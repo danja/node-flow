@@ -1,0 +1,70 @@
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>Node Flow Demo</title>
+    <link rel="shortcut icon" href="#" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+    </style>
+
+    <script src="./dist/web/index.js"></script>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById("canvas");
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas, false);
+        resizeCanvas();
+
+        const node1 = new FlowNode({ title: "Test Node 1" });
+        node1.addOutput({ name: "test out 1", type: "test" })
+        node1.addOutput({ name: "test out 2", type: "test" })
+        node1.addOutput({ name: "A super duper long name!!!", type: "test" })
+
+        const node2 = new FlowNode({
+            title: "Test Node 2 With a super long Title",
+            position: { x: 200, y: 100 },
+        });
+        node2.addInput({ name: "test input 1", type: "test" })
+        node2.addOutput({ name: "test out 1", type: "test" })
+
+        const node3 = new FlowNode({
+            title: "Node 3",
+            position: { x: 400, y: 100 },
+        });
+        node3.addInput({ name: "test input 1", type: "test" })
+
+        const graph = new NodeFlowGraph(canvas);
+        graph.addNode(node1);
+        graph.addNode(node2);
+        graph.addNode(node3);
+
+        graph.connectNodes(node1, 1, node2, 0)
+        graph.connectNodes(node2, 0, node3, 0)
+
+    </script>
+</body>
+
+</html>
