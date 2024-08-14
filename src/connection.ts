@@ -4,19 +4,23 @@ import { BoxCenter, InBox, Vector2 } from "./types";
 
 export type ConnectionRenderer = (ctx: CanvasRenderingContext2D, start: Vector2, end: Vector2, graphScale: number, mouseOver: boolean) => void
 
-export function DefaultConnectionRenderer(connectionSize: number, connectionColor: string): ConnectionRenderer {
+export function DefaultConnectionRenderer(connectionSize: number, connectionColor: string, mouseOverSize: number, mouseOverColor: string): ConnectionRenderer {
     return (ctx: CanvasRenderingContext2D, start: Vector2, end: Vector2, graphScale: number, mouseOver: boolean) => {
-        const midX = (start.x + end.x) / 2;
 
         let lineSize = connectionSize * graphScale;
+        let color = connectionColor;
         if (mouseOver) {
-            lineSize *= 2;
+            lineSize = mouseOverSize * graphScale;
+            color = mouseOverColor;
         }
 
-        ctx.strokeStyle = connectionColor;
+        ctx.strokeStyle = color;
         ctx.lineWidth = lineSize;
+
+        // Draw
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
+        const midX = (start.x + end.x) / 2;
         ctx.bezierCurveTo(midX, start.y, midX, end.y, end.x, end.y);
         ctx.stroke();
     }
@@ -30,9 +34,9 @@ export class Connection {
     private outPos: Vector2;
 
     constructor(
-        private inNode: FlowNode,
+        private inNode: FlowNode | null,
         private inNodePortIndex: number,
-        private outNode: FlowNode,
+        private outNode: FlowNode | null,
         private outNodePortIndex: number,
         private renderer: ConnectionRenderer,
     ) {
@@ -40,31 +44,95 @@ export class Connection {
         this.outPos = { x: 0, y: 0 };
     }
 
-    render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, graphScale: number, mouseOver: boolean): void {
-        const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
-        const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+    render(ctx: CanvasRenderingContext2D, graphScale: number, mouseOver: boolean, mousePosition: Vector2 | undefined): void {
 
-        if (inPortBox === undefined || outPortBox === undefined) {
+        // Not sure what to do here? Maybe we should throw an error in the 
+        // future?
+        if (this.inNode === null && this.outNode === null) {
             return;
         }
 
-        BoxCenter(inPortBox, this.inPos);
-        BoxCenter(outPortBox, this.outPos);
+        if (this.inNode !== null) {
+            const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
+            if (inPortBox === undefined) {
+                return;
+            }
+            BoxCenter(inPortBox, this.inPos);
+        } else if (mousePosition !== undefined) {
+            this.inPos.x = mousePosition.x;
+            this.inPos.y = mousePosition.y;
+        } else {
+            return;
+        }
+
+        if (this.outNode !== null) {
+            const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+            if (outPortBox === undefined) {
+                return;
+            }
+            BoxCenter(outPortBox, this.outPos);
+        } else if (mousePosition !== undefined) {
+            this.outPos.x = mousePosition.x;
+            this.outPos.y = mousePosition.y;
+        } else {
+            return;
+        }
 
         this.renderer(ctx, this.inPos, this.outPos, graphScale, mouseOver);
     }
 
-    mouseOverPort(mousePosition: Vector2): Port | null {
-        const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
-        if (inPortBox !== undefined && InBox(inPortBox, mousePosition)) {
-            return this.inNode.inputPort(this.inNodePortIndex)
+    clearPort(mousePosition: Vector2): void {
+        if (this.inNode !== null) {
+            const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
+            if (inPortBox !== undefined && InBox(inPortBox, mousePosition)) {
+                this.inNode = null;
+                this.inNodePortIndex = -1;
+            }
         }
 
-        const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
-        if (outPortBox !== undefined && InBox(outPortBox, mousePosition)) {
-            return this.outNode.outputPort(this.outNodePortIndex)
+        if (this.outNode !== null) {
+            const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+            if (outPortBox !== undefined && InBox(outPortBox, mousePosition)) {
+                this.outNode = null;
+                this.outNodePortIndex = -1;
+            }
+        }
+    }
+
+    setInput(node: FlowNode, portIndex: number): void {
+        this.inNode = node;
+        this.inNodePortIndex = portIndex;
+    }
+
+    mouseOverPort(mousePosition: Vector2): Port | null {
+        if (this.inNode !== null) {
+            const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
+            if (inPortBox !== undefined && InBox(inPortBox, mousePosition)) {
+                return this.inNode.inputPort(this.inNodePortIndex)
+            }
+        }
+
+        if (this.outNode !== null) {
+            const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+            if (outPortBox !== undefined && InBox(outPortBox, mousePosition)) {
+                return this.outNode.outputPort(this.outNodePortIndex)
+            }
         }
 
         return null;
+    }
+
+    outPort(): Port | null {
+        if (this.outNode === null) {
+            return null;
+        }
+        return this.outNode[this.outNodePortIndex];
+    }
+
+    inPort(): Port | null {
+        if (this.inNode === null) {
+            return null;
+        }
+        return this.inNode[this.inNodePortIndex];
     }
 }

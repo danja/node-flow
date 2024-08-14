@@ -26,6 +26,13 @@ export enum NodeState {
     Selected,
 }
 
+export interface NodeIntersection {
+    Node?: FlowNode,
+    Port?: Port,
+    PortIndex?: number;
+    PortIsInput?: boolean;
+}
+
 export class FlowNode {
 
     private position: Vector2;
@@ -154,9 +161,34 @@ export class FlowNode {
         this.position.y += delta.y;
     }
 
-    inBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, position: Vector2): boolean {
+    inBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, position: Vector2): NodeIntersection {
+        var intersection: NodeIntersection = {
+        }
+
         const box = this.calculateBounds(ctx, graphPosition, scale);
-        return InBox(box, position);
+        if (InBox(box, position)) {
+            intersection.Node = this;
+        }
+
+        for (let i = 0; i < this.inputPortPositions.length; i++) {
+            if (InBox(this.inputPortPositions[i], position)) {
+                intersection.Node = this;
+                intersection.PortIndex = i;
+                intersection.PortIsInput = true;
+                intersection.Port = this.input[i]
+            }
+        }
+
+        for (let i = 0; i < this.outputPortPositions.length; i++) {
+            if (InBox(this.outputPortPositions[i], position)) {
+                intersection.Node = this;
+                intersection.PortIndex = i;
+                intersection.PortIsInput = false;
+                intersection.Port = this.output[i];
+            }
+        }
+
+        return intersection;
     }
 
     inputPortPosition(index: number): Box {
@@ -231,7 +263,7 @@ export class FlowNode {
         }
 
         // Output Ports 
-        const rightSide = box.Position.x + box.Size.x ;
+        const rightSide = box.Position.x + box.Size.x;
         ctx.textAlign = "right";
         for (let i = 0; i < this.output.length; i++) {
             const port = this.output[i];
