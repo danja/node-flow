@@ -105,8 +105,6 @@ export class NodeFlowGraph {
 
     private nodeSelected: number;
 
-    private connectionHovering: Connection | null;
-
     private connectionSelected: Connection | null;
 
     private portHovering: PortIntersection | null;
@@ -116,7 +114,6 @@ export class NodeFlowGraph {
         this.scale = 1;
         this.nodeHovering = -1;
         this.nodeSelected = -1;
-        this.connectionHovering = null;
         this.connectionSelected = null;
         this.portHovering = null;
         this.position = { x: 0, y: 0 };
@@ -163,10 +160,18 @@ export class NodeFlowGraph {
                     this.nodeSelected = this.nodeHovering;
                 }
 
-                if (this.connectionHovering !== null && this.mousePosition !== undefined) {
-                    this.connectionHovering.clearPort(this.mousePosition)
-                    this.connectionSelected = this.connectionHovering;
-                } else if (this.portHovering !== null) {
+                if (this.portHovering === null) {
+                    return
+                }
+
+                if (this.portHovering.InputPort) {
+                    for (let i = 0; i < this.connections.length; i++) {
+                        if (this.connections[i].inPort() === this.portHovering.Port) {
+                            this.connections[i].clearInput();
+                            this.connectionSelected = this.connections[i];
+                        }
+                    }
+                } else {
                     let inNode: FlowNode | null = this.portHovering.Node
                     let inNodeIndex = this.portHovering.Index
                     let outNode: FlowNode | null = this.portHovering.Node
@@ -236,12 +241,22 @@ export class NodeFlowGraph {
 
         // Ight. Let's make the connection.
         if (this.portHovering.InputPort) {
+            this.clearNodeInputPortConnection(this.portHovering.Node, this.portHovering.Index);
             conn.setInput(this.portHovering.Node, this.portHovering.Index)
         } else {
             conn.setOutput(this.portHovering.Node, this.portHovering.Index);
         }
 
         this.connectionSelected = null;
+    }
+
+    clearNodeInputPortConnection(node: FlowNode, index: number): void {
+        const port = node.inputPort(index);
+        for (let i = this.connections.length - 1; i >= 0; i--) {
+            if (this.connections[i].inPort() === port) {
+                this.removeConnection(this.connections[i]);
+            }
+        }
     }
 
     private mouseDragEvent(delta: Vector2): void {
@@ -267,11 +282,12 @@ export class NodeFlowGraph {
     }
 
     private removeConnection(connection: Connection) {
+        connection.clearPorts();
         const index = this.connections.indexOf(connection);
         if (index > -1) {
             this.connections.splice(index, 1);
         } else {
-            console.log("no connection found to remove");
+            console.error("no connection found to remove");
         }
     }
 
@@ -296,21 +312,12 @@ export class NodeFlowGraph {
     }
 
     private renderConnections(): void {
-        this.connectionHovering = null;
-        let connectionIndex = -1;
-
-        if (this.mousePosition !== undefined) {
-            for (let i = 0; i < this.connections.length; i++) {
-                const portMousedOver = this.connections[i].mouseOverPort(this.mousePosition);
-                if (portMousedOver !== null) {
-                    this.connectionHovering = this.connections[i];
-                    connectionIndex = i;
-                }
-            }
-        }
-
         for (let i = 0; i < this.connections.length; i++) {
-            this.connections[i].render(this.ctx, this.scale, i === connectionIndex, this.mousePosition);
+            let portMousedOver = false;
+            if (this.mousePosition !== undefined) {
+                portMousedOver = this.connections[i].mouseOverPort(this.mousePosition) !== null;
+            }
+            this.connections[i].render(this.ctx, this.scale, portMousedOver, this.mousePosition);
         }
     }
 
@@ -336,7 +343,6 @@ export class NodeFlowGraph {
                 }
 
                 if (intersection.Port !== undefined && intersection.Node !== undefined && intersection.PortIndex !== undefined && intersection.PortIsInput !== undefined) {
-                    console.log("hover")
                     this.portHovering = {
                         Index: intersection.PortIndex,
                         Node: intersection.Node,

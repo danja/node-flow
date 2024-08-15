@@ -42,6 +42,14 @@ export class Connection {
     ) {
         this.inPos = { x: 0, y: 0 };
         this.outPos = { x: 0, y: 0 };
+
+        if (inNode !== null) {
+            inNode.inputPort(this.inNodePortIndex).addConnection(this);
+        }
+
+        if (outNode !== null) {
+            outNode.outputPort(this.outNodePortIndex).addConnection(this);
+        }
     }
 
     render(ctx: CanvasRenderingContext2D, graphScale: number, mouseOver: boolean, mousePosition: Vector2 | undefined): void {
@@ -85,23 +93,45 @@ export class Connection {
         if (this.inNode !== null) {
             const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
             if (inPortBox !== undefined && InBox(inPortBox, mousePosition)) {
-                this.inNode = null;
-                this.inNodePortIndex = -1;
+                this.clearInput();
             }
         }
 
         if (this.outNode !== null) {
             const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
             if (outPortBox !== undefined && InBox(outPortBox, mousePosition)) {
-                this.outNode = null;
-                this.outNodePortIndex = -1;
+                this.clearOutput();
             }
         }
+    }
+
+    clearPorts(): void {
+        this.clearInput();
+        this.clearOutput();
     }
 
     setInput(node: FlowNode, portIndex: number): void {
         this.inNode = node;
         this.inNodePortIndex = portIndex;
+        this.inNode.inputPort(portIndex).addConnection(this);
+    }
+
+    setOutput(node: FlowNode, portIndex: number): void {
+        this.outNode = node;
+        this.outNodePortIndex = portIndex;
+        this.outNode.outputPort(portIndex).addConnection(this);
+    }
+
+    clearInput() {
+        this.inNode?.inputPort(this.inNodePortIndex).clearConnection(this);
+        this.inNode = null;
+        this.inNodePortIndex = -1;
+    }
+
+    clearOutput() {
+        this.outNode?.outputPort(this.outNodePortIndex).clearConnection(this);
+        this.outNode = null;
+        this.outNodePortIndex = -1;
     }
 
     mouseOverPort(mousePosition: Vector2): Port | null {
@@ -126,13 +156,13 @@ export class Connection {
         if (this.outNode === null) {
             return null;
         }
-        return this.outNode[this.outNodePortIndex];
+        return this.outNode.outputPort(this.outNodePortIndex);
     }
 
     inPort(): Port | null {
         if (this.inNode === null) {
             return null;
         }
-        return this.inNode[this.inNodePortIndex];
+        return this.inNode.inputPort(this.inNodePortIndex);
     }
 }
