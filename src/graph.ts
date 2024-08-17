@@ -3,7 +3,7 @@ import { FlowNode, NodeIntersection, NodeState } from "./node";
 import { Port } from "./port";
 import { Vector2 } from './types';
 
-type GraphRenderer = (ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
+export type GraphRenderer = (ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
 export interface ConnectionRendererConfiguration {
     size?: number;
@@ -356,7 +356,7 @@ export class NodeFlowGraph {
                 state = NodeState.Selected;
             }
 
-            this.nodes[i].render(this.ctx, this.position, this.scale, state);
+            this.nodes[i].render(this.ctx, this.position, this.scale, state, this.mousePosition);
         }
     }
 }

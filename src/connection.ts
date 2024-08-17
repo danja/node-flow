@@ -12,6 +12,8 @@ export function DefaultConnectionRenderer(connectionSize: number, connectionColo
         if (mouseOver) {
             lineSize = mouseOverSize * graphScale;
             color = mouseOverColor;
+            ctx.shadowColor = mouseOverColor;
+            ctx.shadowBlur = 15 * graphScale;
         }
 
         ctx.strokeStyle = color;
@@ -23,6 +25,7 @@ export function DefaultConnectionRenderer(connectionSize: number, connectionColo
         const midX = (start.x + end.x) / 2;
         ctx.bezierCurveTo(midX, start.y, midX, end.y, end.x, end.y);
         ctx.stroke();
+        ctx.shadowBlur = 0;
     }
 }
 

@@ -2,6 +2,7 @@ import { BorderStyle, BorderStyleConfig } from "./borderStyle";
 import { Port, PortConfig } from "./port";
 import { TextStyle, TextStyleConfig } from "./textStyle";
 import { Box, InBox, Vector2 } from "./types";
+import { Widget } from './widgets/widget';
 
 export interface FlowNodeConfiguration {
     position?: Vector2;
@@ -27,10 +28,17 @@ export enum NodeState {
 }
 
 export interface NodeIntersection {
-    Node?: FlowNode,
-    Port?: Port,
-    PortIndex?: number;
-    PortIsInput?: boolean;
+    Node?: FlowNode
+
+    // Port
+    Port?: Port
+    PortIndex?: number
+    PortIsInput?: boolean
+
+    // Widget
+    Widget?: Widget
+    WidgetIndex?: number
+
 }
 
 export class FlowNode {
@@ -42,6 +50,8 @@ export class FlowNode {
     private input: Array<Port>;
 
     private output: Array<Port>;
+
+    private widgets: Array<Widget>;
 
     // Styling ================================================================
 
@@ -59,13 +69,16 @@ export class FlowNode {
 
     private inputPortPositions: Array<Box>;
     private outputPortPositions: Array<Box>;
+    private widgetPositions: Array<Box>;
 
     constructor(config?: FlowNodeConfiguration) {
         this.input = new Array<Port>();
         this.output = new Array<Port>();
+        this.widgets = new Array<Widget>();
         this.elementSpacing = 10;
         this.inputPortPositions = new Array<Box>();
         this.outputPortPositions = new Array<Box>();
+        this.widgetPositions = new Array<Box>();
 
         this.position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.title = config?.title === undefined ? "" : config.title;
@@ -142,6 +155,14 @@ export class FlowNode {
             size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
         }
 
+        size.y += (this.elementSpacing * this.widgets.length * scale);
+        for (let i = 0; i < this.widgets.length; i++) {
+            const element = this.widgets[i];
+            const eleSize = element.Size();
+            size.y += eleSize.y * scale
+            size.x = Math.max(size.x, (eleSize.x * scale) + (scaledPadding * 2))
+        }
+
         return {
             Position: position,
             Size: size,
@@ -154,6 +175,10 @@ export class FlowNode {
 
     addOutput(port: PortConfig): void {
         this.output.push(new Port(port));
+    }
+
+    addWidget(widget: Widget): void {
+        this.widgets.push(widget);
     }
 
     translate(delta: Vector2): void {
@@ -188,6 +213,15 @@ export class FlowNode {
             }
         }
 
+        for (let i = 0; i < this.widgetPositions.length; i++) {
+            if (InBox(this.widgetPositions[i], position)) {
+                intersection.Node = this;
+                intersection.WidgetIndex = i;
+                intersection.Widget = this.widgets[i];
+            }
+        }
+
+
         return intersection;
     }
 
@@ -207,9 +241,10 @@ export class FlowNode {
         return this.output[index];
     }
 
-    render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState): void {
+    render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
         this.inputPortPositions = new Array<Box>();
         this.outputPortPositions = new Array<Box>();
+        this.widgetPositions = new Array<Box>();
         const scaledPadding = this.padding * scale;
         const scaledElementSpacing = this.elementSpacing * scale;
 
@@ -223,6 +258,8 @@ export class FlowNode {
 
         borderStyle.setupStyle(ctx, scale);
         ctx.fillStyle = this.fillColor;
+        ctx.shadowColor = "black";
+        ctx.shadowBlur = 15 * scale;
         ctx.beginPath();
         ctx.roundRect(
             box.Position.x,
@@ -233,6 +270,10 @@ export class FlowNode {
         );
         ctx.fill();
         ctx.stroke();
+        ctx.shadowBlur = 0;
+
+
+        ctx.textBaseline = 'middle';
 
         // Title
         this.setupTitleStyle(ctx, scale);
@@ -278,6 +319,18 @@ export class FlowNode {
             this.outputPortPositions.push(port.render(ctx, position, scale));
 
             startY += measurement.y + scaledElementSpacing;
+        }
+
+        for (let i = 0; i < this.widgets.length; i++) {
+            const widget = this.widgets[i];
+            const widgetSize = widget.Size();
+            const scaledWidgetWidth = widgetSize.x * scale;
+            const position = {
+                x: box.Position.x + ((box.Size.x - scaledWidgetWidth) / 2),
+                y: startY
+            };
+            this.widgetPositions.push(widget.Draw(ctx, position, scale, mousePosition));
+            startY += (widgetSize.y * scale) + scaledElementSpacing;
         }
     }
 }
