@@ -46,12 +46,20 @@
         node1.addWidget(new NumberWidget({ value: 1.2345 }));
         node1.addWidget(new StringWidget({ value: "woo!" }));
         node1.addWidget(new StringWidget({ value: "A super duper long text input" }));
-        node1.addWidget(new ButtonWidget({ 
+        node1.addWidget(new ButtonWidget({
             text: "Click Me!",
             callback: () => {
                 alert("Node button clicked!")
             }
-         }));
+        }));
+        node1.addWidget(new ToggleWidget({
+            text: "Example",
+        }));
+        node1.addWidget(new SliderWidget({
+            min: 0,
+            max: 10,
+            value: 7.5
+        }))
 
         const node2 = new FlowNode({
             title: "Test Node 2 With a super long Title",

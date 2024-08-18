@@ -7,4 +7,6 @@ export const borderRadius = 15;
 export interface Widget {
     Size(): Vector2
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box
+    ClickStart(): void
+    ClickEnd(): void
 }

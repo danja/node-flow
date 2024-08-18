@@ -79,9 +79,12 @@ export class ButtonWidget {
 
     callback?: () => void;
 
+    gettingClicked: boolean;
+
     constructor(config?: ButtonWidgetConfig) {
         this.text = config?.text === undefined ? "Button" : config?.text;
         this.callback = config?.callback
+        this.gettingClicked = false;
 
         this.idleStyle = new ButtonStyle(config?.idleStyle);
         this.hoverStyle = new ButtonStyle({
@@ -104,7 +107,7 @@ export class ButtonWidget {
 
         let style: ButtonStyle = this.idleStyle;
 
-        if (mousePosition !== undefined) {
+        if (mousePosition !== undefined && !this.gettingClicked) {
             const box = {
                 Position: position,
                 Size: { x: width * scale, y: height * scale }
@@ -114,6 +117,21 @@ export class ButtonWidget {
             }
         }
 
+        if(this.gettingClicked) {
+            style = this.clickStyle;
+        }
+
         return style.Draw(ctx, position, scale, this.text, mousePosition);
+    }
+
+    ClickStart(): void {
+        this.gettingClicked = true;
+    }
+
+    ClickEnd(): void {
+        this.gettingClicked = false;
+        if (this.callback !== undefined) {
+            this.callback();
+        }
     }
 }

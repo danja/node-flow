@@ -24,6 +24,13 @@ export class StringWidget {
         return { "x": width, "y": height }
     }
 
+    ClickStart(): void {
+    }
+
+    ClickEnd(): void {
+    }
+
+
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
 
         const scaledWidth = width * scale;

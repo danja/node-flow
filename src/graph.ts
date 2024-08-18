@@ -2,6 +2,7 @@ import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./con
 import { FlowNode, NodeIntersection, NodeState } from "./node";
 import { Port } from "./port";
 import { Vector2 } from './types';
+import { Widget } from "./widgets/widget";
 
 export type GraphRenderer = (ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -109,6 +110,10 @@ export class NodeFlowGraph {
 
     private portHovering: PortIntersection | null;
 
+    private widgetHovering: Widget | null;
+
+    private widgetCurrentlyClicking: Widget | null;
+
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.nodes = [];
         this.scale = 1;
@@ -116,6 +121,8 @@ export class NodeFlowGraph {
         this.nodeSelected = -1;
         this.connectionSelected = null;
         this.portHovering = null;
+        this.widgetHovering = null;
+        this.widgetCurrentlyClicking = null;
         this.position = { x: 0, y: 0 };
         this.connections = new Array<Connection>();
         this.idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
@@ -158,6 +165,11 @@ export class NodeFlowGraph {
             () => {
                 if (this.nodeHovering > -1) {
                     this.nodeSelected = this.nodeHovering;
+                }
+
+                if (this.widgetHovering !== null) {
+                    this.widgetHovering.ClickStart();
+                    this.widgetCurrentlyClicking = this.widgetHovering;
                 }
 
                 if (this.portHovering === null) {
@@ -205,6 +217,11 @@ export class NodeFlowGraph {
 
     private clickEnd(): void {
         this.nodeSelected = -1;
+
+        if (this.widgetCurrentlyClicking !== null) {
+            this.widgetCurrentlyClicking.ClickEnd();
+            this.widgetCurrentlyClicking = null;
+        }
 
         if (this.connectionSelected === null) {
             return;
@@ -267,6 +284,8 @@ export class NodeFlowGraph {
             });
         } else if (this.interactingWithConnection()) {
             // intentionally left blank
+        } else if (this.interactingWithWidget()) {
+            // intentionally left blank
         } else {
             this.position.x += delta.x;
             this.position.y += delta.y;
@@ -279,6 +298,10 @@ export class NodeFlowGraph {
 
     private interactingWithConnection(): boolean {
         return this.connectionSelected !== null;
+    }
+
+    private interactingWithWidget(): boolean {
+        return this.widgetCurrentlyClicking !== null;
     }
 
     private removeConnection(connection: Connection) {
@@ -330,16 +353,25 @@ export class NodeFlowGraph {
 
     private renderNodes() {
         this.portHovering = null;
+        this.widgetHovering = null;
         this.nodeHovering = -1;
+        let cursor = 'default';
+
         for (let i = 0; i < this.nodes.length; i++) {
             let state = NodeState.Idle;
 
             if (this.mousePosition !== undefined) {
                 const intersection = this.nodes[i].inBounds(this.ctx, this.position, this.scale, this.mousePosition);
 
-                if (intersection.Node !== undefined && intersection.PortIndex === undefined) {
+                if (intersection.Node !== undefined && intersection.PortIndex === undefined && intersection.Widget === undefined) {
                     state = NodeState.MouseOver;
                     this.nodeHovering = i;
+                    cursor = 'grab';
+                }
+
+                if (intersection.Widget !== undefined) {
+                    this.widgetHovering = intersection.Widget
+                    cursor = 'pointer';
                 }
 
                 if (intersection.Port !== undefined && intersection.Node !== undefined && intersection.PortIndex !== undefined && intersection.PortIsInput !== undefined) {
@@ -354,9 +386,13 @@ export class NodeFlowGraph {
 
             if (i === this.nodeSelected) {
                 state = NodeState.Selected;
+                cursor = 'grabbing';
             }
 
             this.nodes[i].render(this.ctx, this.position, this.scale, state, this.mousePosition);
         }
+
+        this.canvas.style.cursor = cursor;
     }
+
 }
