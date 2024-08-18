@@ -1,4 +1,5 @@
-import { Box, Vector2 } from '../types';
+import { Box } from '../types/box';
+import { Vector2 } from '../types/vector2';
 
 export const width = 150;
 export const height = 30;

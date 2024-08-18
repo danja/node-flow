@@ -1,8 +1,10 @@
 import { BorderStyle, BorderStyleConfig } from "./borderStyle";
 import { Port, PortConfig } from "./port";
 import { TextStyle, TextStyleConfig } from "./textStyle";
-import { Box, InBox, Vector2 } from "./types";
+import { Box, InBox } from "./types/box";
+import { Vector2 } from "./types/vector2";
 import { Widget } from './widgets/widget';
+import { List } from './types/list';
 
 export interface FlowNodeConfiguration {
     position?: Vector2;
@@ -67,18 +69,18 @@ export class FlowNode {
 
     private elementSpacing: number;
 
-    private inputPortPositions: Array<Box>;
-    private outputPortPositions: Array<Box>;
-    private widgetPositions: Array<Box>;
+    private inputPortPositions: List<Box>;
+    private outputPortPositions: List<Box>;
+    private widgetPositions: List<Box>;
 
     constructor(config?: FlowNodeConfiguration) {
         this.input = new Array<Port>();
         this.output = new Array<Port>();
         this.widgets = new Array<Widget>();
         this.elementSpacing = 10;
-        this.inputPortPositions = new Array<Box>();
-        this.outputPortPositions = new Array<Box>();
-        this.widgetPositions = new Array<Box>();
+        this.inputPortPositions = new List<Box>();
+        this.outputPortPositions = new List<Box>();
+        this.widgetPositions = new List<Box>();
 
         this.position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.title = config?.title === undefined ? "" : config.title;
@@ -195,8 +197,8 @@ export class FlowNode {
             intersection.Node = this;
         }
 
-        for (let i = 0; i < this.inputPortPositions.length; i++) {
-            if (InBox(this.inputPortPositions[i], position)) {
+        for (let i = 0; i < this.inputPortPositions.Count(); i++) {
+            if (InBox(this.inputPortPositions.At(i), position)) {
                 intersection.Node = this;
                 intersection.PortIndex = i;
                 intersection.PortIsInput = true;
@@ -204,8 +206,8 @@ export class FlowNode {
             }
         }
 
-        for (let i = 0; i < this.outputPortPositions.length; i++) {
-            if (InBox(this.outputPortPositions[i], position)) {
+        for (let i = 0; i < this.outputPortPositions.Count(); i++) {
+            if (InBox(this.outputPortPositions.At(i), position)) {
                 intersection.Node = this;
                 intersection.PortIndex = i;
                 intersection.PortIsInput = false;
@@ -213,20 +215,19 @@ export class FlowNode {
             }
         }
 
-        for (let i = 0; i < this.widgetPositions.length; i++) {
-            if (InBox(this.widgetPositions[i], position)) {
+        for (let i = 0; i < this.widgetPositions.Count(); i++) {
+            if (InBox(this.widgetPositions.At(i), position)) {
                 intersection.Node = this;
                 intersection.WidgetIndex = i;
                 intersection.Widget = this.widgets[i];
             }
         }
 
-
         return intersection;
     }
 
     inputPortPosition(index: number): Box {
-        return this.inputPortPositions[index];
+        return this.inputPortPositions.At(index);
     }
 
     inputPort(index: number): Port {
@@ -234,7 +235,7 @@ export class FlowNode {
     }
 
     outputPortPosition(index: number): Box {
-        return this.outputPortPositions[index];
+        return this.outputPortPositions.At(index);
     }
 
     outputPort(index: number): Port {
@@ -242,9 +243,9 @@ export class FlowNode {
     }
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
-        this.inputPortPositions = new Array<Box>();
-        this.outputPortPositions = new Array<Box>();
-        this.widgetPositions = new Array<Box>();
+        this.inputPortPositions.Clear();
+        this.outputPortPositions.Clear();
+        this.widgetPositions.Clear();
         const scaledPadding = this.padding * scale;
         const scaledElementSpacing = this.elementSpacing * scale;
 
@@ -298,7 +299,7 @@ export class FlowNode {
             ctx.fillText(port.getDisplayName(), leftSide, position.y);
 
             // Port
-            this.inputPortPositions.push(port.render(ctx, position, scale));
+            this.inputPortPositions.Push(port.render(ctx, position, scale));
 
             startY += measurement.y + scaledElementSpacing;
         }
@@ -316,7 +317,7 @@ export class FlowNode {
             ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
 
             // Port
-            this.outputPortPositions.push(port.render(ctx, position, scale));
+            this.outputPortPositions.Push(port.render(ctx, position, scale));
 
             startY += measurement.y + scaledElementSpacing;
         }
@@ -329,7 +330,7 @@ export class FlowNode {
                 x: box.Position.x + ((box.Size.x - scaledWidgetWidth) / 2),
                 y: startY
             };
-            this.widgetPositions.push(widget.Draw(ctx, position, scale, mousePosition));
+            this.widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));
             startY += (widgetSize.y * scale) + scaledElementSpacing;
         }
     }

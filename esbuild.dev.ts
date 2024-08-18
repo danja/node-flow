@@ -17,24 +17,24 @@ const buildOptsNode: BuildOptions = {
   ]
 };
 
-const buildOptsWeb: BuildOptions  = {
+const buildOptsWeb: BuildOptions = {
   entryPoints: ['./src/index.ts'],
-//   inject: [],
+  //   inject: [],
   outfile: './dist/web/index.js',
-//   external: [],
+  //   external: [],
   platform: 'browser',
   target: ['es2018'],
-//   format: 'cjs',
+  //   format: 'cjs',
   bundle: true,
   sourcemap: true,
-//   minify: false,
-//   treeShaking: false,
-//   plugins: [
-//     NodeModulesPolyfillPlugin(),
-//     NodeGlobalsPolyfillPlugin({
-//       process: true,
-//     }),
-//   ],
+  minify: true,
+  treeShaking: true,
+  //   plugins: [
+  //     NodeModulesPolyfillPlugin(),
+  //     NodeGlobalsPolyfillPlugin({
+  //       process: true,
+  //     }),
+  //   ],
 };
 
 const serveOpts = {

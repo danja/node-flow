@@ -1,5 +1,6 @@
 import { TextStyle, TextStyleConfig } from "../textStyle";
-import { Vector2, Box, CopyVector2 } from '../types';
+import { Box } from '../types/box';
+import { CopyVector2, Vector2 } from "../types/vector2";
 import { Clamp01 } from "../utils/math";
 import { borderRadius, height, width } from "./widget";
 
@@ -17,6 +18,10 @@ export interface SliderWidgetConfig {
     fillColor?: string;
 
     textStyle?: TextStyleConfig;
+
+    change?: (newValue: number) => void;
+
+    release?: (newValue: number) => void;
 }
 
 export class SliderWidget {
@@ -30,6 +35,12 @@ export class SliderWidget {
     value: number;
 
     text: string;
+
+    // Callbacks ==============================================================
+
+    change?: (newValue: number) => void;
+
+    release?: (newValue: number) => void;
 
     // Styling Variables ======================================================
 
@@ -54,6 +65,9 @@ export class SliderWidget {
         this.min = config?.min === undefined ? 0 : config?.min;
         this.max = config?.max === undefined ? 1 : config?.max;
 
+        this.change = config?.change;
+        this.release = config?.release;
+
         this.backgroundColor = config?.backgroundColor === undefined ? "#666666" : config?.backgroundColor;
         this.fillColor = config?.fillColor === undefined ? "#AAAAAA" : config?.fillColor;
         this.borderColor = config?.borderColor === undefined ? "black" : config?.borderColor;
@@ -67,8 +81,15 @@ export class SliderWidget {
     }
 
     SetValue(newValue: number): void {
+        if (this.value === newValue) {
+            return;
+        }
+
         this.value = newValue;
         this.text = this.value.toFixed(3);
+        if (this.change !== undefined) {
+            this.change(this.value);
+        }
     }
 
     Size(): Vector2 {
@@ -82,6 +103,9 @@ export class SliderWidget {
 
     ClickEnd(): void {
         this.clicking = false;
+        if (this.release !== undefined) {
+            this.release(this.value);
+        }
     }
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
@@ -116,7 +140,6 @@ export class SliderWidget {
         // Render Number
         ctx.textAlign = "center";
         ctx.textBaseline = 'middle';
-        // const size = this.textStyle.measure(ctx, scale, this.text);
         this.textStyle.setupStyle(ctx, scale);
         ctx.fillText(
             this.text,

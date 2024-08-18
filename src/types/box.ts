@@ -1,16 +1,8 @@
-export interface Vector2 {
-    x: number
-    y: number
-}
+import { Vector2 } from "./vector2";
 
 export interface Box {
     Position: Vector2
     Size: Vector2
-}
-
-export function CopyVector2(dst: Vector2, src: Vector2): void {
-    dst.x = src.x;
-    dst.y = src.y;
 }
 
 export function BoxCenter(box: Box, out: Vector2): Vector2 {

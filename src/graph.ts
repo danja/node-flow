@@ -1,7 +1,7 @@
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./connection";
 import { FlowNode, NodeIntersection, NodeState } from "./node";
 import { Port } from "./port";
-import { Vector2 } from './types';
+import { Vector2 } from './types/vector2';
 import { Widget } from "./widgets/widget";
 
 export type GraphRenderer = (ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;

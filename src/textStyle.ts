@@ -1,4 +1,4 @@
-import { Vector2 } from "./types";
+import { Vector2 } from "./types/vector2";
 
 export interface TextStyleConfig {
     size?: number;

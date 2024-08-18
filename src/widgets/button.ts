@@ -1,5 +1,6 @@
 import { TextStyle, TextStyleConfig } from "../textStyle";
-import { Box, InBox, Vector2 } from "../types";
+import { Box, InBox } from "../types/box";
+import { Vector2 } from "../types/vector2";
 import { borderRadius, height, width } from "./widget";
 
 export interface ButtonStyleConfig {

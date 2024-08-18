@@ -1,5 +1,6 @@
 import { Connection } from "./connection";
-import { Box, Vector2 } from "./types";
+import { Box } from "./types/box";
+import { Vector2 } from "./types/vector2";
 
 export interface PortStyle {
     size?: number;

@@ -1,24 +1,31 @@
+import { Popup } from "../popup";
 import { TextStyle, TextStyleConfig } from "../textStyle";
-import { Vector2, Box } from '../types';
+import { Box } from '../types/box';
+import { Vector2 } from "../types/vector2";
 import { borderRadius, height, width } from "./widget";
 
 export interface NumberWidgetConfig {
     value?: number;
 
     textStyle?: TextStyleConfig;
+
+    callback?: (newNumber: number) => void;
 }
 
 export class NumberWidget {
+    
+    private value: number;
 
-    value: number;
+    private textStyle: TextStyle
 
-    textStyle: TextStyle
+    private text: string;
 
-    text: string;
+    private callback?: (newNumber: number) => void;
 
     constructor(config?: NumberWidgetConfig) {
         this.value = config?.value === undefined ? 0 : config?.value;
         this.textStyle = new TextStyle(config?.textStyle);
+        this.callback = config?.callback;
 
         // https://stackoverflow.com/questions/5765398/whats-the-best-way-to-convert-a-number-to-a-string-in-javascript
         this.text = '' + this.value;
@@ -28,10 +35,41 @@ export class NumberWidget {
         return { "x": width, "y": height }
     }
 
+    Set(newNumber: number): void {
+        this.value = newNumber;
+        this.text = '' + this.value;
+        if (this.callback !== undefined) {
+            this.callback(this.value);
+        }
+    }
+
     ClickStart(): void {
     }
 
     ClickEnd(): void {
+        let input: HTMLInputElement | null = null;
+
+        const popup = new Popup({
+            title: "Set Number",
+            options: ["Set", "Cancel"],
+            content: () => {
+                const container = document.createElement('div');
+                input = document.createElement('input')
+                input.type = "number";
+                input.valueAsNumber = this.value;
+                container.append(input);
+                return container;
+            },
+            onClose: (button: string | null): void => {
+                if (button !== "Set" || input === null) {
+                    return;
+                }
+
+                this.Set(input.valueAsNumber);
+            },
+        });
+
+        popup.Show();
     }
 
 

@@ -1,6 +1,7 @@
 import { FlowNode } from "./node";
 import { Port } from "./port";
-import { BoxCenter, InBox, Vector2 } from "./types";
+import { BoxCenter, InBox } from "./types/box";
+import { Vector2 } from "./types/vector2";
 
 export type ConnectionRenderer = (ctx: CanvasRenderingContext2D, start: Vector2, end: Vector2, graphScale: number, mouseOver: boolean) => void
 
