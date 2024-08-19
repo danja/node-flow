@@ -74,7 +74,24 @@
         });
         node3.addInput({ name: "test input 1", type: "test" })
 
-        const graph = new NodeFlowGraph(canvas);
+        const graph = new NodeFlowGraph(canvas, {
+            contextMenu: {
+                name: "test",
+                items: [
+                    { name: "a" },
+                    { name: "b" }
+                ],
+                subMenus: [
+                    {
+                        name: "sub",
+                        items: [
+                            { name: "sub a" },
+                            { name: "sub b" }
+                        ],
+                    }
+                ]
+            },
+        });
         graph.addNode(node1);
         graph.addNode(node2);
         graph.addNode(node3);

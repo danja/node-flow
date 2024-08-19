@@ -1,7 +1,8 @@
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./connection";
+import { ContextMenu, ContextMenuConfig } from "./contextMenu";
 import { FlowNode, NodeIntersection, NodeState } from "./node";
 import { Port } from "./port";
-import { Vector2 } from './types/vector2';
+import { CopyVector2, Vector2 } from './types/vector2';
 import { Widget } from "./widgets/widget";
 
 export type GraphRenderer = (ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
@@ -40,47 +41,108 @@ export interface FlowNodeGraphConfiguration {
     backgroundRenderer?: GraphRenderer;
     backgroundColor?: string;
     idleConnection?: ConnectionRendererConfiguration
+    contextMenu?: ContextMenuConfig
 }
 
-
-
 class MouseObserver {
+
+    private clicked: boolean;
+
+    private lastTouch: Vector2;
+
     constructor(
-        ele: HTMLElement,
-        dragCallback: (delta: Vector2) => void,
-        moveCallback: (position: Vector2) => void,
-        clickStart: () => void,
-        clickStop: () => void,
+        private ele: HTMLElement,
+        private dragCallback: (delta: Vector2) => void,
+        private moveCallback: (position: Vector2) => void,
+        private clickStart: (position: Vector2) => void,
+        private clickStop: () => void,
+        private contextMenu: (position: Vector2) => void
     ) {
-        let clicked = false;
+        this.clicked = false;
+        this.lastTouch = {
+            x: 0,
+            y: 0
+        }
 
-        ele.addEventListener('mousedown', (event) => {
-            clicked = true;
-            clickStart();
+        // Down
+        ele.addEventListener('mousedown', this.down.bind(this), false);
+        ele.addEventListener('touchstart', this.touchDown.bind(this), false);
+
+        // Up
+        ele.addEventListener('mouseup', this.up.bind(this), false);
+        ele.addEventListener('touchend', this.up.bind(this), false);
+
+        // Move
+        ele.addEventListener('mousemove', this.move.bind(this), false);
+        ele.addEventListener('touchmove', this.moveTouch.bind(this), false);
+
+        // Context
+        ele.addEventListener('contextmenu', (evt) => {
+            contextMenu(this.mousePosition(evt));
+            evt.preventDefault()
         }, false);
+    }
 
-        ele.addEventListener('mouseup', (event) => {
-            clicked = false
-            clickStop();
-        }, false);
+    private mousePosition(event: MouseEvent): Vector2 {
+        var rect = this.ele.getBoundingClientRect();
+        return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+        }
+    }
 
-        ele.addEventListener('mousemove', (event) => {
-            if (clicked) {
-                dragCallback({
-                    x: event.movementX,
-                    y: event.movementY,
-                })
-            }
-
-            var rect = ele.getBoundingClientRect();
-            moveCallback({
-                x: event.clientX - rect.left,
-                y: event.clientY - rect.top
+    private move(event: MouseEvent): void {
+        if (this.clicked) {
+            this.dragCallback({
+                x: event.movementX,
+                y: event.movementY,
             })
-        }, false);
+        }
+
+        this.moveCallback(this.mousePosition(event));
+    }
+
+    private moveTouch(event: TouchEvent): void {
+        const rect = this.ele.getBoundingClientRect();
+        const pos = {
+            x: event.touches[0].clientX - rect.left,
+            y: event.touches[0].clientY - rect.top
+        }
+        this.moveCallback(pos);
+
+        if (this.clicked) {
+            this.dragCallback({
+                x: pos.x - this.lastTouch.x,
+                y: pos.y - this.lastTouch.y,
+            });
+        }
+
+        CopyVector2(this.lastTouch, pos);
+    }
+
+    private down(event: MouseEvent): void {
+        this.clicked = true;
+        this.clickStart(this.mousePosition(event));
+    }
+
+    private touchDown(event: TouchEvent) {
+        this.clicked = true;
+        const rect = this.ele.getBoundingClientRect();
+        this.lastTouch.x = event.touches[0].clientX - rect.left;
+        this.lastTouch.y = event.touches[0].clientY - rect.top;
+        this.clickStart(this.lastTouch);
+    }
+
+    private up(): void {
+        this.clicked = false
+        this.clickStop();
     }
 }
 
+interface OpenContextMenu {
+    Menu: ContextMenu
+    Position: Vector2
+}
 
 export class NodeFlowGraph {
 
@@ -95,6 +157,8 @@ export class NodeFlowGraph {
     private nodes: Array<FlowNode>;
 
     private connections: Array<Connection>;
+
+    private contextMenu: ContextMenu;
 
     private position: Vector2;
 
@@ -114,6 +178,8 @@ export class NodeFlowGraph {
 
     private widgetCurrentlyClicking: Widget | null;
 
+    private openContextMenu: OpenContextMenu | null;
+
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.nodes = [];
         this.scale = 1;
@@ -126,6 +192,8 @@ export class NodeFlowGraph {
         this.position = { x: 0, y: 0 };
         this.connections = new Array<Connection>();
         this.idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
+        this.contextMenu = new ContextMenu(config?.contextMenu);
+        this.openContextMenu = null;
 
         this.canvas = canvas;
         const ctx = canvas.getContext("2d")
@@ -162,7 +230,10 @@ export class NodeFlowGraph {
             },
 
             // Click start
-            () => {
+            (mousePosition: Vector2) => {
+                this.openContextMenu = null;
+                this.mousePosition = mousePosition;
+
                 if (this.nodeHovering > -1) {
                     this.nodeSelected = this.nodeHovering;
                 }
@@ -203,7 +274,17 @@ export class NodeFlowGraph {
                 }
             },
 
-            this.clickEnd.bind(this)
+            this.clickEnd.bind(this),
+
+            (position) => {
+                this.openContextMenu = {
+                    Menu: this.contextMenu,
+                    Position: {
+                        x: -(this.position.x / this.scale) + (position.x / this.scale),
+                        y: -(this.position.y / this.scale) + (position.y / this.scale),
+                    }
+                };
+            }
         );
     }
 
@@ -330,6 +411,12 @@ export class NodeFlowGraph {
         this.backgroundRenderer(this.ctx, this.position, this.scale);
         this.renderConnections();
         this.renderNodes();
+        if (this.openContextMenu !== null) {
+            this.openContextMenu.Menu.render(this.ctx, {
+                x: this.position.x + (this.openContextMenu.Position.x * this.scale),
+                y: this.position.y + (this.openContextMenu.Position.y * this.scale),
+            }, this.scale, this.mousePosition);
+        }
 
         window.requestAnimationFrame(this.render.bind(this));
     }

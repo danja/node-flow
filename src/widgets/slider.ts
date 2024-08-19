@@ -28,37 +28,37 @@ export class SliderWidget {
 
     // Data Variables =========================================================
 
-    min: number;
+    private min: number;
 
-    max: number;
+    private max: number;
 
-    value: number;
+    private value: number;
 
-    text: string;
+    private text: string;
 
     // Callbacks ==============================================================
 
-    change?: (newValue: number) => void;
+    private change?: (newValue: number) => void;
 
-    release?: (newValue: number) => void;
+    private release?: (newValue: number) => void;
 
     // Styling Variables ======================================================
 
-    textStyle: TextStyle
+    private textStyle: TextStyle
 
-    backgroundColor: string;
+    private backgroundColor: string;
 
-    borderColor: string;
+    private borderColor: string;
 
-    fillColor: string;
+    private fillColor: string;
 
     // Runtime Variables ======================================================
 
-    lastMousePosition: Vector2;
+    private lastMousePosition: Vector2;
 
-    clickStartMousePosition: Vector2;
+    private clickStartMousePosition: Vector2;
 
-    clicking: boolean;
+    private clicking: boolean;
 
     constructor(config?: SliderWidgetConfig) {
         this.value = config?.value === undefined ? 0 : config?.value;

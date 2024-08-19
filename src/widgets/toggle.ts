@@ -22,17 +22,17 @@ export interface ToggleWidgetConfig {
 
 class ToggleStyle {
 
-    textStyle: TextStyle;
+    private textStyle: TextStyle;
 
-    backgroundColor: string;
+    private backgroundColor: string;
 
-    borderColor: string;
+    private borderColor: string;
 
-    lightColor: string;
+    private lightColor: string;
 
-    lightBorderColor: string;
+    private lightBorderColor: string;
 
-    lightBlur?: number;
+    private lightBlur?: number;
 
     constructor(config?: ToggleStyleConfig) {
         this.textStyle = new TextStyle(config?.textStyle);
@@ -74,7 +74,7 @@ class ToggleStyle {
             borderRadius * scale
         );
         if (this.lightBlur) {
-            ctx.shadowBlur = this.lightBlur;
+            ctx.shadowBlur = this.lightBlur * scale;
             ctx.shadowColor = this.lightColor;
         }
         ctx.fill();

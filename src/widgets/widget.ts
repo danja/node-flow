@@ -3,7 +3,7 @@ import { Vector2 } from '../types/vector2';
 
 export const width = 150;
 export const height = 30;
-export const borderRadius = 15;
+export const borderRadius = 10;
 
 export interface Widget {
     Size(): Vector2

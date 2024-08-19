@@ -19,11 +19,11 @@ export interface ButtonWidgetConfig {
 
 class ButtonStyle {
 
-    textStyle: TextStyle;
+    private textStyle: TextStyle;
 
-    backgroundColor: string;
+    private backgroundColor: string;
 
-    borderColor: string;
+    private borderColor: string;
 
     constructor(config?: ButtonStyleConfig) {
         this.textStyle = new TextStyle(config?.textStyle);
@@ -70,17 +70,17 @@ class ButtonStyle {
 
 export class ButtonWidget {
 
-    text: string;
+    private text: string;
 
-    idleStyle: ButtonStyle;
+    private idleStyle: ButtonStyle;
 
-    hoverStyle: ButtonStyle;
+    private hoverStyle: ButtonStyle;
 
-    clickStyle: ButtonStyle;
+    private clickStyle: ButtonStyle;
 
-    callback?: () => void;
+    private callback?: () => void;
 
-    gettingClicked: boolean;
+    private gettingClicked: boolean;
 
     constructor(config?: ButtonWidgetConfig) {
         this.text = config?.text === undefined ? "Button" : config?.text;
