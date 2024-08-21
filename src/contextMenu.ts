@@ -1,4 +1,5 @@
-import { TextStyle, TextStyleConfig } from './textStyle';
+import { TextStyle, TextStyleConfig } from './styles/text';
+import { Box, InBox } from './types/box';
 import { Vector2 } from './types/vector2';
 
 export interface ContextMenuItemConfig {
@@ -46,6 +47,8 @@ export class ContextMenu {
 
     private textStyle: TextStyle;
 
+    private entries: Array<ContextEntry>;
+
     constructor(config?: ContextMenuConfig) {
         this.name = config?.name === undefined ? "menu" : config?.name;
         this.items = new Array<ContextMenuItem>();
@@ -63,48 +66,61 @@ export class ContextMenu {
                 this.items.push(new ContextMenuItem(config?.items[i]));
             }
         }
+
+        this.calculateEntries();
+    }
+
+    private calculateEntries(): void {
+        this.entries = new Array<ContextEntry>();
+        for (let i = 0; i < this.items.length; i++) {
+            this.entries.push({
+                text: this.items[i].getName(),
+            });
+        }
     }
 
     getName(): string {
         return this.name;
     }
 
+    private tempBox: Box = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
+
     public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
         const height = scale * 30;
         const width = scale * 100;
 
-        var entries = new Array<ContextEntry>();
-        for (let i = 0; i < this.items.length; i++) {
-            entries.push({
-                text: this.items[i].getName(),
-            });
-        }
+        // for (let i = 0; i < this.subMenus.length; i++) {
+        //     this.subMenus[i].render(ctx, { x: position.x + width, y: position.y + (height * this.entries.length) }, scale, mousePosition)
+        //     this.entries.push({
+        //         text: this.subMenus[i].getName(),
+        //     });
+        // }
 
-        for (let i = 0; i < this.subMenus.length; i++) {
-            this.subMenus[i].render(ctx, { x: position.x + width, y: position.y + (height * entries.length) }, scale, mousePosition)
-            entries.push({
-                text: this.subMenus[i].getName(),
-            });
-        }
-
+        this.tempBox.Size.x = width;
+        this.tempBox.Size.y = height;
+        this.tempBox.Position.x = position.x;
 
         ctx.textAlign = "center";
 
-        for (let i = 0; i < entries.length; i++) {
-            const startY = position.y + (height * i);
+        for (let i = 0; i < this.entries.length; i++) {
+            this.tempBox.Position.y = position.y + (height * i);
 
-            ctx.fillStyle = "#CCCCCC";
+            if (mousePosition !== undefined && InBox(this.tempBox, mousePosition)) {
+                ctx.fillStyle = "#AAAAFF";
+            } else {
+                ctx.fillStyle = "#CCCCCC";
+            }
             ctx.beginPath();
             ctx.rect(
                 position.x,
-                startY,
+                this.tempBox.Position.y,
                 width,
                 height,
             );
             ctx.fill();
 
             this.textStyle.setupStyle(ctx, scale);
-            ctx.fillText(entries[i].text, position.x + (width / 2), startY + (height / 2))
+            ctx.fillText(this.entries[i].text, position.x + (width / 2), this.tempBox.Position.y + (height / 2))
         }
     }
 

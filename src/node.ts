@@ -1,10 +1,11 @@
-import { BorderStyle, BorderStyleConfig } from "./borderStyle";
 import { Port, PortConfig } from "./port";
-import { TextStyle, TextStyleConfig } from "./textStyle";
+import { FontWeight, TextStyle, TextStyleConfig, TextStyleFallback } from "./styles/text";
 import { Box, InBox } from "./types/box";
 import { Vector2 } from "./types/vector2";
 import { Widget } from './widgets/widget';
 import { List } from './types/list';
+import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
+import { Text } from "./types/text";
 
 export interface FlowNodeConfiguration {
     position?: Vector2;
@@ -14,13 +15,12 @@ export interface FlowNodeConfiguration {
     onSelect?: () => void;
 
     // Styling
-    idleBorder?: BorderStyleConfig;
-    mouseOverBorder?: BorderStyleConfig;
-    selectedBorder?: BorderStyleConfig;
+    idleBorder?: BoxStyleConfig;
+    mouseOverBorder?: BoxStyleConfig;
+    selectedBorder?: BoxStyleConfig;
     titleTextStyle?: TextStyleConfig;
     portTextStyle?: TextStyleConfig;
     padding?: number;
-    fillColor?: string;
 }
 
 export enum NodeState {
@@ -47,7 +47,7 @@ export class FlowNode {
 
     private position: Vector2;
 
-    private title: string;
+    private title: Text;
 
     private input: Array<Port>;
 
@@ -57,13 +57,9 @@ export class FlowNode {
 
     // Styling ================================================================
 
-    private borderStyle: Map<NodeState, BorderStyle>;
+    private boxStyle: Map<NodeState, BoxStyle>;
 
     private padding: number;
-
-    private fillColor: string;
-
-    private titleTextStyle: TextStyle;
 
     private portTextStyle: TextStyle;
 
@@ -83,87 +79,87 @@ export class FlowNode {
         this.widgetPositions = new List<Box>();
 
         this.position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
-        this.title = config?.title === undefined ? "" : config.title;
+        this.title = new Text(
+            config?.title === undefined ? "" : config.title,
+            TextStyleFallback(config?.titleTextStyle, {
+                size: 16,
+                weight: FontWeight.Bold
+            })
+        );
 
-        this.fillColor = config?.fillColor === undefined ? "#999999" : config.fillColor;
         this.padding = config?.padding === undefined ? 15 : config.padding;
 
-        this.borderStyle = new Map<NodeState, BorderStyle>();
-        this.borderStyle.set(NodeState.Idle, new BorderStyle({
-            color: config?.idleBorder?.color === undefined ? "#1c1c1c" : config?.idleBorder?.color,
-            radius: config?.idleBorder?.radius === undefined ? 15 : config?.idleBorder?.radius,
-            size: config?.idleBorder?.size === undefined ? 1 : config?.idleBorder?.size,
-        }));
-        this.borderStyle.set(NodeState.MouseOver, new BorderStyle({
-            color: config?.mouseOverBorder?.color === undefined ? "#6e6e6e" : config?.mouseOverBorder?.color,
-            radius: config?.mouseOverBorder?.radius === undefined ? 15 : config?.mouseOverBorder?.radius,
-            size: config?.mouseOverBorder?.size === undefined ? 1.1 : config?.mouseOverBorder?.size,
-        }));
-        this.borderStyle.set(NodeState.Selected, new BorderStyle({
-            color: config?.selectedBorder?.color === undefined ? "white" : config?.selectedBorder?.color,
-            radius: config?.selectedBorder?.radius === undefined ? 15 : config?.selectedBorder?.radius,
-            size: config?.selectedBorder?.size === undefined ? 1 : config?.selectedBorder?.size,
-        }));
-
-
-        this.titleTextStyle = new TextStyle({
-            size: config?.titleTextStyle?.size === undefined ? 16 : config?.titleTextStyle?.size,
-            color: config?.titleTextStyle?.color === undefined ? "black" : config?.titleTextStyle?.color,
-        });
+        this.boxStyle = new Map<NodeState, BoxStyle>();
+        this.boxStyle.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
+            border: { color: "#1c1c1c", size: 1, },
+            color: "#999999",
+        })));
+        this.boxStyle.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
+            border: { color: "#6e6e6e", size: 1.1, },
+            color: "#999999",
+        })));
+        this.boxStyle.set(NodeState.Selected, new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
+            border: { color: "white", size: 1, },
+            color: "#999999",
+        })));
 
         this.portTextStyle = new TextStyle({
             size: config?.portTextStyle?.size === undefined ? 14 : config?.portTextStyle?.size,
             color: config?.portTextStyle?.color === undefined ? "black" : config?.portTextStyle?.color,
+            font: config?.titleTextStyle?.font,
+            weight: config?.titleTextStyle?.weight,
         });
     }
 
-    private setupTitleStyle(ctx: CanvasRenderingContext2D, scale: number): void {
-        this.titleTextStyle.setupStyle(ctx, scale);
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-    }
+   
 
-    private measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
-        return this.titleTextStyle.measure(ctx, scale, this.title);
-    }
+    // private measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
+    //     return this.titleTextStyle.measure(ctx, scale, this.title);
+    // }
 
     private calculateBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number): Box {
-        const scaledPadding = this.padding * scale;
+        const scaledPadding = this.padding;
         const position: Vector2 = {
             x: (this.position.x * scale) + graphPosition.x,
             y: (this.position.y * scale) + graphPosition.y
         }
-        const scaledTitleMeasurement = this.measureTitleText(ctx, scale);
+
+        const scaledTitleMeasurement = { x: 0, y: 0 };
+        this.title.getSize(ctx, 1, scaledTitleMeasurement);
+
         const size = {
             x: scaledTitleMeasurement.x + (scaledPadding * 2),
             y: scaledTitleMeasurement.y + (scaledPadding * 2),
         }
 
-        size.y += (this.elementSpacing * this.input.length * scale);
+        size.y += (this.elementSpacing * this.input.length);
 
         for (let i = 0; i < this.input.length; i++) {
             const port = this.input[i];
-            const measurement = this.portTextStyle.measure(ctx, scale, port.getDisplayName());
+            const measurement = this.portTextStyle.measure(ctx, 1, port.getDisplayName());
             size.y += measurement.y;
             size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
         }
 
-        size.y += (this.elementSpacing * this.output.length * scale);
+        size.y += (this.elementSpacing * this.output.length);
 
         for (let i = 0; i < this.output.length; i++) {
             const port = this.output[i];
-            const measurement = this.portTextStyle.measure(ctx, scale, port.getDisplayName());
+            const measurement = this.portTextStyle.measure(ctx, 1, port.getDisplayName());
             size.y += measurement.y;
             size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
         }
 
-        size.y += (this.elementSpacing * this.widgets.length * scale);
+        size.y += (this.elementSpacing * this.widgets.length);
         for (let i = 0; i < this.widgets.length; i++) {
             const element = this.widgets[i];
             const eleSize = element.Size();
-            size.y += eleSize.y * scale
-            size.x = Math.max(size.x, (eleSize.x * scale) + (scaledPadding * 2))
+            size.y += eleSize.y
+            size.x = Math.max(size.x, (eleSize.x) + (scaledPadding * 2))
         }
+
+        size.x *= scale;
+        size.y *= scale;
 
         return {
             Position: position,
@@ -252,41 +248,25 @@ export class FlowNode {
         const box = this.calculateBounds(ctx, graphPosition, scale);
 
         // Background
-        const borderStyle = this.borderStyle.get(state);
-        if (borderStyle === undefined) {
+        const boxStyle = this.boxStyle.get(state);
+        if (boxStyle === undefined) {
             throw new Error("no registered border style for state: " + state)
         }
 
-        borderStyle.setupStyle(ctx, scale);
-        ctx.fillStyle = this.fillColor;
-        ctx.shadowColor = "black";
-        ctx.shadowBlur = 15 * scale;
-        ctx.beginPath();
-        ctx.roundRect(
-            box.Position.x,
-            box.Position.y,
-            box.Size.x,
-            box.Size.y,
-            borderStyle.getRadius(scale)
-        );
-        ctx.fill();
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-
-        ctx.textBaseline = 'middle';
+        boxStyle.Draw(ctx, box, scale);
 
         // Title
-        this.setupTitleStyle(ctx, scale);
-        const titleHeight = this.titleTextStyle.getSize() * scale;
-        ctx.fillText(
-            this.title,
-            box.Position.x + (box.Size.x / 2),
-            box.Position.y + scaledPadding + (titleHeight / 2)
-        );
+        ctx.textAlign = "center";
+        ctx.textBaseline = 'middle';
+        const titleSize = { x: 0, y: 0 };
+        this.title.getSize(ctx, scale, titleSize);
+        this.title.render(ctx, scale, {
+            x: box.Position.x + (box.Size.x / 2),
+            y: box.Position.y + scaledPadding + (titleSize.y / 2)
+        });
 
         // Input Ports 
-        let startY = box.Position.y + scaledPadding + titleHeight + scaledElementSpacing;
+        let startY = box.Position.y + scaledPadding + titleSize.y + scaledElementSpacing;
         const leftSide = box.Position.x + scaledPadding;
         ctx.textAlign = "left";
         for (let i = 0; i < this.input.length; i++) {

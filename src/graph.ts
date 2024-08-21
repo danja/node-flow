@@ -408,15 +408,30 @@ export class NodeFlowGraph {
     }
 
     render(): void {
+        performance.mark('Render_Background_Start');
         this.backgroundRenderer(this.ctx, this.position, this.scale);
+        performance.mark('Render_Background_End');
+        performance.measure('Render_Background', 'Render_Background_Start', 'Render_Background_End');
+
+        performance.mark('Render_Connections_Start');
         this.renderConnections();
+        performance.mark('Render_Connections_End');
+        performance.measure('Render_Connections', 'Render_Connections_Start', 'Render_Connections_End');
+        
+        performance.mark('Render_Nodes_Start');
         this.renderNodes();
+        performance.mark('Render_Nodes_End');
+        performance.measure('Render_Nodes', 'Render_Nodes_Start', 'Render_Nodes_End');
+        
+        performance.mark('Render_Conext_Start');
         if (this.openContextMenu !== null) {
             this.openContextMenu.Menu.render(this.ctx, {
                 x: this.position.x + (this.openContextMenu.Position.x * this.scale),
                 y: this.position.y + (this.openContextMenu.Position.y * this.scale),
             }, this.scale, this.mousePosition);
         }
+        performance.mark('Render_Context_End');
+        performance.measure('Render_Conext', 'Render_Conext_Start', 'Render_Context_End');
 
         window.requestAnimationFrame(this.render.bind(this));
     }

@@ -1,4 +1,4 @@
-import { TextStyle, TextStyleConfig } from "../textStyle";
+import { TextStyle, TextStyleConfig } from "../styles/text";
 import { Box } from '../types/box';
 import { CopyVector2, Vector2 } from "../types/vector2";
 import { Clamp01 } from "../utils/math";

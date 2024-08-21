@@ -1,9 +1,10 @@
 import { HexToColor } from "../utils/color";
-import { TextStyle, TextStyleConfig } from "../textStyle";
+import { TextStyleConfig } from "../styles/text";
 import { Box } from "../types/box";
 import { Vector2 } from "../types/vector2";
-import { borderRadius, height, width } from "./widget";
+import { height, width } from "./widget";
 import { Popup } from "../popup";
+import { TextBoxStyle } from '../styles/textBox';
 
 export interface ColorWidgetConfig {
     value?: string;
@@ -32,15 +33,26 @@ export class ColorWidget {
 
     private contrast: string;
 
-    private textStyle: TextStyle;
+    private textBoxStyle: TextBoxStyle;
 
     private callback?: (newColor: string) => void;
 
     constructor(config?: ColorWidgetConfig) {
         this.value = config?.value === undefined ? "#000000" : config?.value;
         this.contrast = contrastColor(this.value);
-        this.textStyle = new TextStyle(config?.textStyle);
+        this.textBoxStyle = new TextBoxStyle({
+            box: {
+                color: this.value,
+                border: {
+                    color: this.contrast
+                }
+            },
+            text: config?.textStyle
+        });
         this.callback = config?.callback;
+
+
+        this.textBoxStyle.setTextColor(this.contrast);
     }
 
     Size(): Vector2 {
@@ -50,11 +62,16 @@ export class ColorWidget {
     Set(value: string): void {
         this.value = value;
         this.contrast = contrastColor(this.value);
+
+        this.textBoxStyle.setBoxColor(this.value);
+        this.textBoxStyle.setBorderColor(this.contrast);
+        this.textBoxStyle.setTextColor(this.contrast);
+
         if (this.callback !== undefined) {
             this.callback(this.value);
         }
     }
-    
+
     ClickStart(): void {
     }
 
@@ -66,11 +83,11 @@ export class ColorWidget {
             options: ["Set", "Cancel"],
             content: () => {
                 const container = document.createElement('div');
-                
+
                 input = document.createElement('input')
                 input.type = "color";
                 input.value = this.value;
-                input.name="color"
+                input.name = "color"
                 container.append(input);
 
                 const label = document.createElement("label");
@@ -93,38 +110,16 @@ export class ColorWidget {
     }
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
-        const scaledWidth = width * scale;
-        const scaledHeight = height * scale;
-
-        ctx.fillStyle = this.value;
-        ctx.strokeStyle = this.contrast;
-        ctx.beginPath();
-        ctx.roundRect(
-            position.x,
-            position.y,
-            scaledWidth,
-            scaledHeight,
-            borderRadius * scale
-        );
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-        this.textStyle.setupStyle(ctx, scale);
-        ctx.fillStyle = this.contrast;
-        ctx.fillText(
-            this.value,
-            position.x + (scaledWidth / 2),
-            position.y + (scaledHeight / 2),
-        );
-
-        return {
+        const box = {
             Position: position,
             Size: {
-                x: scaledWidth,
-                y: scaledHeight
+                x: width * scale,
+                y: height * scale
             }
-        }
+        };
+
+        this.textBoxStyle.Draw(ctx, box, scale, this.value)
+
+        return box;
     }
 }

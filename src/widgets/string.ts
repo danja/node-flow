@@ -1,14 +1,14 @@
 import { Popup } from "../popup";
-import { TextStyle, TextStyleConfig } from "../textStyle";
+import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 import { Box } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { fitString } from "../utils/string";
-import { borderRadius, height, width } from "./widget";
+import { height, width } from "./widget";
 
 export interface StringWidgetConfig {
     value?: string;
 
-    textStyle?: TextStyleConfig;
+    textBoxStyle?: TextBoxStyleConfig;
 
     callback?: (newString: string) => void;
 }
@@ -17,13 +17,15 @@ export class StringWidget {
 
     private value: string;
 
-    private textStyle: TextStyle
+    private textBoxStyle: TextBoxStyle
 
     private callback?: (newString: string) => void;
 
     constructor(config?: StringWidgetConfig) {
         this.value = config?.value === undefined ? "" : config?.value;
-        this.textStyle = new TextStyle(config?.textStyle);
+        this.textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
+            box: { color: "#666666", }
+        }));
         this.callback = config?.callback;
     }
 
@@ -66,39 +68,16 @@ export class StringWidget {
     }
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
-        const scaledWidth = width * scale;
-        const scaledHeight = height * scale;
-
-        // Render background
-        ctx.fillStyle = "#666666";
-        ctx.beginPath();
-        ctx.roundRect(
-            position.x,
-            position.y,
-            scaledWidth,
-            scaledHeight,
-            borderRadius * scale
-        );
-        ctx.fill();
-
-        // Render Number
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-        // const size = this.textStyle.measure(ctx, scale, this.text);
-        this.textStyle.setupStyle(ctx, scale);
-        ctx.fillText(
-            fitString(ctx, this.value, scaledWidth - (20 * scale)),
-            position.x + (scaledWidth / 2),
-            position.y + (scaledHeight / 2),
-            scaledWidth - (20 * scale)
-        );
-
-        return {
+        const box = {
             Position: position,
             Size: {
-                x: scaledWidth,
-                y: scaledHeight
+                x: width * scale,
+                y: height * scale
             }
-        }
+        };
+
+        this.textBoxStyle.Draw(ctx, box, scale, fitString(ctx, this.value, box.Size.x - (20 * scale)))
+
+        return box;
     }
 }
