@@ -16,7 +16,7 @@ export class StrokeStyle {
     private color: string;
 
     constructor(config?: StrokeStyleConfig) {
-        this.size = config?.size === undefined ? 1 : config.size;
+        this.size = config?.size === undefined ? 0.5 : config.size;
         this.color = config?.color === undefined ? "black" : config.color;
     }
 

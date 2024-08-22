@@ -22,6 +22,8 @@ export interface SliderWidgetConfig {
     change?: (newValue: number) => void;
 
     release?: (newValue: number) => void;
+
+    snapIncrement?: number;
 }
 
 export class SliderWidget {
@@ -35,6 +37,8 @@ export class SliderWidget {
     private value: number;
 
     private text: string;
+
+    private snapIncrement?: number;
 
     // Callbacks ==============================================================
 
@@ -64,6 +68,7 @@ export class SliderWidget {
         this.value = config?.value === undefined ? 0 : config?.value;
         this.min = config?.min === undefined ? 0 : config?.min;
         this.max = config?.max === undefined ? 1 : config?.max;
+        this.snapIncrement = config?.snapIncrement;
 
         this.change = config?.change;
         this.release = config?.release;
@@ -154,7 +159,13 @@ export class SliderWidget {
                 const min = position.x;
                 const max = min + scaledWidth;
                 const p = Clamp01((this.lastMousePosition.x - min) / (max - min));
-                this.SetValue((p * (this.max - this.min)) + this.min);
+
+                let value = (p * (this.max - this.min)) + this.min;
+                if (this.snapIncrement !== undefined) {
+                    value = Math.round(value / this.snapIncrement) * this.snapIncrement;
+                }
+
+                this.SetValue(value);
             }
         }
 

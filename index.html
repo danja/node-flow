@@ -73,6 +73,12 @@
             position: { x: 650, y: 200 },
         });
         node3.addInput({ name: "test input 1", type: "test" })
+        node3.addWidget(new SliderWidget({
+            min: 0,
+            max: 10,
+            value: 7.5,
+            snapIncrement: .25
+        }))
 
         const graph = new NodeFlowGraph(canvas, {
             contextMenu: {
@@ -83,11 +89,27 @@
                 ],
                 subMenus: [
                     {
-                        name: "sub",
+                        name: "sub 1",
                         items: [
                             { name: "sub a" },
                             { name: "sub b" }
+                        ]
+                    },
+                    {
+                        name: "sub 2",
+                        items: [
+                            { name: "sub c" },
+                            { name: "sub d" }
                         ],
+                        subMenus: [
+                            {
+                                name: "sub 3",
+                                items: [
+                                    { name: "sub e" },
+                                    { name: "sub f" }
+                                ],
+                            }
+                        ]
                     }
                 ]
             },

@@ -25,7 +25,7 @@ export class BoxStyle {
     constructor(config?: BoxStyleConfig) {
         this.color = config?.color === undefined ? "#CCCCCC" : config.color;
         this.border = config?.border === undefined ? null : new StrokeStyle(config.border);
-        this.radius = config?.radius === undefined ? 15 : config.radius;
+        this.radius = config?.radius === undefined ? 2 : config.radius;
     }
 
     Draw(ctx: CanvasRenderingContext2D, box: Box, scale: number): void {

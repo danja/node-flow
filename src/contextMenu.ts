@@ -35,6 +35,7 @@ export interface ContextMenuConfig {
 
 interface ContextEntry {
     text: string;
+    subMenu?: ContextMenu;
 }
 
 export class ContextMenu {
@@ -72,6 +73,14 @@ export class ContextMenu {
 
     private calculateEntries(): void {
         this.entries = new Array<ContextEntry>();
+
+        for (let i = 0; i < this.subMenus.length; i++) {
+            this.entries.push({
+                text: this.subMenus[i].getName(),
+                subMenu: this.subMenus[i],
+            });
+        }
+
         for (let i = 0; i < this.items.length; i++) {
             this.entries.push({
                 text: this.items[i].getName(),
@@ -85,43 +94,93 @@ export class ContextMenu {
 
     private tempBox: Box = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
 
-    public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
-        const height = scale * 30;
-        const width = scale * 100;
+    private openSubMenu: ContextMenu | undefined;
 
-        // for (let i = 0; i < this.subMenus.length; i++) {
-        //     this.subMenus[i].render(ctx, { x: position.x + width, y: position.y + (height * this.entries.length) }, scale, mousePosition)
-        //     this.entries.push({
-        //         text: this.subMenus[i].getName(),
-        //     });
-        // }
+    private submenuPosition: Vector2;
+
+    public open(): void {
+        this.openSubMenu = undefined;
+        for (let i = 0; i < this.subMenus.length; i++) {
+            this.subMenus[i].open();
+        }
+    }
+
+    public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): boolean {
+        const height = scale * 30;
+        const width = scale * 200;
 
         this.tempBox.Size.x = width;
         this.tempBox.Size.y = height;
         this.tempBox.Position.x = position.x;
+        this.tempBox.Position.y = position.y;
 
-        ctx.textAlign = "center";
+        ctx.textAlign = "left";
+
+        ctx.fillStyle = "#CCCCCC";
+        ctx.beginPath();
+        ctx.rect(
+            position.x,
+            this.tempBox.Position.y,
+            width,
+            height * this.entries.length,
+        );
+        ctx.fill();
+
+        let mouseIsOver = false;
+        let subOpenedThisFrame = false;
 
         for (let i = 0; i < this.entries.length; i++) {
             this.tempBox.Position.y = position.y + (height * i);
 
+            let entryMousedOver = false;
             if (mousePosition !== undefined && InBox(this.tempBox, mousePosition)) {
-                ctx.fillStyle = "#AAAAFF";
-            } else {
-                ctx.fillStyle = "#CCCCCC";
+                mouseIsOver = true;
+                entryMousedOver = true
+                if (this.entries[i].subMenu !== undefined) {
+                    this.openSubMenu = this.entries[i].subMenu;
+                    this.submenuPosition = { x: position.x + width, y: this.tempBox.Position.y }
+                    subOpenedThisFrame = true;
+                } else {
+                    this.openSubMenu = undefined;
+                }
             }
-            ctx.beginPath();
-            ctx.rect(
-                position.x,
-                this.tempBox.Position.y,
-                width,
-                height,
-            );
-            ctx.fill();
+
+            if (entryMousedOver || (this.openSubMenu !== undefined && this.entries[i].subMenu === this.openSubMenu)) {
+                ctx.fillStyle = "#AAAAFF";
+                ctx.beginPath();
+                ctx.roundRect(
+                    position.x + (height / 10),
+                    this.tempBox.Position.y + (height / 10),
+                    width - (height / 5),
+                    height - (height / 5),
+                    5 * scale
+                );
+                ctx.fill();
+            }
 
             this.textStyle.setupStyle(ctx, scale);
-            ctx.fillText(this.entries[i].text, position.x + (width / 2), this.tempBox.Position.y + (height / 2))
-        }
-    }
+            ctx.fillText(this.entries[i].text, position.x + (height / 5), this.tempBox.Position.y + (height / 2))
 
+            // Render arrows
+            if (this.entries[i].subMenu !== undefined) {
+                ctx.beginPath()
+                ctx.strokeStyle = "black"
+                ctx.lineWidth = 1 * scale;
+                ctx.lineTo(position.x + width - (height / 3), this.tempBox.Position.y + (height / 3))
+                ctx.lineTo(position.x + width - (height / 5), this.tempBox.Position.y + (height / 2))
+                ctx.lineTo(position.x + width - (height / 3), this.tempBox.Position.y + height - (height / 3))
+                ctx.stroke();
+            }
+        }
+
+        if (this.openSubMenu !== undefined) {
+            if (this.openSubMenu.render(ctx, this.submenuPosition, scale, mousePosition)) {
+                mouseIsOver = true;
+            } else if (!subOpenedThisFrame) {
+                this.openSubMenu = undefined;
+            }
+        }
+
+        return mouseIsOver;
+    }
 }
