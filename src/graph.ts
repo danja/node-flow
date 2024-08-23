@@ -1,5 +1,5 @@
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./connection";
-import { ContextMenu, ContextMenuConfig } from "./contextMenu";
+import { ContextEntry, ContextMenu, ContextMenuConfig } from "./contextMenu";
 import { FlowNode, NodeIntersection, NodeState } from "./node";
 import { Port } from "./port";
 import { CopyVector2, Vector2 } from './types/vector2';
@@ -180,6 +180,8 @@ export class NodeFlowGraph {
 
     private openContextMenu: OpenContextMenu | null;
 
+    private contextMenuEntryHovering: ContextEntry | null;
+
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.nodes = [];
         this.scale = 1;
@@ -194,6 +196,7 @@ export class NodeFlowGraph {
         this.idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
         this.contextMenu = new ContextMenu(config?.contextMenu);
         this.openContextMenu = null;
+        this.contextMenuEntryHovering = null;
 
         this.canvas = canvas;
         const ctx = canvas.getContext("2d")
@@ -231,7 +234,11 @@ export class NodeFlowGraph {
 
             // Click start
             (mousePosition: Vector2) => {
+                if(this.contextMenuEntryHovering !== null) {
+                    this.contextMenuEntryHovering.click();
+                }
                 this.openContextMenu = null;
+                this.contextMenuEntryHovering = null;
                 this.mousePosition = mousePosition;
 
                 if (this.nodeHovering > -1) {
@@ -299,6 +306,7 @@ export class NodeFlowGraph {
 
     private clickEnd(): void {
         this.nodeSelected = -1;
+
 
         if (this.widgetCurrentlyClicking !== null) {
             this.widgetCurrentlyClicking.ClickEnd();
@@ -418,23 +426,27 @@ export class NodeFlowGraph {
         this.renderConnections();
         performance.mark('Render_Connections_End');
         performance.measure('Render_Connections', 'Render_Connections_Start', 'Render_Connections_End');
-        
+
         performance.mark('Render_Nodes_Start');
         this.renderNodes();
         performance.mark('Render_Nodes_End');
         performance.measure('Render_Nodes', 'Render_Nodes_Start', 'Render_Nodes_End');
-        
+
         performance.mark('Render_Conext_Start');
-        if (this.openContextMenu !== null) {
-            this.openContextMenu.Menu.render(this.ctx, {
-                x: this.position.x + (this.openContextMenu.Position.x * this.scale),
-                y: this.position.y + (this.openContextMenu.Position.y * this.scale),
-            }, this.scale, this.mousePosition);
-        }
+        this.renderContextMenu();
         performance.mark('Render_Context_End');
         performance.measure('Render_Conext', 'Render_Conext_Start', 'Render_Context_End');
 
         window.requestAnimationFrame(this.render.bind(this));
+    }
+
+    private renderContextMenu(): void {
+        if (this.openContextMenu !== null) {
+            this.contextMenuEntryHovering = this.openContextMenu.Menu.render(this.ctx, {
+                x: this.position.x + (this.openContextMenu.Position.x * this.scale),
+                y: this.position.y + (this.openContextMenu.Position.y * this.scale),
+            }, this.scale, this.mousePosition);
+        }
     }
 
     private renderConnections(): void {

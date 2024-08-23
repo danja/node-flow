@@ -24,6 +24,13 @@ export class ContextMenuItem {
     getName(): string {
         return this.name;
     }
+
+    execute(): void {
+        if(this.callback === undefined) {
+            return;
+        }
+        this.callback();
+    }
 }
 
 export interface ContextMenuConfig {
@@ -33,9 +40,15 @@ export interface ContextMenuConfig {
     textStyle?: TextStyleConfig;
 }
 
-interface ContextEntry {
-    text: string;
-    subMenu?: ContextMenu;
+export class ContextEntry {
+
+    constructor(public text: string, public subMenu: ContextMenu | undefined, public item: ContextMenuItem | undefined) {
+
+    }
+
+    click(): void {
+        this.item?.execute();
+    }
 }
 
 export class ContextMenu {
@@ -75,16 +88,19 @@ export class ContextMenu {
         this.entries = new Array<ContextEntry>();
 
         for (let i = 0; i < this.subMenus.length; i++) {
-            this.entries.push({
-                text: this.subMenus[i].getName(),
-                subMenu: this.subMenus[i],
-            });
+            this.entries.push(new ContextEntry(
+                this.subMenus[i].getName(),
+                this.subMenus[i],
+                undefined
+            ));
         }
 
         for (let i = 0; i < this.items.length; i++) {
-            this.entries.push({
-                text: this.items[i].getName(),
-            });
+            this.entries.push(new ContextEntry(
+                this.items[i].getName(),
+                undefined,
+                this.items[i]
+            ));
         }
     }
 
@@ -105,7 +121,7 @@ export class ContextMenu {
         }
     }
 
-    public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): boolean {
+    public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): ContextEntry | null {
         const height = scale * 30;
         const width = scale * 200;
 
@@ -117,16 +133,20 @@ export class ContextMenu {
         ctx.textAlign = "left";
 
         ctx.fillStyle = "#CCCCCC";
+        ctx.shadowColor = "#000000";
+        ctx.shadowBlur = 5 * scale;
         ctx.beginPath();
-        ctx.rect(
+        ctx.roundRect(
             position.x,
             this.tempBox.Position.y,
             width,
             height * this.entries.length,
+            5 * scale
         );
         ctx.fill();
+        ctx.shadowBlur = 0;
 
-        let mouseIsOver = false;
+        let mouseIsOver: ContextEntry | null = null;
         let subOpenedThisFrame = false;
 
         for (let i = 0; i < this.entries.length; i++) {
@@ -134,7 +154,7 @@ export class ContextMenu {
 
             let entryMousedOver = false;
             if (mousePosition !== undefined && InBox(this.tempBox, mousePosition)) {
-                mouseIsOver = true;
+                mouseIsOver = this.entries[i];
                 entryMousedOver = true
                 if (this.entries[i].subMenu !== undefined) {
                     this.openSubMenu = this.entries[i].subMenu;
@@ -166,16 +186,17 @@ export class ContextMenu {
                 ctx.beginPath()
                 ctx.strokeStyle = "black"
                 ctx.lineWidth = 1 * scale;
-                ctx.lineTo(position.x + width - (height / 3), this.tempBox.Position.y + (height / 3))
-                ctx.lineTo(position.x + width - (height / 5), this.tempBox.Position.y + (height / 2))
-                ctx.lineTo(position.x + width - (height / 3), this.tempBox.Position.y + height - (height / 3))
+                ctx.lineTo(position.x + width - (height / 2.5), this.tempBox.Position.y + (height / 3))
+                ctx.lineTo(position.x + width - (height / 4), this.tempBox.Position.y + (height / 2))
+                ctx.lineTo(position.x + width - (height / 2.5), this.tempBox.Position.y + height - (height / 3))
                 ctx.stroke();
             }
         }
 
         if (this.openSubMenu !== undefined) {
-            if (this.openSubMenu.render(ctx, this.submenuPosition, scale, mousePosition)) {
-                mouseIsOver = true;
+            const mouseOverSub = this.openSubMenu.render(ctx, this.submenuPosition, scale, mousePosition)
+            if (mouseOverSub !== null) {
+                mouseIsOver = mouseOverSub;
             } else if (!subOpenedThisFrame) {
                 this.openSubMenu = undefined;
             }

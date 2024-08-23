@@ -84,8 +84,8 @@
             contextMenu: {
                 name: "test",
                 items: [
-                    { name: "a" },
-                    { name: "b" }
+                    { name: "a", callback: () => { alert("a") } },
+                    { name: "b", callback: () => { alert("b") } }
                 ],
                 subMenus: [
                     {
@@ -105,7 +105,7 @@
                             {
                                 name: "sub 3",
                                 items: [
-                                    { name: "sub e" },
+                                    { name: "sub e", callback: () => { alert("e") } },
                                     { name: "sub f" }
                                 ],
                             }
