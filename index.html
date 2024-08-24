@@ -84,12 +84,20 @@
             contextMenu: {
                 name: "test",
                 items: [
-                    { name: "a", callback: () => { alert("a") } },
-                    { name: "b", callback: () => { alert("b") } }
+                    {
+                        name: "a",
+                        group: "test",
+                        callback: () => { alert("a") },
+                    },
+                    {
+                        name: "b",
+                        callback: () => { alert("b") }
+                    }
                 ],
                 subMenus: [
                     {
                         name: "sub 1",
+                        group: "test",
                         items: [
                             { name: "sub a" },
                             { name: "sub b" }

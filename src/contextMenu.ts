@@ -1,12 +1,28 @@
 import { TextStyle, TextStyleConfig } from './styles/text';
 import { Box, InBox } from './types/box';
+import { List } from './types/list';
 import { Vector2 } from './types/vector2';
+
+const contextEntryHeight = 30;
+const contextEntryWidth = 200;
 
 export interface ContextMenuItemConfig {
     name?: string;
-    callback?: () => void;
     textStyle?: TextStyleConfig;
+    group?: string;
+
+    callback?: () => void;
 }
+
+export interface ContextMenuConfig {
+    name?: string;
+    textStyle?: TextStyleConfig;
+    group?: string;
+
+    subMenus?: Array<ContextMenuConfig>;
+    items?: Array<ContextMenuItemConfig>;
+}
+
 
 export class ContextMenuItem {
     private name: string;
@@ -15,10 +31,13 @@ export class ContextMenuItem {
 
     private textStyle: TextStyle;
 
+    public group?: string;
+
     constructor(config?: ContextMenuItemConfig) {
         this.name = config?.name === undefined ? "item" : config.name;
         this.callback = config?.callback;
         this.textStyle = new TextStyle(config?.textStyle);
+        this.group = config?.group;
     }
 
     getName(): string {
@@ -26,18 +45,25 @@ export class ContextMenuItem {
     }
 
     execute(): void {
-        if(this.callback === undefined) {
+        if (this.callback === undefined) {
             return;
         }
         this.callback();
     }
 }
 
-export interface ContextMenuConfig {
-    name?: string;
-    subMenus?: Array<ContextMenuConfig>;
-    items?: Array<ContextMenuItemConfig>;
-    textStyle?: TextStyleConfig;
+class ContextGroup {
+
+    private calculatedHeight: number;
+
+    constructor(public entries: Array<ContextEntry>) {
+        this.calculatedHeight = entries.length * contextEntryHeight
+    }
+
+    height() {
+        return this.calculatedHeight;
+    }
+
 }
 
 export class ContextEntry {
@@ -61,13 +87,17 @@ export class ContextMenu {
 
     private textStyle: TextStyle;
 
-    private entries: Array<ContextEntry>;
+    private groups: List<ContextGroup>;
+
+    private group?: string;
 
     constructor(config?: ContextMenuConfig) {
+        this.groups = new List<ContextGroup>();
         this.name = config?.name === undefined ? "menu" : config?.name;
         this.items = new Array<ContextMenuItem>();
         this.subMenus = new Array<ContextMenu>();
         this.textStyle = new TextStyle(config?.textStyle);
+        this.group = config?.group;
 
         if (config?.subMenus !== undefined) {
             for (let i = 0; i < config?.subMenus.length; i++) {
@@ -85,23 +115,68 @@ export class ContextMenu {
     }
 
     private calculateEntries(): void {
-        this.entries = new Array<ContextEntry>();
+
+        const groupLUT = new Map<string, number>();
+        const workingGroups = new Array<Array<ContextEntry>>();
+
+        // Initialize first group for undefined entries
+        workingGroups.push(new Array<ContextEntry>());
+
+        for (let i = 0; i < this.items.length; i++) {
+            let group = 0; // index to undefined entries
+
+            // Find collection that this entry belongs too
+            const sub = this.items[i]
+            if (sub.group !== undefined) {
+                const groupIndex = groupLUT.get(sub.group)
+                if (groupIndex !== undefined) {
+                    group = groupIndex
+                } else {
+                    group = workingGroups.length
+                    groupLUT.set(sub.group, group)
+                    workingGroups.push(new Array<ContextEntry>());
+                }
+            }
+
+            workingGroups[group].push(new ContextEntry(
+                this.items[i].getName(),
+                undefined,
+                this.items[i]
+            ));
+        }
 
         for (let i = 0; i < this.subMenus.length; i++) {
-            this.entries.push(new ContextEntry(
+            let group = 0; // index to undefined entries
+
+            // Find collection that this entry belongs too
+            const sub = this.subMenus[i]
+            if (sub.group !== undefined) {
+                const groupIndex = groupLUT.get(sub.group)
+                if (groupIndex !== undefined) {
+                    group = groupIndex
+                } else {
+                    group = workingGroups.length
+                    groupLUT.set(sub.group, group)
+                    workingGroups.push(new Array<ContextEntry>());
+                }
+            }
+
+            workingGroups[group].push(new ContextEntry(
                 this.subMenus[i].getName(),
                 this.subMenus[i],
                 undefined
             ));
         }
 
-        for (let i = 0; i < this.items.length; i++) {
-            this.entries.push(new ContextEntry(
-                this.items[i].getName(),
-                undefined,
-                this.items[i]
-            ));
+        this.groups.Clear();
+        for (let i = 0; i < workingGroups.length; i++) {
+            const groupContent = workingGroups[i];
+            if (groupContent.length === 0) {
+                continue;
+            }
+            this.groups.Push(new ContextGroup(groupContent));
         }
+
     }
 
     getName(): string {
@@ -114,19 +189,18 @@ export class ContextMenu {
 
     private submenuPosition: Vector2;
 
-    public open(): void {
-        this.openSubMenu = undefined;
-        for (let i = 0; i < this.subMenus.length; i++) {
-            this.subMenus[i].open();
-        }
-    }
-
     public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): ContextEntry | null {
-        const height = scale * 30;
-        const width = scale * 200;
+        const scaledEntryHeight = scale * contextEntryHeight;
+        const scaledEntryWidth = scale * contextEntryWidth;
 
-        this.tempBox.Size.x = width;
-        this.tempBox.Size.y = height;
+        let totalScaledHeight = 0
+        for (let i = 0; i < this.groups.Count(); i++) {
+            totalScaledHeight += this.groups.At(i).height();
+        }
+        totalScaledHeight *= scale;
+
+        this.tempBox.Size.x = scaledEntryWidth;
+        this.tempBox.Size.y = scaledEntryHeight;
         this.tempBox.Position.x = position.x;
         this.tempBox.Position.y = position.y;
 
@@ -139,8 +213,8 @@ export class ContextMenu {
         ctx.roundRect(
             position.x,
             this.tempBox.Position.y,
-            width,
-            height * this.entries.length,
+            scaledEntryWidth,
+            totalScaledHeight,
             5 * scale
         );
         ctx.fill();
@@ -149,46 +223,66 @@ export class ContextMenu {
         let mouseIsOver: ContextEntry | null = null;
         let subOpenedThisFrame = false;
 
-        for (let i = 0; i < this.entries.length; i++) {
-            this.tempBox.Position.y = position.y + (height * i);
+        let optionsRendered = 0;
+        for (let groupIndex = 0; groupIndex < this.groups.Count(); groupIndex++) {
+            const group = this.groups.At(groupIndex);
+            for (let entryIndex = 0; entryIndex < group.entries.length; entryIndex++) {
+                const entry = group.entries[entryIndex];
 
-            let entryMousedOver = false;
-            if (mousePosition !== undefined && InBox(this.tempBox, mousePosition)) {
-                mouseIsOver = this.entries[i];
-                entryMousedOver = true
-                if (this.entries[i].subMenu !== undefined) {
-                    this.openSubMenu = this.entries[i].subMenu;
-                    this.submenuPosition = { x: position.x + width, y: this.tempBox.Position.y }
-                    subOpenedThisFrame = true;
-                } else {
-                    this.openSubMenu = undefined;
+                this.tempBox.Position.y = position.y + (scaledEntryHeight * optionsRendered);
+
+                let entryMousedOver = false;
+                if (mousePosition !== undefined && InBox(this.tempBox, mousePosition)) {
+                    mouseIsOver = entry;
+                    entryMousedOver = true
+                    if (entry.subMenu !== undefined) {
+                        this.openSubMenu = entry.subMenu;
+                        this.submenuPosition = { x: position.x + scaledEntryWidth, y: this.tempBox.Position.y }
+                        subOpenedThisFrame = true;
+                    } else {
+                        this.openSubMenu = undefined;
+                    }
                 }
+
+                if (entryMousedOver || (this.openSubMenu !== undefined && entry.subMenu === this.openSubMenu)) {
+                    ctx.fillStyle = "#AAAAFF";
+                    ctx.beginPath();
+                    ctx.roundRect(
+                        position.x + (scaledEntryHeight / 10),
+                        this.tempBox.Position.y + (scaledEntryHeight / 10),
+                        scaledEntryWidth - (scaledEntryHeight / 5),
+                        scaledEntryHeight - (scaledEntryHeight / 5),
+                        5 * scale
+                    );
+                    ctx.fill();
+                }
+
+                this.textStyle.setupStyle(ctx, scale);
+                ctx.fillText(entry.text, position.x + (scaledEntryHeight / 5), this.tempBox.Position.y + (scaledEntryHeight / 2))
+
+                // Render arrows
+                if (entry.subMenu !== undefined) {
+                    ctx.beginPath()
+                    ctx.strokeStyle = "black"
+                    ctx.lineWidth = 1 * scale;
+                    ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 2.5), this.tempBox.Position.y + (scaledEntryHeight / 3))
+                    ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 4), this.tempBox.Position.y + (scaledEntryHeight / 2))
+                    ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 2.5), this.tempBox.Position.y + scaledEntryHeight - (scaledEntryHeight / 3))
+                    ctx.stroke();
+                }
+
+                optionsRendered++;
             }
 
-            if (entryMousedOver || (this.openSubMenu !== undefined && this.entries[i].subMenu === this.openSubMenu)) {
-                ctx.fillStyle = "#AAAAFF";
-                ctx.beginPath();
-                ctx.roundRect(
-                    position.x + (height / 10),
-                    this.tempBox.Position.y + (height / 10),
-                    width - (height / 5),
-                    height - (height / 5),
-                    5 * scale
-                );
-                ctx.fill();
-            }
-
-            this.textStyle.setupStyle(ctx, scale);
-            ctx.fillText(this.entries[i].text, position.x + (height / 5), this.tempBox.Position.y + (height / 2))
-
-            // Render arrows
-            if (this.entries[i].subMenu !== undefined) {
-                ctx.beginPath()
+            // Draw a line seperating the groups
+            if (groupIndex !== this.groups.Count() - 1) {
                 ctx.strokeStyle = "black"
-                ctx.lineWidth = 1 * scale;
-                ctx.lineTo(position.x + width - (height / 2.5), this.tempBox.Position.y + (height / 3))
-                ctx.lineTo(position.x + width - (height / 4), this.tempBox.Position.y + (height / 2))
-                ctx.lineTo(position.x + width - (height / 2.5), this.tempBox.Position.y + height - (height / 3))
+                ctx.lineWidth = .5 * scale;
+                ctx.beginPath();
+                const startX = position.x + (scaledEntryHeight / 10);
+                const y = this.tempBox.Position.y + scaledEntryHeight
+                ctx.lineTo(startX, y);
+                ctx.lineTo(startX + scaledEntryWidth - (scaledEntryHeight / 5), y);
                 ctx.stroke();
             }
         }

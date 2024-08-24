@@ -284,7 +284,6 @@ export class NodeFlowGraph {
             this.clickEnd.bind(this),
 
             (position) => {
-                this.contextMenu.open();
                 this.openContextMenu = {
                     Menu: this.contextMenu,
                     Position: {
