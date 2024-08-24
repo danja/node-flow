@@ -24,9 +24,9 @@ function BuildConnectionRenderer(config: ConnectionRendererConfiguration | undef
 
     return DefaultConnectionRenderer(
         config?.size === undefined ? 2 : config.size,
-        config?.color === undefined ? "#00FF00" : config.color,
+        undefined, // config?.color === undefined ? "#00FF00" : config.color,
         config?.mouseOverSize === undefined ? 3 : config.mouseOverSize,
-        config?.mouseOverColor === undefined ? "#00FF22" : config.mouseOverColor
+        undefined, // config?.mouseOverColor === undefined ? "#00FF22" : config.mouseOverColor
     );
 }
 
@@ -234,7 +234,7 @@ export class NodeFlowGraph {
 
             // Click start
             (mousePosition: Vector2) => {
-                if(this.contextMenuEntryHovering !== null) {
+                if (this.contextMenuEntryHovering !== null) {
                     this.contextMenuEntryHovering.click();
                 }
                 this.openContextMenu = null;
@@ -306,7 +306,6 @@ export class NodeFlowGraph {
     private clickEnd(): void {
         this.nodeSelected = -1;
 
-
         if (this.widgetCurrentlyClicking !== null) {
             this.widgetCurrentlyClicking.ClickEnd();
             this.widgetCurrentlyClicking = null;
@@ -341,6 +340,18 @@ export class NodeFlowGraph {
 
         // Same with out. Can't connect output to output
         if (!this.portHovering.InputPort && conn.outPort() !== null) {
+            this.clearCurrentlySelectedConnection();
+            return;
+        }
+
+        // Different types, can't connect
+        if (this.portHovering.InputPort && this.portHovering.Port.getType() !== conn.outPort()?.getType()) {
+            this.clearCurrentlySelectedConnection();
+            return;
+        }
+
+        // Different types, can't connect
+        if (!this.portHovering.InputPort && this.portHovering.Port.getType() !== conn.inPort()?.getType()) {
             this.clearCurrentlySelectedConnection();
             return;
         }

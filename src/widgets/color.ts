@@ -20,7 +20,7 @@ function contrastColor(color: string): string {
         return "black";
     }
 
-    if ((c.r + c.g + c.b) / 3 > 128) {
+    if ((c.r + c.g + c.b) / 3 > 0.5) {
         return "black"
     }
 

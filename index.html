@@ -39,9 +39,9 @@
         resizeCanvas();
 
         const node1 = new FlowNode({ title: "Test Node 1" });
-        node1.addOutput({ name: "test out 1", type: "test" })
-        node1.addOutput({ name: "test out 2", type: "test" })
-        node1.addOutput({ name: "A super duper long name!!!", type: "test" })
+        node1.addOutput({ name: "test out 1", type: "string" })
+        node1.addOutput({ name: "test out 2", type: "int" })
+        node1.addOutput({ name: "A super duper long name!!!", type: "bool" })
         node1.addWidget(new ColorWidget({ value: "#000000" }));
         node1.addWidget(new NumberWidget({ value: 1.2345 }));
         node1.addWidget(new StringWidget({ value: "woo!" }));
@@ -65,14 +65,14 @@
             title: "Test Node 2 With a super long Title",
             position: { x: 300, y: 100 },
         });
-        node2.addInput({ name: "test input 1", type: "test" })
-        node2.addOutput({ name: "test out 1", type: "test" })
+        node2.addInput({ name: "test input 1", type: "string" })
+        node2.addOutput({ name: "test out 1", type: "int" })
 
         const node3 = new FlowNode({
             title: "Node 3",
             position: { x: 650, y: 200 },
         });
-        node3.addInput({ name: "test input 1", type: "test" })
+        node3.addInput({ name: "test input 1", type: "int" })
         node3.addWidget(new SliderWidget({
             min: 0,
             max: 10,

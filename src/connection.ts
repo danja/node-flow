@@ -3,30 +3,55 @@ import { Port } from "./port";
 import { BoxCenter, InBox } from "./types/box";
 import { Vector2 } from "./types/vector2";
 
-export type ConnectionRenderer = (ctx: CanvasRenderingContext2D, start: Vector2, end: Vector2, graphScale: number, mouseOver: boolean) => void
+export interface ConnectionRendererParams {
+    ctx: CanvasRenderingContext2D;
+    start: Vector2;
+    end: Vector2;
+    graphScale: number;
+    mouseOver: boolean;
 
-export function DefaultConnectionRenderer(connectionSize: number, connectionColor: string, mouseOverSize: number, mouseOverColor: string): ConnectionRenderer {
-    return (ctx: CanvasRenderingContext2D, start: Vector2, end: Vector2, graphScale: number, mouseOver: boolean) => {
+    inPort: Port | null;
+    outPort: Port | null;
+}
 
-        let lineSize = connectionSize * graphScale;
-        let color = connectionColor;
-        if (mouseOver) {
-            lineSize = mouseOverSize * graphScale;
-            color = mouseOverColor;
-            ctx.shadowColor = mouseOverColor;
-            ctx.shadowBlur = 15 * graphScale;
+export type ConnectionRenderer = (params: ConnectionRendererParams) => void
+
+export function DefaultConnectionRenderer(connectionSize: number, connectionColor: string | undefined, mouseOverSize: number, mouseOverColor: string | undefined): ConnectionRenderer {
+    return (params: ConnectionRendererParams) => {
+
+        let color = "#00FF00";
+        if (params.outPort !== null) {
+            color = params.outPort.filledStyleColor()
+        } else if (params.inPort !== null) {
+            color = params.inPort.filledStyleColor()
         }
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineSize;
+        let lineSize = connectionSize * params.graphScale;
+        if (connectionColor !== undefined) {
+            color = connectionColor;
+        }
+
+        if (params.mouseOver) {
+            lineSize = mouseOverSize * params.graphScale;
+            params.ctx.shadowBlur = 15 * params.graphScale;
+
+            if (mouseOverColor !== undefined) {
+                color = mouseOverColor;
+            }
+
+            params.ctx.shadowColor = color;
+        }
+
+        params.ctx.strokeStyle = color;
+        params.ctx.lineWidth = lineSize;
 
         // Draw
-        ctx.beginPath();
-        ctx.moveTo(start.x, start.y);
-        const midX = (start.x + end.x) / 2;
-        ctx.bezierCurveTo(midX, start.y, midX, end.y, end.x, end.y);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+        params.ctx.beginPath();
+        params.ctx.moveTo(params.start.x, params.start.y);
+        const midX = (params.start.x + params.end.x) / 2;
+        params.ctx.bezierCurveTo(midX, params.start.y, midX, params.end.y, params.end.x, params.end.y);
+        params.ctx.stroke();
+        params.ctx.shadowBlur = 0;
     }
 }
 
@@ -90,7 +115,16 @@ export class Connection {
             return;
         }
 
-        this.renderer(ctx, this.inPos, this.outPos, graphScale, mouseOver);
+        this.renderer({
+            ctx: ctx,
+            start: this.inPos,
+            end: this.outPos,
+            graphScale: graphScale,
+            mouseOver: mouseOver,
+
+            inPort: this.inPort(),
+            outPort: this.outPort(),
+        });
     }
 
     clearPort(mousePosition: Vector2): void {
