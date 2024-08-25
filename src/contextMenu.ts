@@ -4,7 +4,7 @@ import { List } from './types/list';
 import { Vector2 } from './types/vector2';
 
 const contextEntryHeight = 30;
-const contextEntryWidth = 200;
+const contextEntryWidth = 250;
 
 export interface ContextMenuItemConfig {
     name?: string;
@@ -67,14 +67,36 @@ class ContextGroup {
 }
 
 export class ContextEntry {
-
     constructor(public text: string, public subMenu: ContextMenu | undefined, public item: ContextMenuItem | undefined) {
-
     }
 
     click(): void {
         this.item?.execute();
     }
+}
+
+export function CombineContextMenus(...contextMenus: Array<ContextMenuConfig | undefined>): ContextMenuConfig {
+    const finalConfig: ContextMenuConfig = {
+        items: new Array<ContextMenuItemConfig>,
+        subMenus: new Array<ContextMenuConfig>,
+    }
+
+    for (let i = 0; i < contextMenus.length; i++) {
+        const config = contextMenus[i];
+        if (config === undefined) {
+            continue;
+        }
+
+        if (config.items !== undefined) {
+            finalConfig.items = finalConfig.items?.concat(config.items);
+        }
+
+        if (config.subMenus !== undefined) {
+            finalConfig.subMenus = finalConfig.subMenus?.concat(config.subMenus);
+        }
+    }
+
+    return finalConfig;
 }
 
 export class ContextMenu {
@@ -189,15 +211,16 @@ export class ContextMenu {
 
     private submenuPosition: Vector2;
 
-    public render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): ContextEntry | null {
-        const scaledEntryHeight = scale * contextEntryHeight;
-        const scaledEntryWidth = scale * contextEntryWidth;
+    public render(ctx: CanvasRenderingContext2D, position: Vector2, graphScale: number, mousePosition: Vector2 | undefined): ContextEntry | null {
+        const menuScale = 1.25;
+        const scaledEntryHeight = menuScale * contextEntryHeight;
+        const scaledEntryWidth = menuScale * contextEntryWidth;
 
         let totalScaledHeight = 0
         for (let i = 0; i < this.groups.Count(); i++) {
             totalScaledHeight += this.groups.At(i).height();
         }
-        totalScaledHeight *= scale;
+        totalScaledHeight *= menuScale;
 
         this.tempBox.Size.x = scaledEntryWidth;
         this.tempBox.Size.y = scaledEntryHeight;
@@ -208,14 +231,14 @@ export class ContextMenu {
 
         ctx.fillStyle = "#CCCCCC";
         ctx.shadowColor = "#000000";
-        ctx.shadowBlur = 5 * scale;
+        ctx.shadowBlur = 5 * menuScale;
         ctx.beginPath();
         ctx.roundRect(
             position.x,
             this.tempBox.Position.y,
             scaledEntryWidth,
             totalScaledHeight,
-            5 * scale
+            5 * menuScale
         );
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -252,19 +275,19 @@ export class ContextMenu {
                         this.tempBox.Position.y + (scaledEntryHeight / 10),
                         scaledEntryWidth - (scaledEntryHeight / 5),
                         scaledEntryHeight - (scaledEntryHeight / 5),
-                        5 * scale
+                        5 * menuScale
                     );
                     ctx.fill();
                 }
 
-                this.textStyle.setupStyle(ctx, scale);
+                this.textStyle.setupStyle(ctx, menuScale);
                 ctx.fillText(entry.text, position.x + (scaledEntryHeight / 5), this.tempBox.Position.y + (scaledEntryHeight / 2))
 
                 // Render arrows
                 if (entry.subMenu !== undefined) {
                     ctx.beginPath()
                     ctx.strokeStyle = "black"
-                    ctx.lineWidth = 1 * scale;
+                    ctx.lineWidth = 1 * menuScale;
                     ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 2.5), this.tempBox.Position.y + (scaledEntryHeight / 3))
                     ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 4), this.tempBox.Position.y + (scaledEntryHeight / 2))
                     ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 2.5), this.tempBox.Position.y + scaledEntryHeight - (scaledEntryHeight / 3))
@@ -277,7 +300,7 @@ export class ContextMenu {
             // Draw a line seperating the groups
             if (groupIndex !== this.groups.Count() - 1) {
                 ctx.strokeStyle = "black"
-                ctx.lineWidth = .5 * scale;
+                ctx.lineWidth = .5 * menuScale;
                 ctx.beginPath();
                 const startX = position.x + (scaledEntryHeight / 10);
                 const y = this.tempBox.Position.y + scaledEntryHeight
@@ -288,7 +311,7 @@ export class ContextMenu {
         }
 
         if (this.openSubMenu !== undefined) {
-            const mouseOverSub = this.openSubMenu.render(ctx, this.submenuPosition, scale, mousePosition)
+            const mouseOverSub = this.openSubMenu.render(ctx, this.submenuPosition, menuScale, mousePosition)
             if (mouseOverSub !== null) {
                 mouseIsOver = mouseOverSub;
             } else if (!subOpenedThisFrame) {

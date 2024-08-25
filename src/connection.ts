@@ -203,4 +203,16 @@ export class Connection {
         }
         return this.inNode.inputPort(this.inNodePortIndex);
     }
+
+    referencesNode(node: FlowNode): boolean {
+        if (this.inNode === node) {
+            return true;
+        }
+
+        if (this.outNode === node) {
+            return true;
+        }
+
+        return false;
+    }
 }

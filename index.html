@@ -70,7 +70,7 @@
 
         const node3 = new FlowNode({
             title: "Node 3",
-            position: { x: 650, y: 200 },
+            position: { x: 700, y: 200 },
         });
         node3.addInput({ name: "test input 1", type: "int" })
         node3.addWidget(new SliderWidget({
@@ -126,7 +126,7 @@
         graph.addNode(node2);
         graph.addNode(node3);
 
-        graph.connectNodes(node1, 1, node2, 0)
+        graph.connectNodes(node1, 0, node2, 0)
         graph.connectNodes(node2, 0, node3, 0)
 
     </script>

@@ -55,6 +55,8 @@ export class FlowNode {
 
     private widgets: Array<Widget>;
 
+    private locked: boolean;
+
     // Styling ================================================================
 
     private boxStyle: Map<NodeState, BoxStyle>;
@@ -73,6 +75,7 @@ export class FlowNode {
         this.input = new Array<Port>();
         this.output = new Array<Port>();
         this.widgets = new Array<Widget>();
+        this.locked = false;
         this.elementSpacing = 10;
         this.inputPortPositions = new List<Box>();
         this.outputPortPositions = new List<Box>();
@@ -111,13 +114,23 @@ export class FlowNode {
         });
     }
 
-   
+    public isLocked(): boolean {
+        return this.locked;
+    }
+
+    public lock(): void {
+        this.locked = true;
+    }
+
+    public unlock(): void {
+        this.locked = false;
+    }
 
     // private measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
     //     return this.titleTextStyle.measure(ctx, scale, this.title);
     // }
 
-    private calculateBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number): Box {
+    public calculateBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number): Box {
         const scaledPadding = this.padding;
         const position: Vector2 = {
             x: (this.position.x * scale) + graphPosition.x,
