@@ -1,3 +1,4 @@
+import { Clamp, Clamp01 } from './math';
 export interface Color {
     r: number, // 0 - 1
     g: number, // 0 - 1
@@ -82,6 +83,10 @@ export function HSV2RGB(hsv: HSV, out: Color): void {
             out.b = q;
             break;
     }
+
+    out.r = Clamp01(out.r)
+    out.g = Clamp01(out.g)
+    out.b = Clamp01(out.b)
 }
 
 export function RGB2HSV(rgb: Color, out: HSV): void {

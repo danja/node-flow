@@ -71,16 +71,70 @@
         const node3 = new FlowNode({
             title: "Node 3",
             position: { x: 700, y: 200 },
+            inputs: [
+                { name: "test input 1", type: "int" }
+            ],
+            outputs: [
+                { name: "float", type: "float32" }
+            ],
+            widgets: [
+                {
+                    type: "slider",
+                    config: {
+                        min: 0,
+                        max: 5,
+                        value: 2.5,
+                        snapIncrement: .25
+                    }
+                }
+            ]
         });
-        node3.addInput({ name: "test input 1", type: "int" })
-        node3.addWidget(new SliderWidget({
-            min: 0,
-            max: 10,
-            value: 7.5,
-            snapIncrement: .25
-        }))
 
         const graph = new NodeFlowGraph(canvas, {
+            nodes: {
+                publishers: {
+                    "example": {
+                        name: "Example",
+                        description: "Bunch of example nodes",
+                        version: "v1.0.0",
+                        nodes: {
+                            "widgets/slider": {
+                                title: "Slider Node",
+                                widgets: [
+                                    {
+                                        type: "slider",
+                                        config: {
+                                            value: 0.5,
+                                        }
+                                    }
+                                ],
+                                outputs: [
+                                    {
+                                        name: "out",
+                                        type: "float32"
+                                    }
+                                ]
+                            },
+                            "widgets/color": {
+                                title: "Color Node",
+                                widgets: [
+                                    {
+                                        type: "color",
+                                        config: {
+                                        }
+                                    }
+                                ],
+                                outputs: [
+                                    {
+                                        name: "out",
+                                        type: "color"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                },
+            },
             contextMenu: {
                 name: "test",
                 items: [

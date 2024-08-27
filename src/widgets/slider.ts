@@ -1,7 +1,7 @@
 import { TextStyle, TextStyleConfig } from "../styles/text";
 import { Box } from '../types/box';
 import { CopyVector2, Vector2 } from "../types/vector2";
-import { Clamp01 } from "../utils/math";
+import { Clamp, Clamp01 } from "../utils/math";
 import { borderRadius, height, width } from "./widget";
 
 export interface SliderWidgetConfig {
@@ -65,9 +65,10 @@ export class SliderWidget {
     private clicking: boolean;
 
     constructor(config?: SliderWidgetConfig) {
-        this.value = config?.value === undefined ? 0 : config?.value;
         this.min = config?.min === undefined ? 0 : config?.min;
         this.max = config?.max === undefined ? 1 : config?.max;
+        this.value = config?.value === undefined ? 0 : config?.value;
+        this.value = Clamp(this.value, this.min, this.max);
         this.snapIncrement = config?.snapIncrement;
 
         this.change = config?.change;
@@ -90,7 +91,8 @@ export class SliderWidget {
             return;
         }
 
-        this.value = newValue;
+        this.value = Clamp(newValue, this.min, this.max);
+
         this.text = this.value.toFixed(3);
         if (this.change !== undefined) {
             this.change(this.value);

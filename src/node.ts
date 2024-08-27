@@ -6,13 +6,27 @@ import { Widget } from './widgets/widget';
 import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
 import { Text } from "./types/text";
+import { GlobalWidgetFactory } from "./widgets/factory";
+
+export interface WidgetConfig {
+    type?: string,
+    config?: any
+}
 
 export interface FlowNodeConfiguration {
     position?: Vector2;
     title?: string;
+    locked?: boolean;
+
+    // Ports
+    inputs?: Array<PortConfig>;
+    outputs?: Array<PortConfig>;
 
     // Callbacks
     onSelect?: () => void;
+
+    // Widgets
+    widgets?: Array<WidgetConfig>;
 
     // Styling
     idleBorder?: BoxStyleConfig;
@@ -75,11 +89,11 @@ export class FlowNode {
         this.input = new Array<Port>();
         this.output = new Array<Port>();
         this.widgets = new Array<Widget>();
-        this.locked = false;
-        this.elementSpacing = 10;
         this.inputPortPositions = new List<Box>();
         this.outputPortPositions = new List<Box>();
         this.widgetPositions = new List<Box>();
+        this.elementSpacing = 10;
+        this.locked = config?.locked === undefined ? false : config.locked;
 
         this.position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.title = new Text(
@@ -112,6 +126,28 @@ export class FlowNode {
             font: config?.titleTextStyle?.font,
             weight: config?.titleTextStyle?.weight,
         });
+
+        if (config?.inputs !== undefined) {
+            for (let i = 0; i < config.inputs.length; i++) {
+                this.addInput(config.inputs[i]);
+            }
+        }
+
+        if (config?.outputs !== undefined) {
+            for (let i = 0; i < config.outputs.length; i++) {
+                this.addOutput(config.outputs[i]);
+            }
+        }
+
+        if (config?.widgets !== undefined) {
+            for (let i = 0; i < config.widgets.length; i++) {
+                const widget = config.widgets[i];
+                if (widget.type === undefined) {
+                    continue;
+                }
+                this.addWidget(GlobalWidgetFactory.create(widget.type, widget.config))
+            }
+        }
     }
 
     public isLocked(): boolean {

@@ -2,6 +2,8 @@ import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./con
 import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } from './contextMenu';
 import { MouseObserver } from "./input";
 import { FlowNode, NodeState } from "./node";
+import { NodeFactory, NodeFactoryConfig } from "./nodeFactory";
+import { TimeExecution } from "./performance";
 import { Port } from "./port";
 import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
@@ -44,6 +46,7 @@ export interface FlowNodeGraphConfiguration {
     backgroundColor?: string;
     idleConnection?: ConnectionRendererConfiguration
     contextMenu?: ContextMenuConfig
+    nodes?: NodeFactoryConfig
 }
 
 interface OpenContextMenu {
@@ -85,9 +88,11 @@ export class NodeFlowGraph {
 
     private widgetCurrentlyClicking: Widget | null;
 
-    private openContextMenu: OpenContextMenu | null;
+    private openedContextMenu: OpenContextMenu | null;
 
     private contextMenuEntryHovering: ContextEntry | null;
+
+    private nodeFactory: NodeFactory;
 
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.nodes = [];
@@ -101,6 +106,7 @@ export class NodeFlowGraph {
         this.position = { x: 0, y: 0 };
         this.connections = new Array<Connection>();
         this.idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
+        this.nodeFactory = new NodeFactory(config?.nodes);
 
         const contextMenuGroup = "graph-context-menu";
         this.contextMenuConfig = CombineContextMenus({
@@ -108,6 +114,9 @@ export class NodeFlowGraph {
                 {
                     name: "New Node",
                     group: contextMenuGroup,
+                    callback: () => {
+                        this.nodeFactory.openMenu();
+                    }
                 },
                 {
                     name: "Reset View",
@@ -117,7 +126,7 @@ export class NodeFlowGraph {
             ],
         }, config?.contextMenu);
 
-        this.openContextMenu = null;
+        this.openedContextMenu = null;
         this.contextMenuEntryHovering = null;
 
         this.canvas = canvas;
@@ -145,8 +154,6 @@ export class NodeFlowGraph {
         }, false);
 
         new MouseObserver(this.canvas,
-
-            // Mouse dragging something event
             this.mouseDragEvent.bind(this),
 
             // Mouse move event
@@ -154,111 +161,112 @@ export class NodeFlowGraph {
                 this.mousePosition = mousePosition;
             },
 
-            // Click start
-            (mousePosition: Vector2) => {
-                if (this.contextMenuEntryHovering !== null) {
-                    this.contextMenuEntryHovering.click();
-                }
-                this.openContextMenu = null;
-                this.contextMenuEntryHovering = null;
-                this.mousePosition = mousePosition;
-
-                if (this.nodeHovering > -1) {
-                    this.nodeSelected = this.nodeHovering;
-                }
-
-                if (this.widgetHovering !== null) {
-                    this.widgetHovering.ClickStart();
-                    this.widgetCurrentlyClicking = this.widgetHovering;
-                }
-
-                if (this.portHovering === null) {
-                    return
-                }
-
-                if (this.portHovering.InputPort) {
-                    for (let i = 0; i < this.connections.length; i++) {
-                        if (this.connections[i].inPort() === this.portHovering.Port) {
-                            this.connections[i].clearInput();
-                            this.connectionSelected = this.connections[i];
-                        }
-                    }
-                } else {
-                    let inNode: FlowNode | null = this.portHovering.Node
-                    let inNodeIndex = this.portHovering.Index
-                    let outNode: FlowNode | null = this.portHovering.Node
-                    let outNodeIndex = this.portHovering.Index
-
-                    if (this.portHovering.InputPort) {
-                        outNode = null;
-                        outNodeIndex = -1;
-                    } else {
-                        inNode = null;
-                        inNodeIndex = -1;
-                    }
-
-                    const connection = new Connection(inNode, inNodeIndex, outNode, outNodeIndex, this.idleConnectionRenderer);
-                    this.connectionSelected = connection;
-                    this.connections.push(connection);
-                }
-            },
-
+            this.clickStart.bind(this),
             this.clickEnd.bind(this),
-
-            (position) => {
-                let finalConfig = this.contextMenuConfig;
-
-                if (this.nodeHovering > -1) {
-                    const nodeToReview = this.nodeHovering;
-                    const group = "node-flow-graph-node-menu";
-
-                    let lockOption = {
-                        group: group,
-                        name: "Lock Node Position",
-                        callback: () => {
-                            this.lockNode(nodeToReview);
-                        }
-                    }
-                    if (this.nodes[nodeToReview].isLocked()) {
-                        lockOption = {
-                            group: group,
-                            name: "Unlock Node Position",
-                            callback: () => {
-                                this.unlockNode(nodeToReview);
-                            }
-                        }
-                    }
-
-                    finalConfig = CombineContextMenus(finalConfig, {
-                        items: [
-                            {
-                                group: group,
-                                name: "Delete Node",
-                                callback: () => {
-                                    this.removeNodeByIndex(nodeToReview);
-                                }
-                            },
-                            {
-                                group: group,
-                                name: "Clear Node Connections",
-                                callback: () => {
-                                    this.removeNodeConnections(nodeToReview);
-                                }
-                            },
-                            lockOption
-                        ]
-                    })
-                }
-
-                this.openContextMenu = {
-                    Menu: new ContextMenu(finalConfig),
-                    Position: {
-                        x: -(this.position.x / this.scale) + (position.x / this.scale),
-                        y: -(this.position.y / this.scale) + (position.y / this.scale),
-                    }
-                };
-            }
+            this.openContextMenu.bind(this)
         );
+    }
+
+    private clickStart(mousePosition: Vector2): void {
+        if (this.contextMenuEntryHovering !== null) {
+            this.contextMenuEntryHovering.click();
+        }
+        this.openedContextMenu = null;
+        this.contextMenuEntryHovering = null;
+        this.mousePosition = mousePosition;
+
+        if (this.nodeHovering > -1) {
+            this.nodeSelected = this.nodeHovering;
+        }
+
+        if (this.widgetHovering !== null) {
+            this.widgetHovering.ClickStart();
+            this.widgetCurrentlyClicking = this.widgetHovering;
+        }
+
+        if (this.portHovering === null) {
+            return
+        }
+
+        if (this.portHovering.InputPort) {
+            for (let i = 0; i < this.connections.length; i++) {
+                if (this.connections[i].inPort() === this.portHovering.Port) {
+                    this.connections[i].clearInput();
+                    this.connectionSelected = this.connections[i];
+                }
+            }
+        } else {
+            let inNode: FlowNode | null = this.portHovering.Node
+            let inNodeIndex = this.portHovering.Index
+            let outNode: FlowNode | null = this.portHovering.Node
+            let outNodeIndex = this.portHovering.Index
+
+            if (this.portHovering.InputPort) {
+                outNode = null;
+                outNodeIndex = -1;
+            } else {
+                inNode = null;
+                inNodeIndex = -1;
+            }
+
+            const connection = new Connection(inNode, inNodeIndex, outNode, outNodeIndex, this.idleConnectionRenderer);
+            this.connectionSelected = connection;
+            this.connections.push(connection);
+        }
+    }
+
+    private openContextMenu(position: Vector2): void {
+        let finalConfig = this.contextMenuConfig;
+
+        if (this.nodeHovering > -1) {
+            const nodeToReview = this.nodeHovering;
+            const group = "node-flow-graph-node-menu";
+
+            let lockOption = {
+                group: group,
+                name: "Lock Node Position",
+                callback: () => {
+                    this.lockNode(nodeToReview);
+                }
+            }
+            if (this.nodes[nodeToReview].isLocked()) {
+                lockOption = {
+                    group: group,
+                    name: "Unlock Node Position",
+                    callback: () => {
+                        this.unlockNode(nodeToReview);
+                    }
+                }
+            }
+
+            finalConfig = CombineContextMenus(finalConfig, {
+                items: [
+                    {
+                        group: group,
+                        name: "Delete Node",
+                        callback: () => {
+                            this.removeNodeByIndex(nodeToReview);
+                        }
+                    },
+                    {
+                        group: group,
+                        name: "Clear Node Connections",
+                        callback: () => {
+                            this.removeNodeConnections(nodeToReview);
+                        }
+                    },
+                    lockOption
+                ]
+            })
+        }
+
+        this.openedContextMenu = {
+            Menu: new ContextMenu(finalConfig),
+            Position: {
+                x: -(this.position.x / this.scale) + (position.x / this.scale),
+                y: -(this.position.y / this.scale) + (position.y / this.scale),
+            }
+        };
     }
 
     private resetView(): void {
@@ -421,11 +429,11 @@ export class NodeFlowGraph {
     }
 
     private removeConnectionByIndex(index: number): void {
+        this.connections[index].clearPorts();
         this.connections.splice(index, 1);
     }
 
     private removeConnection(connection: Connection): void {
-        connection.clearPorts();
         const index = this.connections.indexOf(connection);
         if (index > -1) {
             this.removeConnectionByIndex(index);
@@ -460,25 +468,10 @@ export class NodeFlowGraph {
     private render(): void {
         this.cursor = CursorStyle.Default;
 
-        performance.mark('Render_Background_Start');
-        this.backgroundRenderer(this.ctx, this.position, this.scale);
-        performance.mark('Render_Background_End');
-        performance.measure('Render_Background', 'Render_Background_Start', 'Render_Background_End');
-
-        performance.mark('Render_Connections_Start');
-        this.renderConnections();
-        performance.mark('Render_Connections_End');
-        performance.measure('Render_Connections', 'Render_Connections_Start', 'Render_Connections_End');
-
-        performance.mark('Render_Nodes_Start');
-        this.renderNodes();
-        performance.mark('Render_Nodes_End');
-        performance.measure('Render_Nodes', 'Render_Nodes_Start', 'Render_Nodes_End');
-
-        performance.mark('Render_Conext_Start');
-        this.renderContextMenu();
-        performance.mark('Render_Context_End');
-        performance.measure('Render_Conext', 'Render_Conext_Start', 'Render_Context_End');
+        TimeExecution("Render_Background", this.renderBackground.bind(this));
+        TimeExecution("Render_Connections", this.renderConnections.bind(this));
+        TimeExecution("Render_Nodes", this.renderNodes.bind(this));
+        TimeExecution("Render_Conext", this.renderContextMenu.bind(this));
 
         // Only update CSS style if things have changed
         // TODO: Does this actually have any measurable performance savings?
@@ -490,11 +483,15 @@ export class NodeFlowGraph {
         window.requestAnimationFrame(this.render.bind(this));
     }
 
+    private renderBackground(): void {
+        this.backgroundRenderer(this.ctx, this.position, this.scale);
+    }
+
     private renderContextMenu(): void {
-        if (this.openContextMenu !== null) {
-            this.contextMenuEntryHovering = this.openContextMenu.Menu.render(this.ctx, {
-                x: this.position.x + (this.openContextMenu.Position.x * this.scale),
-                y: this.position.y + (this.openContextMenu.Position.y * this.scale),
+        if (this.openedContextMenu !== null) {
+            this.contextMenuEntryHovering = this.openedContextMenu.Menu.render(this.ctx, {
+                x: this.position.x + (this.openedContextMenu.Position.x * this.scale),
+                y: this.position.y + (this.openedContextMenu.Position.y * this.scale),
             }, this.scale, this.mousePosition);
 
             if (this.contextMenuEntryHovering !== null) {

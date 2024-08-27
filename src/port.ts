@@ -25,7 +25,7 @@ function fallbackColor(type: string, s: number): string {
     }
 
     const mod = 24;
-    value = value % mod;
+    value = Math.round(value) % mod;
 
     const hsv: HSV = { h: (value / (mod - 1)) * 360, s: s, v: 1 };
     const color: Color = { r: 0, g: 0, b: 0 };
