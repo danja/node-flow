@@ -217,16 +217,16 @@ export class NodeFlowGraph {
             const group = "node-flow-graph-node-menu";
 
             let lockOption = {
-                group: group,
                 name: "Lock Node Position",
+                group: group,
                 callback: () => {
                     this.lockNode(nodeToReview);
                 }
             }
             if (this.nodes[nodeToReview].isLocked()) {
                 lockOption = {
-                    group: group,
                     name: "Unlock Node Position",
+                    group: group,
                     callback: () => {
                         this.unlockNode(nodeToReview);
                     }
@@ -236,15 +236,15 @@ export class NodeFlowGraph {
             finalConfig = CombineContextMenus(finalConfig, {
                 items: [
                     {
-                        group: group,
                         name: "Delete Node",
+                        group: group,
                         callback: () => {
                             this.removeNodeByIndex(nodeToReview);
                         }
                     },
                     {
-                        group: group,
                         name: "Clear Node Connections",
+                        group: group,
                         callback: () => {
                             this.removeNodeConnections(nodeToReview);
                         }
@@ -254,18 +254,20 @@ export class NodeFlowGraph {
             })
         }
 
+        const contextMenuPosition = {
+            x: -(this.position.x / this.scale) + (position.x / this.scale),
+            y: -(this.position.y / this.scale) + (position.y / this.scale),
+        }
+
         finalConfig = CombineContextMenus(finalConfig, {
             subMenus: [
-                this.nodeFactory.openMenu()
+                this.nodeFactory.openMenu(this, contextMenuPosition)
             ]
         })
 
         this.openedContextMenu = {
             Menu: new ContextMenu(finalConfig),
-            Position: {
-                x: -(this.position.x / this.scale) + (position.x / this.scale),
-                y: -(this.position.y / this.scale) + (position.y / this.scale),
-            }
+            Position: contextMenuPosition,
         };
     }
 

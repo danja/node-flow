@@ -1,9 +1,8 @@
 import { FlowNode } from "../node";
-import { Popup } from "../popup";
 import { Publisher, PublisherConfig } from "./publisher";
-import { HtmlFromString, CssToString } from '../utils/html';
 import { ContextMenuConfig } from "../contextMenu";
-import { contextMenuGroup } from "../graph";
+import { contextMenuGroup, NodeFlowGraph } from "../graph";
+import { Vector2 } from "../types/vector2";
 
 interface NodeFactoryPublishers {
     [name: string]: PublisherConfig
@@ -50,10 +49,10 @@ export class NodeFactory {
         return publisherIdentifier.create(nodeType);
     }
 
-    public openMenu(): ContextMenuConfig {
+    public openMenu(graph: NodeFlowGraph, position: Vector2): ContextMenuConfig {
         const menus: Array<ContextMenuConfig> = [];
         for (let [_, publisher] of this.registeredPublishers) {
-            menus.push(publisher.contextMenu())
+            menus.push(publisher.contextMenu(graph, position))
         }
         return {
             name: "New Node",

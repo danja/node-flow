@@ -1,5 +1,7 @@
 import { ContextMenuConfig, ContextMenuItemConfig } from "../contextMenu";
+import { NodeFlowGraph } from "../graph";
 import { FlowNode, FlowNodeConfiguration } from '../node';
+import { Vector2 } from "../types/vector2";
 
 interface PublisherNodes {
     [name: string]: FlowNodeConfiguration
@@ -44,17 +46,19 @@ export class Publisher {
         this.registeredNodes.set(nodeType, config);
     }
 
-    recurseBuildMenu(name: string, subMenu: Map<string, FlowNodeConfiguration>): ContextMenuConfig {
+    private recurseBuildMenu(graph: NodeFlowGraph, name: string, subMenu: Map<string, FlowNodeConfiguration>, position: Vector2): ContextMenuConfig {
         const items: Array<ContextMenuItemConfig> = [];
         const subMenus = new Map<string, Map<string, FlowNodeConfiguration>>();
 
-        for (let [key, node] of subMenu) {
+        for (let [key, nodeConfig] of subMenu) {
             const elements = key.split("/");
             if (elements.length === 1) {
                 items.push({
                     name: key,
                     callback: () => {
-                        console.log("creating: " + key)
+                        const node = new FlowNode(nodeConfig);
+                        node.setPosition(position);
+                        graph.addNode(node);
                     },
                 });
             } else {
@@ -64,13 +68,13 @@ export class Publisher {
 
                 const menu = subMenus.get(elements[0]);
                 elements.shift();
-                menu?.set(elements.join("/"), node)
+                menu?.set(elements.join("/"), nodeConfig)
             }
         }
 
         const menus: Array<ContextMenuConfig> = [];
         for (let [key, nodes] of subMenus) {
-            menus.push(this.recurseBuildMenu(key, nodes))
+            menus.push(this.recurseBuildMenu(graph, key, nodes, position))
         }
 
         return {
@@ -80,8 +84,8 @@ export class Publisher {
         }
     }
 
-    contextMenu(): ContextMenuConfig {
-        return this.recurseBuildMenu(this.name, this.registeredNodes);
+    contextMenu(graph: NodeFlowGraph, position: Vector2): ContextMenuConfig {
+        return this.recurseBuildMenu(graph, this.name, this.registeredNodes, position);
     }
 
     create(nodeType: string): FlowNode {

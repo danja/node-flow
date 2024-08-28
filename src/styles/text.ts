@@ -26,6 +26,7 @@ export function TextStyleFallback(input?: TextStyleConfig, fallback?: TextStyleC
 }
 
 export class TextStyle {
+
     private size: number;
 
     private color: string;

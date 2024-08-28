@@ -198,7 +198,23 @@ export class ContextMenu {
             }
             this.groups.Push(new ContextGroup(groupContent));
         }
+    }
 
+    private calculatedWidth: number = 0;
+
+    private getMaxWidthForText(ctx: CanvasRenderingContext2D, scale: number): number {
+        if (this.calculatedWidth > 0) {
+            return this.calculatedWidth;
+        }
+
+        for (let groupIndex = 0; groupIndex < this.groups.Count(); groupIndex++) {
+            const group = this.groups.At(groupIndex);
+            for (let entryIndex = 0; entryIndex < group.entries.length; entryIndex++) {
+                const vec = this.textStyle.measure(ctx, scale, group.entries[entryIndex].text);
+                this.calculatedWidth = Math.max(vec.x, this.calculatedWidth);
+            }
+        }
+        return this.calculatedWidth;
     }
 
     getName(): string {
@@ -214,7 +230,7 @@ export class ContextMenu {
     public render(ctx: CanvasRenderingContext2D, position: Vector2, graphScale: number, mousePosition: Vector2 | undefined): ContextEntry | null {
         const menuScale = 1.25;
         const scaledEntryHeight = menuScale * contextEntryHeight;
-        const scaledEntryWidth = menuScale * contextEntryWidth;
+        const scaledEntryWidth = menuScale * (this.getMaxWidthForText(ctx, menuScale) + 20); // contextEntryWidth;
 
         let totalScaledHeight = 0
         for (let i = 0; i < this.groups.Count(); i++) {

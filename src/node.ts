@@ -1,7 +1,7 @@
 import { Port, PortConfig } from "./port";
 import { FontWeight, TextStyle, TextStyleConfig, TextStyleFallback } from "./styles/text";
 import { Box, InBox } from "./types/box";
-import { Vector2 } from "./types/vector2";
+import { CopyVector2, Vector2 } from "./types/vector2";
 import { Widget } from './widgets/widget';
 import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
@@ -160,6 +160,10 @@ export class FlowNode {
 
     public unlock(): void {
         this.locked = false;
+    }
+
+    public setPosition(position: Vector2): void {
+        CopyVector2(this.position, position);
     }
 
     // private measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
