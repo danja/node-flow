@@ -3,7 +3,7 @@ export interface PopupConfig {
     options: Array<string>;
 
     onClose?: (button: string | null) => void;
-    content?: () => HTMLElement;
+    content?: () => Element;
     buttonCSS?: string;
 }
 
@@ -13,7 +13,7 @@ export class Popup {
 
     private options: Array<string>;
 
-    private content?: () => HTMLElement;
+    private content?: () => Element;
 
     private onClose?: (button: string | null) => void;
 

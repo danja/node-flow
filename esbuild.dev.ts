@@ -29,12 +29,12 @@ const buildOptsWeb: BuildOptions = {
   sourcemap: true,
   minify: true,
   treeShaking: true,
-  //   plugins: [
-  //     NodeModulesPolyfillPlugin(),
-  //     NodeGlobalsPolyfillPlugin({
-  //       process: true,
-  //     }),
-  //   ],
+  plugins: [
+    //     NodeModulesPolyfillPlugin(),
+    //     NodeGlobalsPolyfillPlugin({
+    //       process: true,
+    //     }),
+  ],
 };
 
 const serveOpts = {

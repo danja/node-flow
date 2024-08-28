@@ -2,7 +2,7 @@ import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./con
 import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } from './contextMenu';
 import { MouseObserver } from "./input";
 import { FlowNode, NodeState } from "./node";
-import { NodeFactory, NodeFactoryConfig } from "./nodeFactory";
+import { NodeFactory, NodeFactoryConfig } from "./nodes/factory";
 import { TimeExecution } from "./performance";
 import { Port } from "./port";
 import { CursorStyle } from "./styles/cursor";
@@ -33,6 +33,8 @@ function BuildConnectionRenderer(config: ConnectionRendererConfiguration | undef
         undefined, // config?.mouseOverColor === undefined ? "#00FF22" : config.mouseOverColor
     );
 }
+
+export const contextMenuGroup = "graph-context-menu";
 
 interface PortIntersection {
     Node: FlowNode;
@@ -108,16 +110,8 @@ export class NodeFlowGraph {
         this.idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
         this.nodeFactory = new NodeFactory(config?.nodes);
 
-        const contextMenuGroup = "graph-context-menu";
         this.contextMenuConfig = CombineContextMenus({
             items: [
-                {
-                    name: "New Node",
-                    group: contextMenuGroup,
-                    callback: () => {
-                        this.nodeFactory.openMenu();
-                    }
-                },
                 {
                     name: "Reset View",
                     group: contextMenuGroup,
@@ -259,6 +253,12 @@ export class NodeFlowGraph {
                 ]
             })
         }
+
+        finalConfig = CombineContextMenus(finalConfig, {
+            subMenus: [
+                this.nodeFactory.openMenu()
+            ]
+        })
 
         this.openedContextMenu = {
             Menu: new ContextMenu(finalConfig),

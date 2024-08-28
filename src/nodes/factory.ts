@@ -1,6 +1,9 @@
-import { FlowNode } from "./node";
-import { Popup } from "./popup";
+import { FlowNode } from "../node";
+import { Popup } from "../popup";
 import { Publisher, PublisherConfig } from "./publisher";
+import { HtmlFromString, CssToString } from '../utils/html';
+import { ContextMenuConfig } from "../contextMenu";
+import { contextMenuGroup } from "../graph";
 
 interface NodeFactoryPublishers {
     [name: string]: PublisherConfig
@@ -15,6 +18,12 @@ export class NodeFactory {
 
     constructor(config?: NodeFactoryConfig) {
         this.registeredPublishers = new Map<string, Publisher>();
+
+        if (config?.publishers !== undefined) {
+            for (let entry in config.publishers) {
+                this.addPublisher(entry, new Publisher(config.publishers[entry]));
+            }
+        }
     }
 
     public addPublisher(identifier: string, publisher: Publisher): void {
@@ -41,12 +50,15 @@ export class NodeFactory {
         return publisherIdentifier.create(nodeType);
     }
 
-    public openMenu(): void {
-        const popup = new Popup({
-            title: "Create Node",
-            options: []
-        });
-
-        popup.Show();
+    public openMenu(): ContextMenuConfig {
+        const menus: Array<ContextMenuConfig> = [];
+        for (let [_, publisher] of this.registeredPublishers) {
+            menus.push(publisher.contextMenu())
+        }
+        return {
+            name: "New Node",
+            group: contextMenuGroup,
+            subMenus: menus,
+        };
     }
 } 

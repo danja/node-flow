@@ -1,4 +1,5 @@
-import { Clamp, Clamp01 } from './math';
+import { Clamp01 } from './math';
+
 export interface Color {
     r: number, // 0 - 1
     g: number, // 0 - 1

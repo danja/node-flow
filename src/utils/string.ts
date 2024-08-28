@@ -29,3 +29,13 @@ export function fitString(ctx: CanvasRenderingContext2D, str: string, maxWidth: 
 
     return str.substring(0, index) + ellipsis;
 };
+
+// https://stackoverflow.com/a/18234317/4974261
+export function Format(str: string, ...args: Array<string>): string {
+    if (arguments.length) {
+        for (let key in args) {
+            str = str.replace(new RegExp("\\{" + key + "\\}", "gi"), args[key]);
+        }
+    }
+    return str;
+};
