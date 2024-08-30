@@ -1,4 +1,5 @@
-import { TextStyle, TextStyleConfig } from "../styles/text";
+import { Default } from "../default";
+import { TextStyle, TextStyleConfig, TextStyleFallback } from "../styles/text";
 import { Box } from '../types/box';
 import { CopyVector2, Vector2 } from "../types/vector2";
 import { Clamp, Clamp01 } from "../utils/math";
@@ -74,11 +75,12 @@ export class SliderWidget {
         this.change = config?.change;
         this.release = config?.release;
 
-        this.backgroundColor = config?.backgroundColor === undefined ? "#666666" : config?.backgroundColor;
-        this.fillColor = config?.fillColor === undefined ? "#AAAAAA" : config?.fillColor;
+        this.backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config?.backgroundColor;
+        this.fillColor = config?.fillColor === undefined ? Default.Node.Widget.Slider.FillColor : config?.fillColor;
         this.borderColor = config?.borderColor === undefined ? "black" : config?.borderColor;
-        this.textStyle = new TextStyle(config?.textStyle);
-
+        this.textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
+            color: Default.Node.Widget.FontColor,
+        }));
         this.lastMousePosition = { x: 0, y: 0 };
         this.clickStartMousePosition = { x: 0, y: 0 };
         this.clicking = false;

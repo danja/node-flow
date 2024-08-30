@@ -1,5 +1,6 @@
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./connection";
 import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } from './contextMenu';
+import { Default } from "./default";
 import { MouseObserver } from "./input";
 import { FlowNode, NodeState } from "./node";
 import { NodeFactory, NodeFactoryConfig } from "./nodes/factory";
@@ -32,6 +33,23 @@ function BuildConnectionRenderer(config: ConnectionRendererConfiguration | undef
         config?.mouseOverSize === undefined ? 3 : config.mouseOverSize,
         undefined, // config?.mouseOverColor === undefined ? "#00FF22" : config.mouseOverColor
     );
+}
+
+function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
+    return (context: CanvasRenderingContext2D, position: Vector2, scale: number) => {
+        context.fillStyle = backgroundColor;
+        context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        context.strokeStyle = "black";
+        const spacing = 100;
+        for (let x = 0; x < 10; x++) {
+            context.beginPath();
+            const xPos = x * spacing * scale;
+            context.moveTo(xPos + position.x, 0);
+            context.moveTo(xPos + position.x, 1000);
+            context.stroke();
+        }
+    }
 }
 
 export const contextMenuGroup = "graph-context-menu";
@@ -80,7 +98,9 @@ export class NodeFlowGraph {
 
     private nodeHovering: number;
 
-    private nodeSelected: number;
+    private nodeGrabbed: number;
+
+    private nodesSelected: Array<FlowNode>;
 
     private connectionSelected: Connection | null;
 
@@ -99,8 +119,11 @@ export class NodeFlowGraph {
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.nodes = [];
         this.scale = 1;
+        
         this.nodeHovering = -1;
-        this.nodeSelected = -1;
+        this.nodeGrabbed = -1;
+        this.nodesSelected = new Array<FlowNode>();
+
         this.connectionSelected = null;
         this.portHovering = null;
         this.widgetHovering = null;
@@ -133,11 +156,8 @@ export class NodeFlowGraph {
         if (config?.backgroundRenderer !== undefined) {
             this.backgroundRenderer = config?.backgroundRenderer
         } else {
-            const backgroundColor = config?.backgroundColor === undefined ? "#3b3b3b" : config.backgroundColor;
-            this.backgroundRenderer = (context: CanvasRenderingContext2D, position: Vector2, scale: number) => {
-                context.fillStyle = backgroundColor;
-                context.fillRect(0, 0, this.canvas.width, this.canvas.height);
-            }
+            const backgroundColor = config?.backgroundColor === undefined ? Default.Graph.BackgroundColor : config.backgroundColor;
+            this.backgroundRenderer = BuildBackgroundRenderer(backgroundColor);
         }
 
         window.requestAnimationFrame(this.render.bind(this));
@@ -170,8 +190,9 @@ export class NodeFlowGraph {
         this.mousePosition = mousePosition;
 
         if (this.nodeHovering > -1) {
-            this.nodeSelected = this.nodeHovering;
+            this.nodeGrabbed = this.nodeHovering;
         }
+        this.nodesSelected.push(this.nodes[this.nodeHovering]);
 
         if (this.widgetHovering !== null) {
             this.widgetHovering.ClickStart();
@@ -277,6 +298,12 @@ export class NodeFlowGraph {
         this.position.y = 0;
     }
 
+    private unselectAllNodes() {
+        for(let i = 0; i < this.nodes.length; i ++) {
+            this.nodes[i].unselect();
+        }
+    }
+
     // Somethings wrong here. Needs more testing
     // private fitView(): void {
     //     if (this.nodes.length === 0) {
@@ -305,7 +332,7 @@ export class NodeFlowGraph {
     }
 
     private clickEnd(): void {
-        this.nodeSelected = -1;
+        this.nodeGrabbed = -1;
 
         if (this.widgetCurrentlyClicking !== null) {
             this.widgetCurrentlyClicking.ClickEnd();
@@ -378,8 +405,8 @@ export class NodeFlowGraph {
     }
 
     private mouseDragEvent(delta: Vector2): void {
-        if (this.interactingWithNode() && !this.nodes[this.nodeSelected].isLocked()) {
-            this.nodes[this.nodeSelected].translate({
+        if (this.interactingWithNode() && !this.nodes[this.nodeGrabbed].isLocked()) {
+            this.nodes[this.nodeGrabbed].translate({
                 x: delta.x * (1 / this.scale),
                 y: delta.y * (1 / this.scale)
             });
@@ -394,7 +421,7 @@ export class NodeFlowGraph {
     }
 
     private interactingWithNode(): boolean {
-        return this.nodeSelected > -1;
+        return this.nodeGrabbed > -1;
     }
 
     private interactingWithConnection(): boolean {
@@ -544,8 +571,12 @@ export class NodeFlowGraph {
                 }
             }
 
-            if (i === this.nodeSelected) {
-                state = NodeState.Selected;
+            // if (i === this.nodeSelected) {
+            //     state = NodeState.Selected;
+            // }
+
+            if (i === this.nodeGrabbed) {
+                state = NodeState.Grabbed;
                 this.cursor = CursorStyle.Grabbing;
             }
 

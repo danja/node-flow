@@ -1,3 +1,4 @@
+import { Default } from "../default";
 import { Popup } from "../popup";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 import { Box } from '../types/box';
@@ -25,7 +26,8 @@ export class NumberWidget {
     constructor(config?: NumberWidgetConfig) {
         this.value = config?.value === undefined ? 0 : config?.value;
         this.textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
-            box: { color: "#666666", }
+            box: { color: Default.Node.Widget.BackgroundColor, },
+            text: { color: Default.Node.Widget.FontColor },
         }));
         this.callback = config?.callback;
 

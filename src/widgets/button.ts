@@ -1,3 +1,4 @@
+import { Default } from "../default";
 import { BoxStyle } from "../styles/box";
 import { TextStyle, TextStyleConfig } from "../styles/text";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
@@ -34,13 +35,16 @@ export class ButtonWidget {
         this.gettingClicked = false;
 
         this.idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleStyle, {
-            box: { color: "#666666", }
+            box: { color: Default.Node.Widget.BackgroundColor, },
+            text: { color: Default.Node.Widget.FontColor },
         }));
         this.hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.hoverStyle, {
-            box: { color: "#888888", }
+            box: { color: "#888888", },
+            text: { color: Default.Node.Widget.FontColor },
         }));
         this.clickStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.clickStyle, {
-            box: { color: "#CCCCCC", }
+            box: { color: "#CCCCCC", },
+            text: { color: Default.Node.Widget.FontColor },
         }))
     }
 

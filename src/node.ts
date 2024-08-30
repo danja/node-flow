@@ -7,6 +7,7 @@ import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
 import { Text } from "./types/text";
 import { GlobalWidgetFactory } from "./widgets/factory";
+import { Default } from "./default";
 
 export interface WidgetConfig {
     type?: string,
@@ -23,7 +24,10 @@ export interface FlowNodeConfiguration {
     outputs?: Array<PortConfig>;
 
     // Callbacks
+    onGrab?: () => void;
+    onRelease?: () => void;
     onSelect?: () => void;
+    onUnselect?: () => void;
 
     // Widgets
     widgets?: Array<WidgetConfig>;
@@ -31,7 +35,9 @@ export interface FlowNodeConfiguration {
     // Styling
     idleBorder?: BoxStyleConfig;
     mouseOverBorder?: BoxStyleConfig;
+    grabbedBorder?: BoxStyleConfig;
     selectedBorder?: BoxStyleConfig;
+
     titleTextStyle?: TextStyleConfig;
     portTextStyle?: TextStyleConfig;
     padding?: number;
@@ -40,7 +46,7 @@ export interface FlowNodeConfiguration {
 export enum NodeState {
     Idle,
     MouseOver,
-    Selected,
+    Grabbed
 }
 
 export interface NodeIntersection {
@@ -71,6 +77,12 @@ export class FlowNode {
 
     private locked: boolean;
 
+    // Callbacks
+
+    private onSelect?: () => void;
+
+    private onUnselect?: () => void;
+
     // Styling ================================================================
 
     private boxStyle: Map<NodeState, BoxStyle>;
@@ -81,8 +93,14 @@ export class FlowNode {
 
     private elementSpacing: number;
 
+    // Runtime ================================================================
+
+    private selected: boolean;
+
     private inputPortPositions: List<Box>;
+
     private outputPortPositions: List<Box>;
+
     private widgetPositions: List<Box>;
 
     constructor(config?: FlowNodeConfiguration) {
@@ -94,13 +112,17 @@ export class FlowNode {
         this.widgetPositions = new List<Box>();
         this.elementSpacing = 10;
         this.locked = config?.locked === undefined ? false : config.locked;
+        this.selected = false;
+        this.onSelect = config?.onSelect;
+        this.onUnselect = config?.onUnselect;
 
         this.position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.title = new Text(
             config?.title === undefined ? "" : config.title,
             TextStyleFallback(config?.titleTextStyle, {
                 size: 16,
-                weight: FontWeight.Bold
+                weight: FontWeight.Bold,
+                color: Default.Node.FontColor
             })
         );
 
@@ -109,20 +131,24 @@ export class FlowNode {
         this.boxStyle = new Map<NodeState, BoxStyle>();
         this.boxStyle.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
             border: { color: "#1c1c1c", size: 1, },
-            color: "#999999",
+            color: Default.Node.BackgroundColor,
         })));
         this.boxStyle.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
             border: { color: "#6e6e6e", size: 1.1, },
-            color: "#999999",
+            color: Default.Node.BackgroundColor,
         })));
-        this.boxStyle.set(NodeState.Selected, new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
-            border: { color: "white", size: 1, },
-            color: "#999999",
+        this.boxStyle.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
+            border: { color: "white", size: 2, },
+            color: Default.Node.BackgroundColor,
         })));
+        // this.boxStyle.set(NodeState.Selected, new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
+        //     border: { color: "white", size: 1, },
+        //     color: Default.Node.BackgroundColor,
+        // })));
 
         this.portTextStyle = new TextStyle({
             size: config?.portTextStyle?.size === undefined ? 14 : config?.portTextStyle?.size,
-            color: config?.portTextStyle?.color === undefined ? "black" : config?.portTextStyle?.color,
+            color: config?.portTextStyle?.color === undefined ? Default.Node.Port.FontColor : config?.portTextStyle?.color,
             font: config?.titleTextStyle?.font,
             weight: config?.titleTextStyle?.weight,
         });
@@ -147,6 +173,26 @@ export class FlowNode {
                 }
                 this.addWidget(GlobalWidgetFactory.create(widget.type, widget.config))
             }
+        }
+    }
+
+    public select(): void {
+        if (this.selected) {
+            return;
+        }
+        this.selected = true;
+        if (this.onSelect) {
+            this.onSelect();
+        }
+    }
+
+    public unselect(): void {
+        if (!this.selected) {
+            return;
+        }
+        this.selected = false;
+        if (this.onUnselect) {
+            this.onUnselect();
         }
     }
 

@@ -1,4 +1,5 @@
-import { TextStyle, TextStyleConfig } from "../styles/text";
+import { Default } from "../default";
+import { TextStyle, TextStyleConfig, TextStyleFallback } from '../styles/text';
 import { Box } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { borderRadius, height, width } from "./widget";
@@ -35,8 +36,10 @@ class ToggleStyle {
     private lightBlur?: number;
 
     constructor(config?: ToggleStyleConfig) {
-        this.textStyle = new TextStyle(config?.textStyle);
-        this.backgroundColor = config?.backgroundColor === undefined ? "#666666" : config.backgroundColor;
+        this.textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
+            color: Default.Node.Widget.FontColor,
+        }));
+        this.backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config.backgroundColor;
         this.lightColor = config?.lightColor === undefined ? "#222222" : config.lightColor;
         this.borderColor = config?.borderColor === undefined ? "black" : config.borderColor;
         this.lightBorderColor = config?.lightBorderColor === undefined ? "black" : config.lightBorderColor;
