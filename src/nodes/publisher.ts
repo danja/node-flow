@@ -16,20 +16,20 @@ export interface PublisherConfig {
 
 export class Publisher {
 
-    private name: string;
+    #name: string;
 
-    private description: string;
+    #description: string;
 
-    private version: string;
+    #version: string;
 
-    private registeredNodes: Map<string, FlowNodeConfiguration>
+    #registeredNodes: Map<string, FlowNodeConfiguration>
 
     constructor(config?: PublisherConfig) {
-        this.name = config?.name === undefined ? "Unknown" : config.name;
-        this.description = config?.description === undefined ? "" : config.description;
-        this.version = config?.version === undefined ? "v0.0.0" : config.version;
+        this.#name = config?.name === undefined ? "Unknown" : config.name;
+        this.#description = config?.description === undefined ? "" : config.description;
+        this.#version = config?.version === undefined ? "v0.0.0" : config.version;
 
-        this.registeredNodes = new Map<string, FlowNodeConfiguration>();
+        this.#registeredNodes = new Map<string, FlowNodeConfiguration>();
 
         if (config?.nodes !== undefined) {
             for (const nodeKey in config.nodes) {
@@ -39,14 +39,14 @@ export class Publisher {
     }
 
     nodes(): Map<string, FlowNodeConfiguration> {
-        return this.registeredNodes;
+        return this.#registeredNodes;
     }
 
     register(nodeType: string, config: FlowNodeConfiguration): void {
-        this.registeredNodes.set(nodeType, config);
+        this.#registeredNodes.set(nodeType, config);
     }
 
-    private recurseBuildMenu(graph: NodeFlowGraph, name: string, subMenu: Map<string, FlowNodeConfiguration>, position: Vector2): ContextMenuConfig {
+    #recurseBuildMenu(graph: NodeFlowGraph, name: string, subMenu: Map<string, FlowNodeConfiguration>, position: Vector2): ContextMenuConfig {
         const items: Array<ContextMenuItemConfig> = [];
         const subMenus = new Map<string, Map<string, FlowNodeConfiguration>>();
 
@@ -74,7 +74,7 @@ export class Publisher {
 
         const menus: Array<ContextMenuConfig> = [];
         for (let [key, nodes] of subMenus) {
-            menus.push(this.recurseBuildMenu(graph, key, nodes, position))
+            menus.push(this.#recurseBuildMenu(graph, key, nodes, position))
         }
 
         return {
@@ -85,11 +85,11 @@ export class Publisher {
     }
 
     contextMenu(graph: NodeFlowGraph, position: Vector2): ContextMenuConfig {
-        return this.recurseBuildMenu(graph, this.name, this.registeredNodes, position);
+        return this.#recurseBuildMenu(graph, this.#name, this.#registeredNodes, position);
     }
 
     create(nodeType: string): FlowNode {
-        const config = this.registeredNodes.get(nodeType)
+        const config = this.#registeredNodes.get(nodeType)
         if (config === undefined) {
             throw new Error("no builder registered for node: " + nodeType);
         }

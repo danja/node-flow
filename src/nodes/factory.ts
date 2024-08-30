@@ -13,10 +13,10 @@ export interface NodeFactoryConfig {
 }
 
 export class NodeFactory {
-    private registeredPublishers: Map<string, Publisher>
+    #registeredPublishers: Map<string, Publisher>
 
     constructor(config?: NodeFactoryConfig) {
-        this.registeredPublishers = new Map<string, Publisher>();
+        this.#registeredPublishers = new Map<string, Publisher>();
 
         if (config?.publishers !== undefined) {
             for (let entry in config.publishers) {
@@ -26,13 +26,13 @@ export class NodeFactory {
     }
 
     public addPublisher(identifier: string, publisher: Publisher): void {
-        this.registeredPublishers.set(identifier, publisher);
+        this.#registeredPublishers.set(identifier, publisher);
     }
 
     // I'm not even sure if I want this here? You can register on Publishers...
     // So why not just make people register with the publisher.
     // public register(publisher: string, nodeType: string, config: FlowNodeConfiguration): void {
-    //     const foundPublisher = this.registeredPublishers.get(publisher);
+    //     const foundPublisher = this.#registeredPublishers.get(publisher);
     //     if (foundPublisher === undefined) {
     //         console.error("no publisher registered with identifier:" + publisher);
     //         return;
@@ -42,7 +42,7 @@ export class NodeFactory {
     // }
 
     public create(publisher: string, nodeType: string): FlowNode {
-        const publisherIdentifier = this.registeredPublishers.get(publisher)
+        const publisherIdentifier = this.#registeredPublishers.get(publisher)
         if (publisherIdentifier === undefined) {
             throw new Error("no publisher registered with identifier: " + publisher);
         }
@@ -51,7 +51,7 @@ export class NodeFactory {
 
     public openMenu(graph: NodeFlowGraph, position: Vector2): ContextMenuConfig {
         const menus: Array<ContextMenuConfig> = [];
-        for (let [_, publisher] of this.registeredPublishers) {
+        for (let [_, publisher] of this.#registeredPublishers) {
             menus.push(publisher.contextMenu(graph, position))
         }
         return {

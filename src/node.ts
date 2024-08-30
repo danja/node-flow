@@ -65,59 +65,59 @@ export interface NodeIntersection {
 
 export class FlowNode {
 
-    private position: Vector2;
+    #position: Vector2;
 
-    private title: Text;
+    #title: Text;
 
-    private input: Array<Port>;
+    #input: Array<Port>;
 
-    private output: Array<Port>;
+    #output: Array<Port>;
 
-    private widgets: Array<Widget>;
+    #widgets: Array<Widget>;
 
-    private locked: boolean;
+    #locked: boolean;
 
     // Callbacks
 
-    private onSelect?: () => void;
+    #onSelect?: () => void;
 
-    private onUnselect?: () => void;
+    #onUnselect?: () => void;
 
     // Styling ================================================================
 
-    private boxStyle: Map<NodeState, BoxStyle>;
+    #boxStyle: Map<NodeState, BoxStyle>;
 
-    private padding: number;
+    #padding: number;
 
-    private portTextStyle: TextStyle;
+    #portTextStyle: TextStyle;
 
-    private elementSpacing: number;
+    #elementSpacing: number;
 
     // Runtime ================================================================
 
-    private selected: boolean;
+    #selected: boolean;
 
-    private inputPortPositions: List<Box>;
+    #inputPortPositions: List<Box>;
 
-    private outputPortPositions: List<Box>;
+    #outputPortPositions: List<Box>;
 
-    private widgetPositions: List<Box>;
+    #widgetPositions: List<Box>;
 
     constructor(config?: FlowNodeConfiguration) {
-        this.input = new Array<Port>();
-        this.output = new Array<Port>();
-        this.widgets = new Array<Widget>();
-        this.inputPortPositions = new List<Box>();
-        this.outputPortPositions = new List<Box>();
-        this.widgetPositions = new List<Box>();
-        this.elementSpacing = 10;
-        this.locked = config?.locked === undefined ? false : config.locked;
-        this.selected = false;
-        this.onSelect = config?.onSelect;
-        this.onUnselect = config?.onUnselect;
+        this.#input = new Array<Port>();
+        this.#output = new Array<Port>();
+        this.#widgets = new Array<Widget>();
+        this.#inputPortPositions = new List<Box>();
+        this.#outputPortPositions = new List<Box>();
+        this.#widgetPositions = new List<Box>();
+        this.#elementSpacing = 10;
+        this.#locked = config?.locked === undefined ? false : config.locked;
+        this.#selected = false;
+        this.#onSelect = config?.onSelect;
+        this.#onUnselect = config?.onUnselect;
 
-        this.position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
-        this.title = new Text(
+        this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
+        this.#title = new Text(
             config?.title === undefined ? "" : config.title,
             TextStyleFallback(config?.titleTextStyle, {
                 size: 16,
@@ -126,27 +126,27 @@ export class FlowNode {
             })
         );
 
-        this.padding = config?.padding === undefined ? 15 : config.padding;
+        this.#padding = config?.padding === undefined ? 15 : config.padding;
 
-        this.boxStyle = new Map<NodeState, BoxStyle>();
-        this.boxStyle.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
+        this.#boxStyle = new Map<NodeState, BoxStyle>();
+        this.#boxStyle.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
             border: { color: "#1c1c1c", size: 1, },
             color: Default.Node.BackgroundColor,
         })));
-        this.boxStyle.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
+        this.#boxStyle.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
             border: { color: "#6e6e6e", size: 1.1, },
             color: Default.Node.BackgroundColor,
         })));
-        this.boxStyle.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
+        this.#boxStyle.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
             border: { color: "white", size: 2, },
             color: Default.Node.BackgroundColor,
         })));
-        // this.boxStyle.set(NodeState.Selected, new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
+        // this.#boxStyle.set(NodeState.Selected, new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
         //     border: { color: "white", size: 1, },
         //     color: Default.Node.BackgroundColor,
         // })));
 
-        this.portTextStyle = new TextStyle({
+        this.#portTextStyle = new TextStyle({
             size: config?.portTextStyle?.size === undefined ? 14 : config?.portTextStyle?.size,
             color: config?.portTextStyle?.color === undefined ? Default.Node.Port.FontColor : config?.portTextStyle?.color,
             font: config?.titleTextStyle?.font,
@@ -177,81 +177,81 @@ export class FlowNode {
     }
 
     public select(): void {
-        if (this.selected) {
+        if (this.#selected) {
             return;
         }
-        this.selected = true;
-        if (this.onSelect) {
-            this.onSelect();
+        this.#selected = true;
+        if (this.#onSelect) {
+            this.#onSelect();
         }
     }
 
     public unselect(): void {
-        if (!this.selected) {
+        if (!this.#selected) {
             return;
         }
-        this.selected = false;
-        if (this.onUnselect) {
-            this.onUnselect();
+        this.#selected = false;
+        if (this.#onUnselect) {
+            this.#onUnselect();
         }
     }
 
     public isLocked(): boolean {
-        return this.locked;
+        return this.#locked;
     }
 
     public lock(): void {
-        this.locked = true;
+        this.#locked = true;
     }
 
     public unlock(): void {
-        this.locked = false;
+        this.#locked = false;
     }
 
     public setPosition(position: Vector2): void {
-        CopyVector2(this.position, position);
+        CopyVector2(this.#position, position);
     }
 
-    // private measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
-    //     return this.titleTextStyle.measure(ctx, scale, this.title);
+    // #measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
+    //     return this.#titleTextStyle.measure(ctx, scale, this.#title);
     // }
 
     public calculateBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number): Box {
-        const scaledPadding = this.padding;
+        const scaledPadding = this.#padding;
         const position: Vector2 = {
-            x: (this.position.x * scale) + graphPosition.x,
-            y: (this.position.y * scale) + graphPosition.y
+            x: (this.#position.x * scale) + graphPosition.x,
+            y: (this.#position.y * scale) + graphPosition.y
         }
 
         const scaledTitleMeasurement = { x: 0, y: 0 };
-        this.title.getSize(ctx, 1, scaledTitleMeasurement);
+        this.#title.getSize(ctx, 1, scaledTitleMeasurement);
 
         const size = {
             x: scaledTitleMeasurement.x + (scaledPadding * 2),
             y: scaledTitleMeasurement.y + (scaledPadding * 2),
         }
 
-        size.y += (this.elementSpacing * this.input.length);
+        size.y += (this.#elementSpacing * this.#input.length);
 
-        for (let i = 0; i < this.input.length; i++) {
-            const port = this.input[i];
-            const measurement = this.portTextStyle.measure(ctx, 1, port.getDisplayName());
+        for (let i = 0; i < this.#input.length; i++) {
+            const port = this.#input[i];
+            const measurement = this.#portTextStyle.measure(ctx, 1, port.getDisplayName());
             size.y += measurement.y;
             size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
         }
 
-        size.y += (this.elementSpacing * this.output.length);
+        size.y += (this.#elementSpacing * this.#output.length);
 
-        for (let i = 0; i < this.output.length; i++) {
-            const port = this.output[i];
-            const measurement = this.portTextStyle.measure(ctx, 1, port.getDisplayName());
+        for (let i = 0; i < this.#output.length; i++) {
+            const port = this.#output[i];
+            const measurement = this.#portTextStyle.measure(ctx, 1, port.getDisplayName());
             size.y += measurement.y;
             size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
         }
 
-        size.y += (this.elementSpacing * this.widgets.length);
-        for (let i = 0; i < this.widgets.length; i++) {
-            const element = this.widgets[i];
+        size.y += (this.#elementSpacing * this.#widgets.length);
+        for (let i = 0; i < this.#widgets.length; i++) {
+            const element = this.#widgets[i];
             const eleSize = element.Size();
             size.y += eleSize.y
             size.x = Math.max(size.x, (eleSize.x) + (scaledPadding * 2))
@@ -267,20 +267,20 @@ export class FlowNode {
     }
 
     addInput(port: PortConfig): void {
-        this.input.push(new Port(port));
+        this.#input.push(new Port(port));
     }
 
     addOutput(port: PortConfig): void {
-        this.output.push(new Port(port));
+        this.#output.push(new Port(port));
     }
 
     addWidget(widget: Widget): void {
-        this.widgets.push(widget);
+        this.#widgets.push(widget);
     }
 
     translate(delta: Vector2): void {
-        this.position.x += delta.x;
-        this.position.y += delta.y;
+        this.#position.x += delta.x;
+        this.#position.y += delta.y;
     }
 
     inBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, position: Vector2): NodeIntersection {
@@ -292,29 +292,29 @@ export class FlowNode {
             intersection.Node = this;
         }
 
-        for (let i = 0; i < this.inputPortPositions.Count(); i++) {
-            if (InBox(this.inputPortPositions.At(i), position)) {
+        for (let i = 0; i < this.#inputPortPositions.Count(); i++) {
+            if (InBox(this.#inputPortPositions.At(i), position)) {
                 intersection.Node = this;
                 intersection.PortIndex = i;
                 intersection.PortIsInput = true;
-                intersection.Port = this.input[i]
+                intersection.Port = this.#input[i]
             }
         }
 
-        for (let i = 0; i < this.outputPortPositions.Count(); i++) {
-            if (InBox(this.outputPortPositions.At(i), position)) {
+        for (let i = 0; i < this.#outputPortPositions.Count(); i++) {
+            if (InBox(this.#outputPortPositions.At(i), position)) {
                 intersection.Node = this;
                 intersection.PortIndex = i;
                 intersection.PortIsInput = false;
-                intersection.Port = this.output[i];
+                intersection.Port = this.#output[i];
             }
         }
 
-        for (let i = 0; i < this.widgetPositions.Count(); i++) {
-            if (InBox(this.widgetPositions.At(i), position)) {
+        for (let i = 0; i < this.#widgetPositions.Count(); i++) {
+            if (InBox(this.#widgetPositions.At(i), position)) {
                 intersection.Node = this;
                 intersection.WidgetIndex = i;
-                intersection.Widget = this.widgets[i];
+                intersection.Widget = this.#widgets[i];
             }
         }
 
@@ -322,32 +322,32 @@ export class FlowNode {
     }
 
     inputPortPosition(index: number): Box {
-        return this.inputPortPositions.At(index);
+        return this.#inputPortPositions.At(index);
     }
 
     inputPort(index: number): Port {
-        return this.input[index];
+        return this.#input[index];
     }
 
     outputPortPosition(index: number): Box {
-        return this.outputPortPositions.At(index);
+        return this.#outputPortPositions.At(index);
     }
 
     outputPort(index: number): Port {
-        return this.output[index];
+        return this.#output[index];
     }
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
-        this.inputPortPositions.Clear();
-        this.outputPortPositions.Clear();
-        this.widgetPositions.Clear();
-        const scaledPadding = this.padding * scale;
-        const scaledElementSpacing = this.elementSpacing * scale;
+        this.#inputPortPositions.Clear();
+        this.#outputPortPositions.Clear();
+        this.#widgetPositions.Clear();
+        const scaledPadding = this.#padding * scale;
+        const scaledElementSpacing = this.#elementSpacing * scale;
 
         const box = this.calculateBounds(ctx, graphPosition, scale);
 
         // Background
-        const boxStyle = this.boxStyle.get(state);
+        const boxStyle = this.#boxStyle.get(state);
         if (boxStyle === undefined) {
             throw new Error("no registered border style for state: " + state)
         }
@@ -358,8 +358,8 @@ export class FlowNode {
         ctx.textAlign = "center";
         ctx.textBaseline = 'middle';
         const titleSize = { x: 0, y: 0 };
-        this.title.getSize(ctx, scale, titleSize);
-        this.title.render(ctx, scale, {
+        this.#title.getSize(ctx, scale, titleSize);
+        this.#title.render(ctx, scale, {
             x: box.Position.x + (box.Size.x / 2),
             y: box.Position.y + scaledPadding + (titleSize.y / 2)
         });
@@ -368,17 +368,17 @@ export class FlowNode {
         let startY = box.Position.y + scaledPadding + titleSize.y + scaledElementSpacing;
         const leftSide = box.Position.x + scaledPadding;
         ctx.textAlign = "left";
-        for (let i = 0; i < this.input.length; i++) {
-            const port = this.input[i];
-            const measurement = this.portTextStyle.measure(ctx, scale, port.getDisplayName());
+        for (let i = 0; i < this.#input.length; i++) {
+            const port = this.#input[i];
+            const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
             const position = { x: box.Position.x, y: startY + (measurement.y / 2) }
 
             // Text
-            this.portTextStyle.setupStyle(ctx, scale);
+            this.#portTextStyle.setupStyle(ctx, scale);
             ctx.fillText(port.getDisplayName(), leftSide, position.y);
 
             // Port
-            this.inputPortPositions.Push(port.render(ctx, position, scale));
+            this.#inputPortPositions.Push(port.render(ctx, position, scale));
 
             startY += measurement.y + scaledElementSpacing;
         }
@@ -386,30 +386,30 @@ export class FlowNode {
         // Output Ports 
         const rightSide = box.Position.x + box.Size.x;
         ctx.textAlign = "right";
-        for (let i = 0; i < this.output.length; i++) {
-            const port = this.output[i];
-            const measurement = this.portTextStyle.measure(ctx, scale, port.getDisplayName());
+        for (let i = 0; i < this.#output.length; i++) {
+            const port = this.#output[i];
+            const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
             const position = { x: rightSide, y: startY + (measurement.y / 2) };
 
             // Text
-            this.portTextStyle.setupStyle(ctx, scale);
+            this.#portTextStyle.setupStyle(ctx, scale);
             ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
 
             // Port
-            this.outputPortPositions.Push(port.render(ctx, position, scale));
+            this.#outputPortPositions.Push(port.render(ctx, position, scale));
 
             startY += measurement.y + scaledElementSpacing;
         }
 
-        for (let i = 0; i < this.widgets.length; i++) {
-            const widget = this.widgets[i];
+        for (let i = 0; i < this.#widgets.length; i++) {
+            const widget = this.#widgets[i];
             const widgetSize = widget.Size();
             const scaledWidgetWidth = widgetSize.x * scale;
             const position = {
                 x: box.Position.x + ((box.Size.x - scaledWidgetWidth) / 2),
                 y: startY
             };
-            this.widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));
+            this.#widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));
             startY += (widgetSize.y * scale) + scaledElementSpacing;
         }
     }

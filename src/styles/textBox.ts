@@ -22,28 +22,28 @@ export function TextBoxStyleWithFallback(input?: TextBoxStyleConfig, fallback?: 
 }
 
 export class TextBoxStyle {
-    private box: BoxStyle;
+    #box: BoxStyle;
 
-    private text: TextStyle;
+    #text: TextStyle;
 
-    private textAlign: CanvasTextAlign;
+    #textAlign: CanvasTextAlign;
 
-    private textBaseline: CanvasTextBaseline;
+    #textBaseline: CanvasTextBaseline;
 
     constructor(config?: TextBoxStyleConfig) {
-        this.box = new BoxStyle(config?.box);
-        this.text = new TextStyle(config?.text);
+        this.#box = new BoxStyle(config?.box);
+        this.#text = new TextStyle(config?.text);
 
-        this.textAlign = config?.textAlign === undefined ? "center" : config.textAlign;
-        this.textBaseline = config?.textBaseline === undefined ? "middle" : config.textBaseline;
+        this.#textAlign = config?.textAlign === undefined ? "center" : config.textAlign;
+        this.#textBaseline = config?.textBaseline === undefined ? "middle" : config.textBaseline;
     }
 
     Draw(ctx: CanvasRenderingContext2D, box: Box, scale: number, text: string) {
-        this.box.Draw(ctx, box, scale);
+        this.#box.Draw(ctx, box, scale);
 
-        ctx.textAlign = this.textAlign;
-        ctx.textBaseline = this.textBaseline;
-        this.text.setupStyle(ctx, scale);
+        ctx.textAlign = this.#textAlign;
+        ctx.textBaseline = this.#textBaseline;
+        this.#text.setupStyle(ctx, scale);
 
         ctx.fillText(
             text,
@@ -53,14 +53,14 @@ export class TextBoxStyle {
     }
 
     setTextColor(color: string): void {
-        this.text.setColor(color);
+        this.#text.setColor(color);
     }
 
     setBoxColor(color: string): void {
-        this.box.setColor(color);
+        this.#box.setColor(color);
     }
 
     setBorderColor(color: string): void {
-        this.box.setBorderColor(color);
+        this.#box.setBorderColor(color);
     }
 }

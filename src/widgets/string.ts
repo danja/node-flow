@@ -16,19 +16,19 @@ export interface StringWidgetConfig {
 
 export class StringWidget {
 
-    private value: string;
+    #value: string;
 
-    private textBoxStyle: TextBoxStyle
+    #textBoxStyle: TextBoxStyle
 
-    private callback?: (newString: string) => void;
+    #callback?: (newString: string) => void;
 
     constructor(config?: StringWidgetConfig) {
-        this.value = config?.value === undefined ? "" : config?.value;
-        this.textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
+        this.#value = config?.value === undefined ? "" : config?.value;
+        this.#textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
             box: { color: Default.Node.Widget.BackgroundColor, },
             text: { color: Default.Node.Widget.FontColor },
         }));
-        this.callback = config?.callback;
+        this.#callback = config?.callback;
     }
 
     Size(): Vector2 {
@@ -36,9 +36,9 @@ export class StringWidget {
     }
 
     Set(value: string): void {
-        this.value = value;
-        if (this.callback !== undefined) {
-            this.callback(this.value);
+        this.#value = value;
+        if (this.#callback !== undefined) {
+            this.#callback(this.#value);
         }
     }
 
@@ -54,7 +54,7 @@ export class StringWidget {
             content: () => {
                 const container = document.createElement('div');
                 input = document.createElement('input')
-                input.value = this.value;
+                input.value = this.#value;
                 container.append(input);
                 return container;
             },
@@ -78,7 +78,7 @@ export class StringWidget {
             }
         };
 
-        this.textBoxStyle.Draw(ctx, box, scale, fitString(ctx, this.value, box.Size.x - (20 * scale)))
+        this.#textBoxStyle.Draw(ctx, box, scale, fitString(ctx, this.#value, box.Size.x - (20 * scale)))
 
         return box;
     }

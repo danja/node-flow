@@ -59,25 +59,38 @@ export class Connection {
 
     // Variables for holding temp data, preventing object allocations each
     // frame
-    private inPos: Vector2;
-    private outPos: Vector2;
+    #inPos: Vector2;
+    #outPos: Vector2;
+
+    #inNode: FlowNode | null;
+    #inNodePortIndex: number;
+    #outNode: FlowNode | null;
+    #outNodePortIndex: number;
+    #renderer: ConnectionRenderer;
 
     constructor(
-        private inNode: FlowNode | null,
-        private inNodePortIndex: number,
-        private outNode: FlowNode | null,
-        private outNodePortIndex: number,
-        private renderer: ConnectionRenderer,
+        inNode: FlowNode | null,
+        inNodePortIndex: number,
+        outNode: FlowNode | null,
+        outNodePortIndex: number,
+        renderer: ConnectionRenderer,
     ) {
-        this.inPos = { x: 0, y: 0 };
-        this.outPos = { x: 0, y: 0 };
+
+        this.#inNode = inNode;
+        this.#inNodePortIndex = inNodePortIndex;
+        this.#outNode = outNode;
+        this.#outNodePortIndex = outNodePortIndex;
+        this.#renderer = renderer;
+        
+        this.#inPos = { x: 0, y: 0 };
+        this.#outPos = { x: 0, y: 0 };
 
         if (inNode !== null) {
-            inNode.inputPort(this.inNodePortIndex).addConnection(this);
+            inNode.inputPort(this.#inNodePortIndex).addConnection(this);
         }
 
         if (outNode !== null) {
-            outNode.outputPort(this.outNodePortIndex).addConnection(this);
+            outNode.outputPort(this.#outNodePortIndex).addConnection(this);
         }
     }
 
@@ -85,40 +98,40 @@ export class Connection {
 
         // Not sure what to do here? Maybe we should throw an error in the 
         // future?
-        if (this.inNode === null && this.outNode === null) {
+        if (this.#inNode === null && this.#outNode === null) {
             return;
         }
 
-        if (this.inNode !== null) {
-            const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
+        if (this.#inNode !== null) {
+            const inPortBox = this.#inNode.inputPortPosition(this.#inNodePortIndex)
             if (inPortBox === undefined) {
                 return;
             }
-            BoxCenter(inPortBox, this.inPos);
+            BoxCenter(inPortBox, this.#inPos);
         } else if (mousePosition !== undefined) {
-            this.inPos.x = mousePosition.x;
-            this.inPos.y = mousePosition.y;
+            this.#inPos.x = mousePosition.x;
+            this.#inPos.y = mousePosition.y;
         } else {
             return;
         }
 
-        if (this.outNode !== null) {
-            const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+        if (this.#outNode !== null) {
+            const outPortBox = this.#outNode.outputPortPosition(this.#outNodePortIndex);
             if (outPortBox === undefined) {
                 return;
             }
-            BoxCenter(outPortBox, this.outPos);
+            BoxCenter(outPortBox, this.#outPos);
         } else if (mousePosition !== undefined) {
-            this.outPos.x = mousePosition.x;
-            this.outPos.y = mousePosition.y;
+            this.#outPos.x = mousePosition.x;
+            this.#outPos.y = mousePosition.y;
         } else {
             return;
         }
 
-        this.renderer({
+        this.#renderer({
             ctx: ctx,
-            start: this.inPos,
-            end: this.outPos,
+            start: this.#inPos,
+            end: this.#outPos,
             graphScale: graphScale,
             mouseOver: mouseOver,
 
@@ -128,15 +141,15 @@ export class Connection {
     }
 
     clearPort(mousePosition: Vector2): void {
-        if (this.inNode !== null) {
-            const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
+        if (this.#inNode !== null) {
+            const inPortBox = this.#inNode.inputPortPosition(this.#inNodePortIndex)
             if (inPortBox !== undefined && InBox(inPortBox, mousePosition)) {
                 this.clearInput();
             }
         }
 
-        if (this.outNode !== null) {
-            const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+        if (this.#outNode !== null) {
+            const outPortBox = this.#outNode.outputPortPosition(this.#outNodePortIndex);
             if (outPortBox !== undefined && InBox(outPortBox, mousePosition)) {
                 this.clearOutput();
             }
@@ -149,41 +162,41 @@ export class Connection {
     }
 
     setInput(node: FlowNode, portIndex: number): void {
-        this.inNode = node;
-        this.inNodePortIndex = portIndex;
-        this.inNode.inputPort(portIndex).addConnection(this);
+        this.#inNode = node;
+        this.#inNodePortIndex = portIndex;
+        this.#inNode.inputPort(portIndex).addConnection(this);
     }
 
     setOutput(node: FlowNode, portIndex: number): void {
-        this.outNode = node;
-        this.outNodePortIndex = portIndex;
-        this.outNode.outputPort(portIndex).addConnection(this);
+        this.#outNode = node;
+        this.#outNodePortIndex = portIndex;
+        this.#outNode.outputPort(portIndex).addConnection(this);
     }
 
     clearInput() {
-        this.inNode?.inputPort(this.inNodePortIndex).clearConnection(this);
-        this.inNode = null;
-        this.inNodePortIndex = -1;
+        this.#inNode?.inputPort(this.#inNodePortIndex).clearConnection(this);
+        this.#inNode = null;
+        this.#inNodePortIndex = -1;
     }
 
     clearOutput() {
-        this.outNode?.outputPort(this.outNodePortIndex).clearConnection(this);
-        this.outNode = null;
-        this.outNodePortIndex = -1;
+        this.#outNode?.outputPort(this.#outNodePortIndex).clearConnection(this);
+        this.#outNode = null;
+        this.#outNodePortIndex = -1;
     }
 
     mouseOverPort(mousePosition: Vector2): Port | null {
-        if (this.inNode !== null) {
-            const inPortBox = this.inNode.inputPortPosition(this.inNodePortIndex)
+        if (this.#inNode !== null) {
+            const inPortBox = this.#inNode.inputPortPosition(this.#inNodePortIndex)
             if (inPortBox !== undefined && InBox(inPortBox, mousePosition)) {
-                return this.inNode.inputPort(this.inNodePortIndex)
+                return this.#inNode.inputPort(this.#inNodePortIndex)
             }
         }
 
-        if (this.outNode !== null) {
-            const outPortBox = this.outNode.outputPortPosition(this.outNodePortIndex);
+        if (this.#outNode !== null) {
+            const outPortBox = this.#outNode.outputPortPosition(this.#outNodePortIndex);
             if (outPortBox !== undefined && InBox(outPortBox, mousePosition)) {
-                return this.outNode.outputPort(this.outNodePortIndex)
+                return this.#outNode.outputPort(this.#outNodePortIndex)
             }
         }
 
@@ -191,25 +204,25 @@ export class Connection {
     }
 
     outPort(): Port | null {
-        if (this.outNode === null) {
+        if (this.#outNode === null) {
             return null;
         }
-        return this.outNode.outputPort(this.outNodePortIndex);
+        return this.#outNode.outputPort(this.#outNodePortIndex);
     }
 
     inPort(): Port | null {
-        if (this.inNode === null) {
+        if (this.#inNode === null) {
             return null;
         }
-        return this.inNode.inputPort(this.inNodePortIndex);
+        return this.#inNode.inputPort(this.#inNodePortIndex);
     }
 
     referencesNode(node: FlowNode): boolean {
-        if (this.inNode === node) {
+        if (this.#inNode === node) {
             return true;
         }
 
-        if (this.outNode === node) {
+        if (this.#outNode === node) {
             return true;
         }
 

@@ -15,24 +15,24 @@ export interface NumberWidgetConfig {
 
 export class NumberWidget {
     
-    private value: number;
+    #value: number;
 
-    private textBoxStyle: TextBoxStyle;
+    #textBoxStyle: TextBoxStyle;
 
-    private text: string;
+    #text: string;
 
-    private callback?: (newNumber: number) => void;
+    #callback?: (newNumber: number) => void;
 
     constructor(config?: NumberWidgetConfig) {
-        this.value = config?.value === undefined ? 0 : config?.value;
-        this.textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
+        this.#value = config?.value === undefined ? 0 : config?.value;
+        this.#textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
             box: { color: Default.Node.Widget.BackgroundColor, },
             text: { color: Default.Node.Widget.FontColor },
         }));
-        this.callback = config?.callback;
+        this.#callback = config?.callback;
 
         // https://stackoverflow.com/questions/5765398/whats-the-best-way-to-convert-a-number-to-a-string-in-javascript
-        this.text = '' + this.value;
+        this.#text = '' + this.#value;
     }
 
     Size(): Vector2 {
@@ -40,10 +40,10 @@ export class NumberWidget {
     }
 
     Set(newNumber: number): void {
-        this.value = newNumber;
-        this.text = '' + this.value;
-        if (this.callback !== undefined) {
-            this.callback(this.value);
+        this.#value = newNumber;
+        this.#text = '' + this.#value;
+        if (this.#callback !== undefined) {
+            this.#callback(this.#value);
         }
     }
 
@@ -60,7 +60,7 @@ export class NumberWidget {
                 const container = document.createElement('div');
                 input = document.createElement('input')
                 input.type = "number";
-                input.valueAsNumber = this.value;
+                input.valueAsNumber = this.#value;
                 container.append(input);
                 return container;
             },
@@ -86,7 +86,7 @@ export class NumberWidget {
             }
         };
 
-        this.textBoxStyle.Draw(ctx, box, scale, this.text)
+        this.#textBoxStyle.Draw(ctx, box, scale, this.#text)
 
         return box;
     }

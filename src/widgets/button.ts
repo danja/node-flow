@@ -17,32 +17,32 @@ export interface ButtonWidgetConfig {
 
 export class ButtonWidget {
 
-    private text: string;
+    #text: string;
 
-    private idleStyle: TextBoxStyle;
+    #idleStyle: TextBoxStyle;
 
-    private hoverStyle: TextBoxStyle;
+    #hoverStyle: TextBoxStyle;
 
-    private clickStyle: TextBoxStyle;
+    #clickStyle: TextBoxStyle;
 
-    private callback?: () => void;
+    #callback?: () => void;
 
-    private gettingClicked: boolean;
+    #gettingClicked: boolean;
 
     constructor(config?: ButtonWidgetConfig) {
-        this.text = config?.text === undefined ? "Button" : config?.text;
-        this.callback = config?.callback
-        this.gettingClicked = false;
+        this.#text = config?.text === undefined ? "Button" : config?.text;
+        this.#callback = config?.callback
+        this.#gettingClicked = false;
 
-        this.idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleStyle, {
+        this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleStyle, {
             box: { color: Default.Node.Widget.BackgroundColor, },
             text: { color: Default.Node.Widget.FontColor },
         }));
-        this.hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.hoverStyle, {
+        this.#hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.hoverStyle, {
             box: { color: "#888888", },
             text: { color: Default.Node.Widget.FontColor },
         }));
-        this.clickStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.clickStyle, {
+        this.#clickStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.clickStyle, {
             box: { color: "#CCCCCC", },
             text: { color: Default.Node.Widget.FontColor },
         }))
@@ -58,30 +58,30 @@ export class ButtonWidget {
             Size: { x: width * scale, y: height * scale }
         };
 
-        let style: TextBoxStyle = this.idleStyle;
+        let style: TextBoxStyle = this.#idleStyle;
 
-        if (mousePosition !== undefined && !this.gettingClicked) {
+        if (mousePosition !== undefined && !this.#gettingClicked) {
             if (InBox(box, mousePosition)) {
-                style = this.hoverStyle;
+                style = this.#hoverStyle;
             }
         }
 
-        if (this.gettingClicked) {
-            style = this.clickStyle;
+        if (this.#gettingClicked) {
+            style = this.#clickStyle;
         }
-        style.Draw(ctx, box, scale, this.text);
+        style.Draw(ctx, box, scale, this.#text);
 
         return box
     }
 
     ClickStart(): void {
-        this.gettingClicked = true;
+        this.#gettingClicked = true;
     }
 
     ClickEnd(): void {
-        this.gettingClicked = false;
-        if (this.callback !== undefined) {
-            this.callback();
+        this.#gettingClicked = false;
+        if (this.#callback !== undefined) {
+            this.#callback();
         }
     }
 }

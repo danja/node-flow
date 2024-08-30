@@ -29,30 +29,30 @@ function contrastColor(color: string): string {
 
 export class ColorWidget {
 
-    private value: string;
+    #value: string;
 
-    private contrast: string;
+    #contrast: string;
 
-    private textBoxStyle: TextBoxStyle;
+    #textBoxStyle: TextBoxStyle;
 
-    private callback?: (newColor: string) => void;
+    #callback?: (newColor: string) => void;
 
     constructor(config?: ColorWidgetConfig) {
-        this.value = config?.value === undefined ? "#000000" : config?.value;
-        this.contrast = contrastColor(this.value);
-        this.textBoxStyle = new TextBoxStyle({
+        this.#value = config?.value === undefined ? "#000000" : config?.value;
+        this.#contrast = contrastColor(this.#value);
+        this.#textBoxStyle = new TextBoxStyle({
             box: {
-                color: this.value,
+                color: this.#value,
                 border: {
-                    color: this.contrast
+                    color: this.#contrast
                 }
             },
             text: config?.textStyle
         });
-        this.callback = config?.callback;
+        this.#callback = config?.callback;
 
 
-        this.textBoxStyle.setTextColor(this.contrast);
+        this.#textBoxStyle.setTextColor(this.#contrast);
     }
 
     Size(): Vector2 {
@@ -60,15 +60,15 @@ export class ColorWidget {
     }
 
     Set(value: string): void {
-        this.value = value;
-        this.contrast = contrastColor(this.value);
+        this.#value = value;
+        this.#contrast = contrastColor(this.#value);
 
-        this.textBoxStyle.setBoxColor(this.value);
-        this.textBoxStyle.setBorderColor(this.contrast);
-        this.textBoxStyle.setTextColor(this.contrast);
+        this.#textBoxStyle.setBoxColor(this.#value);
+        this.#textBoxStyle.setBorderColor(this.#contrast);
+        this.#textBoxStyle.setTextColor(this.#contrast);
 
-        if (this.callback !== undefined) {
-            this.callback(this.value);
+        if (this.#callback !== undefined) {
+            this.#callback(this.#value);
         }
     }
 
@@ -86,7 +86,7 @@ export class ColorWidget {
 
                 input = document.createElement('input')
                 input.type = "color";
-                input.value = this.value;
+                input.value = this.#value;
                 input.name = "color"
                 container.append(input);
 
@@ -118,7 +118,7 @@ export class ColorWidget {
             }
         };
 
-        this.textBoxStyle.Draw(ctx, box, scale, this.value)
+        this.#textBoxStyle.Draw(ctx, box, scale, this.#value)
 
         return box;
     }

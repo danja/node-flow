@@ -35,69 +35,69 @@ function fallbackColor(type: string, s: number): string {
 
 export class Port {
 
-    private displayName: string;
+    #displayName: string;
 
-    private emptyStyle: PortStyle;
+    #emptyStyle: PortStyle;
 
-    private filledStyle: PortStyle;
+    #filledStyle: PortStyle;
 
-    private connections: Array<Connection>;
+    #connections: Array<Connection>;
 
-    private type: string;
+    #type: string;
 
     constructor(config?: PortConfig) {
-        this.connections = new Array<Connection>();
-        this.displayName = config?.name === undefined ? "Port" : config?.name;
-        this.type = config?.type === undefined ? "" : config?.type;
+        this.#connections = new Array<Connection>();
+        this.#displayName = config?.name === undefined ? "Port" : config?.name;
+        this.#type = config?.type === undefined ? "" : config?.type;
 
-        this.emptyStyle = {
+        this.#emptyStyle = {
             borderColor: config?.emptyStyle?.borderColor === undefined ? "#1c1c1c" : config.emptyStyle?.borderColor,
-            fillColor: config?.emptyStyle?.fillColor === undefined ? fallbackColor(this.type, 0.3) : config.emptyStyle?.fillColor,
+            fillColor: config?.emptyStyle?.fillColor === undefined ? fallbackColor(this.#type, 0.3) : config.emptyStyle?.fillColor,
             borderSize: config?.emptyStyle?.borderSize === undefined ? 1 : config.emptyStyle?.borderSize,
             size: config?.emptyStyle?.size === undefined ? 4 : config.emptyStyle?.size
         }
 
-        this.filledStyle = {
+        this.#filledStyle = {
             borderColor: config?.filledStyle?.borderColor === undefined ? "#1c1c1c" : config.filledStyle?.borderColor,
-            fillColor: config?.filledStyle?.fillColor === undefined ? fallbackColor(this.type, 1) : config.filledStyle?.fillColor,
+            fillColor: config?.filledStyle?.fillColor === undefined ? fallbackColor(this.#type, 1) : config.filledStyle?.fillColor,
             borderSize: config?.filledStyle?.borderSize === undefined ? 1 : config.filledStyle?.borderSize,
             size: config?.filledStyle?.size === undefined ? 5 : config.filledStyle?.size
         }
     }
 
     addConnection(connection: Connection): void {
-        this.connections.push(connection);
+        this.#connections.push(connection);
     }
 
     clearConnection(connection: Connection): void {
-        const index = this.connections.indexOf(connection);
+        const index = this.#connections.indexOf(connection);
         if (index > -1) {
-            this.connections.splice(index, 1);
+            this.#connections.splice(index, 1);
         } else {
             console.error("no connection found to remove");
         }
     }
 
     getType(): string {
-        return this.type;
+        return this.#type;
     }
 
     getDisplayName(): string {
-        return this.displayName;
+        return this.#displayName;
     }
 
     filledStyleColor(): string {
-        if (this.filledStyle.fillColor === undefined) {
+        if (this.#filledStyle.fillColor === undefined) {
             console.error("There's no fill color!!!!!!!!!")
             return "black";
         }
-        return this.filledStyle.fillColor;
+        return this.#filledStyle.fillColor;
     }
 
     render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number): Box {
-        let style = this.emptyStyle;
-        if (this.connections.length > 0) {
-            style = this.filledStyle;
+        let style = this.#emptyStyle;
+        if (this.#connections.length > 0) {
+            style = this.#filledStyle;
         }
 
         const radius = style.size as number * scale

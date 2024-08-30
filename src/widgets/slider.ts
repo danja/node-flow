@@ -31,73 +31,73 @@ export class SliderWidget {
 
     // Data Variables =========================================================
 
-    private min: number;
+    #min: number;
 
-    private max: number;
+    #max: number;
 
-    private value: number;
+    #value: number;
 
-    private text: string;
+    #text: string;
 
-    private snapIncrement?: number;
+    #snapIncrement?: number;
 
     // Callbacks ==============================================================
 
-    private change?: (newValue: number) => void;
+    #change?: (newValue: number) => void;
 
-    private release?: (newValue: number) => void;
+    #release?: (newValue: number) => void;
 
     // Styling Variables ======================================================
 
-    private textStyle: TextStyle
+    #textStyle: TextStyle
 
-    private backgroundColor: string;
+    #backgroundColor: string;
 
-    private borderColor: string;
+    #borderColor: string;
 
-    private fillColor: string;
+    #fillColor: string;
 
     // Runtime Variables ======================================================
 
-    private lastMousePosition: Vector2;
+    #lastMousePosition: Vector2;
 
-    private clickStartMousePosition: Vector2;
+    #clickStartMousePosition: Vector2;
 
-    private clicking: boolean;
+    #clicking: boolean;
 
     constructor(config?: SliderWidgetConfig) {
-        this.min = config?.min === undefined ? 0 : config?.min;
-        this.max = config?.max === undefined ? 1 : config?.max;
-        this.value = config?.value === undefined ? 0 : config?.value;
-        this.value = Clamp(this.value, this.min, this.max);
-        this.snapIncrement = config?.snapIncrement;
+        this.#min = config?.min === undefined ? 0 : config?.min;
+        this.#max = config?.max === undefined ? 1 : config?.max;
+        this.#value = config?.value === undefined ? 0 : config?.value;
+        this.#value = Clamp(this.#value, this.#min, this.#max);
+        this.#snapIncrement = config?.snapIncrement;
 
-        this.change = config?.change;
-        this.release = config?.release;
+        this.#change = config?.change;
+        this.#release = config?.release;
 
-        this.backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config?.backgroundColor;
-        this.fillColor = config?.fillColor === undefined ? Default.Node.Widget.Slider.FillColor : config?.fillColor;
-        this.borderColor = config?.borderColor === undefined ? "black" : config?.borderColor;
-        this.textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
+        this.#backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config?.backgroundColor;
+        this.#fillColor = config?.fillColor === undefined ? Default.Node.Widget.Slider.FillColor : config?.fillColor;
+        this.#borderColor = config?.borderColor === undefined ? "black" : config?.borderColor;
+        this.#textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
             color: Default.Node.Widget.FontColor,
         }));
-        this.lastMousePosition = { x: 0, y: 0 };
-        this.clickStartMousePosition = { x: 0, y: 0 };
-        this.clicking = false;
+        this.#lastMousePosition = { x: 0, y: 0 };
+        this.#clickStartMousePosition = { x: 0, y: 0 };
+        this.#clicking = false;
 
-        this.text = this.value.toFixed(3);
+        this.#text = this.#value.toFixed(3);
     }
 
     SetValue(newValue: number): void {
-        if (this.value === newValue) {
+        if (this.#value === newValue) {
             return;
         }
 
-        this.value = Clamp(newValue, this.min, this.max);
+        this.#value = Clamp(newValue, this.#min, this.#max);
 
-        this.text = this.value.toFixed(3);
-        if (this.change !== undefined) {
-            this.change(this.value);
+        this.#text = this.#value.toFixed(3);
+        if (this.#change !== undefined) {
+            this.#change(this.#value);
         }
     }
 
@@ -106,14 +106,14 @@ export class SliderWidget {
     }
 
     ClickStart(): void {
-        this.clicking = true;
-        CopyVector2(this.clickStartMousePosition, this.lastMousePosition)
+        this.#clicking = true;
+        CopyVector2(this.#clickStartMousePosition, this.#lastMousePosition)
     }
 
     ClickEnd(): void {
-        this.clicking = false;
-        if (this.release !== undefined) {
-            this.release(this.value);
+        this.#clicking = false;
+        if (this.#release !== undefined) {
+            this.#release(this.#value);
         }
     }
 
@@ -122,7 +122,7 @@ export class SliderWidget {
         const scaledHeight = height * scale;
 
         // Render background
-        ctx.fillStyle = this.backgroundColor;
+        ctx.fillStyle = this.#backgroundColor;
         ctx.beginPath();
         ctx.roundRect(
             position.x,
@@ -134,8 +134,8 @@ export class SliderWidget {
         ctx.fill();
 
         // Render Fill
-        const fill = Clamp01((this.value - this.min) / (this.max - this.min));
-        ctx.fillStyle = this.fillColor;
+        const fill = Clamp01((this.#value - this.#min) / (this.#max - this.#min));
+        ctx.fillStyle = this.#fillColor;
         ctx.beginPath();
         ctx.roundRect(
             position.x,
@@ -149,24 +149,24 @@ export class SliderWidget {
         // Render Number
         ctx.textAlign = "center";
         ctx.textBaseline = 'middle';
-        this.textStyle.setupStyle(ctx, scale);
+        this.#textStyle.setupStyle(ctx, scale);
         ctx.fillText(
-            this.text,
+            this.#text,
             position.x + (scaledWidth / 2),
             position.y + (scaledHeight / 2),
         );
 
         // Update value based on mouse position
         if (mousePosition !== undefined) {
-            CopyVector2(this.lastMousePosition, mousePosition);
-            if (this.clicking) {
+            CopyVector2(this.#lastMousePosition, mousePosition);
+            if (this.#clicking) {
                 const min = position.x;
                 const max = min + scaledWidth;
-                const p = Clamp01((this.lastMousePosition.x - min) / (max - min));
+                const p = Clamp01((this.#lastMousePosition.x - min) / (max - min));
 
-                let value = (p * (this.max - this.min)) + this.min;
-                if (this.snapIncrement !== undefined) {
-                    value = Math.round(value / this.snapIncrement) * this.snapIncrement;
+                let value = (p * (this.#max - this.#min)) + this.#min;
+                if (this.#snapIncrement !== undefined) {
+                    value = Math.round(value / this.#snapIncrement) * this.#snapIncrement;
                 }
 
                 this.SetValue(value);

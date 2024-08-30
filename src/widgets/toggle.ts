@@ -23,27 +23,27 @@ export interface ToggleWidgetConfig {
 
 class ToggleStyle {
 
-    private textStyle: TextStyle;
+    #textStyle: TextStyle;
 
-    private backgroundColor: string;
+    #backgroundColor: string;
 
-    private borderColor: string;
+    #borderColor: string;
 
-    private lightColor: string;
+    #lightColor: string;
 
-    private lightBorderColor: string;
+    #lightBorderColor: string;
 
-    private lightBlur?: number;
+    #lightBlur?: number;
 
     constructor(config?: ToggleStyleConfig) {
-        this.textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
+        this.#textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
             color: Default.Node.Widget.FontColor,
         }));
-        this.backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config.backgroundColor;
-        this.lightColor = config?.lightColor === undefined ? "#222222" : config.lightColor;
-        this.borderColor = config?.borderColor === undefined ? "black" : config.borderColor;
-        this.lightBorderColor = config?.lightBorderColor === undefined ? "black" : config.lightBorderColor;
-        this.lightBlur = config?.lightBlur;
+        this.#backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config.backgroundColor;
+        this.#lightColor = config?.lightColor === undefined ? "#222222" : config.lightColor;
+        this.#borderColor = config?.borderColor === undefined ? "black" : config.borderColor;
+        this.#lightBorderColor = config?.lightBorderColor === undefined ? "black" : config.lightBorderColor;
+        this.#lightBlur = config?.lightBlur;
     }
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, text: string, mousePosition: Vector2 | undefined): Box {
@@ -51,8 +51,8 @@ class ToggleStyle {
         const scaledHeight = height * scale;
 
         // Background
-        ctx.fillStyle = this.backgroundColor
-        ctx.strokeStyle = this.borderColor;
+        ctx.fillStyle = this.#backgroundColor
+        ctx.strokeStyle = this.#borderColor;
         ctx.beginPath();
         ctx.roundRect(
             position.x,
@@ -66,8 +66,8 @@ class ToggleStyle {
 
         // Light
         const lightScale = Math.min(scaledWidth, scaledHeight);
-        ctx.strokeStyle = this.lightBorderColor;
-        ctx.fillStyle = this.lightColor
+        ctx.strokeStyle = this.#lightBorderColor;
+        ctx.fillStyle = this.#lightColor
         ctx.beginPath();
         ctx.roundRect(
             position.x + (lightScale * .2),
@@ -76,12 +76,12 @@ class ToggleStyle {
             lightScale * .6,
             borderRadius * scale
         );
-        if (this.lightBlur) {
-            ctx.shadowBlur = this.lightBlur * scale;
-            ctx.shadowColor = this.lightColor;
+        if (this.#lightBlur) {
+            ctx.shadowBlur = this.#lightBlur * scale;
+            ctx.shadowColor = this.#lightColor;
         }
         ctx.fill();
-        if (this.lightBlur) {
+        if (this.#lightBlur) {
             ctx.shadowBlur = 0;
         }
         ctx.stroke();
@@ -90,7 +90,7 @@ class ToggleStyle {
         //  Text
         ctx.textAlign = "center";
         ctx.textBaseline = 'middle';
-        this.textStyle.setupStyle(ctx, scale);
+        this.#textStyle.setupStyle(ctx, scale);
         ctx.fillText(
             text,
             position.x + (scaledWidth / 2),
@@ -109,21 +109,21 @@ class ToggleStyle {
 
 export class ToggleWidget {
 
-    enabled: boolean;
+    #enabled: boolean;
 
-    text: string;
+    #text: string;
 
-    enabledStyle: ToggleStyle;
+    #enabledStyle: ToggleStyle;
 
-    disabledStyle: ToggleStyle;
+    #disabledStyle: ToggleStyle;
 
-    callback?: (value: boolean) => void;
+    #callback?: (value: boolean) => void;
 
     constructor(config?: ToggleWidgetConfig) {
-        this.text = config?.text === undefined ? "Toggle" : config?.text;
-        this.enabled = config?.value === undefined ? false : config?.value;
-        this.callback = config?.callback
-        this.enabledStyle = new ToggleStyle({
+        this.#text = config?.text === undefined ? "Toggle" : config?.text;
+        this.#enabled = config?.value === undefined ? false : config?.value;
+        this.#callback = config?.callback
+        this.#enabledStyle = new ToggleStyle({
             backgroundColor: config?.enabledStyle?.backgroundColor,
             borderColor: config?.enabledStyle?.borderColor,
             textStyle: config?.enabledStyle?.textStyle,
@@ -131,7 +131,7 @@ export class ToggleWidget {
             lightColor: config?.enabledStyle?.lightColor === undefined ? "#00FF00" : config?.enabledStyle?.lightColor,
             lightBlur: config?.enabledStyle?.lightBlur === undefined ? 15 : config?.enabledStyle?.lightBlur
         });
-        this.disabledStyle = new ToggleStyle({
+        this.#disabledStyle = new ToggleStyle({
             backgroundColor: config?.disabledStyle?.backgroundColor,
             borderColor: config?.disabledStyle?.borderColor,
             textStyle: config?.disabledStyle?.textStyle,
@@ -145,14 +145,14 @@ export class ToggleWidget {
     }
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
-        let style = this.enabled ? this.enabledStyle : this.disabledStyle;
-        return style.Draw(ctx, position, scale, this.text, mousePosition);
+        let style = this.#enabled ? this.#enabledStyle : this.#disabledStyle;
+        return style.Draw(ctx, position, scale, this.#text, mousePosition);
     }
 
     ClickStart(): void {
-        this.enabled = !this.enabled;
-        if (this.callback !== undefined) {
-            this.callback(this.enabled);
+        this.#enabled = !this.#enabled;
+        if (this.#callback !== undefined) {
+            this.#callback(this.#enabled);
         }
     }
 

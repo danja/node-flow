@@ -10,18 +10,18 @@ export type WidgetBuilder = (confg?: any) => Widget;
 
 class WidgetFactory {
 
-    private registeredWidgets: Map<string, WidgetBuilder>
+    #registeredWidgets: Map<string, WidgetBuilder>
 
     constructor() {
-        this.registeredWidgets = new Map<string, WidgetBuilder>();
+        this.#registeredWidgets = new Map<string, WidgetBuilder>();
     }
 
     register(widgetType: string, builder: WidgetBuilder): void {
-        this.registeredWidgets.set(widgetType, builder);
+        this.#registeredWidgets.set(widgetType, builder);
     }
 
     create(widgetType: string, config: any): Widget {
-        const builder = this.registeredWidgets.get(widgetType)
+        const builder = this.#registeredWidgets.get(widgetType)
         if (builder === undefined) {
             throw new Error("no builder registered for widget: " + widgetType);
         }

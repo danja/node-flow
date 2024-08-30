@@ -27,28 +27,28 @@ export function TextStyleFallback(input?: TextStyleConfig, fallback?: TextStyleC
 
 export class TextStyle {
 
-    private size: number;
+    #size: number;
 
-    private color: string;
+    #color: string;
 
-    private font: string;
+    #font: string;
 
-    private weight: FontWeight
+    #weight: FontWeight
 
     constructor(config: TextStyleConfig | undefined) {
-        this.size = config?.size === undefined ? DefaultSize : config.size;
-        this.color = config?.color === undefined ? DefaultColor : config.color;
-        this.font = config?.font === undefined ? DefaultFont : config.font;
-        this.weight = config?.weight === undefined ? FontWeight.Normal : config.weight;
+        this.#size = config?.size === undefined ? DefaultSize : config.size;
+        this.#color = config?.color === undefined ? DefaultColor : config.color;
+        this.#font = config?.font === undefined ? DefaultFont : config.font;
+        this.#weight = config?.weight === undefined ? FontWeight.Normal : config.weight;
     }
 
     setupStyle(ctx: CanvasRenderingContext2D, scale: number): void {
-        ctx.fillStyle = this.color;
-        ctx.font = this.weight + " " + (this.size * scale) + "px " + this.font;
+        ctx.fillStyle = this.#color;
+        ctx.font = this.#weight + " " + (this.#size * scale) + "px " + this.#font;
     }
 
     getSize(): number {
-        return this.size;
+        return this.#size;
     }
 
     measure(ctx: CanvasRenderingContext2D, scale: number, text: string): Vector2 {
@@ -61,6 +61,6 @@ export class TextStyle {
     }
 
     setColor(color: string): void {
-        this.color = color;
+        this.#color = color;
     }
 }

@@ -11,25 +11,25 @@ export function StrokeStyleWithFallback(input?: StrokeStyleConfig, fallback?: St
 }
 
 export class StrokeStyle {
-    private size: number;
+    #size: number;
 
-    private color: string;
+    #color: string;
 
     constructor(config?: StrokeStyleConfig) {
-        this.size = config?.size === undefined ? 0.5 : config.size;
-        this.color = config?.color === undefined ? "black" : config.color;
+        this.#size = config?.size === undefined ? 0.5 : config.size;
+        this.#color = config?.color === undefined ? "black" : config.color;
     }
 
     setupStyle(ctx: CanvasRenderingContext2D, scale: number): void {
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = scale * this.size;
+        ctx.strokeStyle = this.#color;
+        ctx.lineWidth = scale * this.#size;
     }
 
     setColor(newColor: string): void {
-        this.color = newColor;
+        this.#color = newColor;
     }
 
     setSize(newSize: number): void {
-        this.size = newSize;
+        this.#size = newSize;
     }
 }

@@ -23,7 +23,7 @@ const buildOptsWeb: BuildOptions = {
   outfile: './dist/web/index.js',
   //   external: [],
   platform: 'browser',
-  target: ['es2018'],
+  target: ['esNext'],
   //   format: 'cjs',
   bundle: true,
   sourcemap: true,
