@@ -39,7 +39,7 @@ export class Text {
         this.#measured = true;
     }
 
-    getSize(ctx: CanvasRenderingContext2D, scale: number, out: Vector2): void {
+    size(ctx: CanvasRenderingContext2D, scale: number, out: Vector2): void {
         if (!this.#measured) {
             this.#measure(ctx);
         }

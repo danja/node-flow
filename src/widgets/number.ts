@@ -1,14 +1,16 @@
-import { Default } from "../default";
+import { Theme } from "../theme";
 import { Popup } from "../popup";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
-import { Box } from '../types/box';
+import { Box, InBox } from '../types/box';
 import { Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
 
 export interface NumberWidgetConfig {
     value?: number;
 
-    textBoxStyle?: TextBoxStyleConfig;
+    idleBoxStyle?: TextBoxStyleConfig;
+
+    highlightBoxStyle?: TextBoxStyleConfig;
 
     callback?: (newNumber: number) => void;
 }
@@ -17,7 +19,9 @@ export class NumberWidget {
     
     #value: number;
 
-    #textBoxStyle: TextBoxStyle;
+    #idleBoxStyle: TextBoxStyle;
+
+    #highlightBoxStyle: TextBoxStyle;
 
     #text: string;
 
@@ -25,9 +29,27 @@ export class NumberWidget {
 
     constructor(config?: NumberWidgetConfig) {
         this.#value = config?.value === undefined ? 0 : config?.value;
-        this.#textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
-            box: { color: Default.Node.Widget.BackgroundColor, },
-            text: { color: Default.Node.Widget.FontColor },
+        this.#idleBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleBoxStyle, {
+            box: {
+                color: Theme.Widget.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                },
+                radius: Theme.Widget.Border.Radius
+            },
+            text: { color: Theme.Widget.FontColor },
+        }));
+        this.#highlightBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.highlightBoxStyle, {
+            box: {
+                color: Theme.Widget.Number.Hover.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                },
+                radius: Theme.Widget.Border.Radius
+            },
+            text: { color: Theme.Widget.FontColor },
         }));
         this.#callback = config?.callback;
 
@@ -86,7 +108,15 @@ export class NumberWidget {
             }
         };
 
-        this.#textBoxStyle.Draw(ctx, box, scale, this.#text)
+        let style: TextBoxStyle = this.#idleBoxStyle;
+
+        if (mousePosition !== undefined) {
+            if (InBox(box, mousePosition)) {
+                style = this.#highlightBoxStyle;
+            }
+        }
+
+        style.DrawUnderline(ctx, box, scale, this.#text)
 
         return box;
     }

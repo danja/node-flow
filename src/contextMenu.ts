@@ -1,4 +1,5 @@
-import { Default } from './default';
+import { Theme } from './theme';
+import { TextAlign } from './styles/canvasTextAlign';
 import { TextStyle, TextStyleConfig, TextStyleFallback } from './styles/text';
 import { Box, InBox } from './types/box';
 import { List } from './types/list';
@@ -120,7 +121,7 @@ export class ContextMenu {
         this.#items = new Array<ContextMenuItem>();
         this.#subMenus = new Array<ContextMenu>();
         this.#textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
-            color: Default.ContextMenu.FontColor
+            color: Theme.ContextMenu.FontColor
         }));
         this.#group = config?.group;
 
@@ -246,9 +247,9 @@ export class ContextMenu {
         this.#tempBox.Position.x = position.x;
         this.#tempBox.Position.y = position.y;
 
-        ctx.textAlign = "left";
+        ctx.textAlign = TextAlign.Left;
 
-        ctx.fillStyle = Default.ContextMenu.BackgroundColor;
+        ctx.fillStyle = Theme.ContextMenu.BackgroundColor;
         ctx.shadowColor = "#000000";
         ctx.shadowBlur = 5 * menuScale;
         ctx.beginPath();
@@ -287,7 +288,7 @@ export class ContextMenu {
                 }
 
                 if (entryMousedOver || (this.#openSubMenu !== undefined && entry.subMenu === this.#openSubMenu)) {
-                    ctx.fillStyle = Default.ContextMenu.HighlightColor;
+                    ctx.fillStyle = Theme.ContextMenu.HighlightColor;
                     ctx.beginPath();
                     ctx.roundRect(
                         position.x + (scaledEntryHeight / 10),
@@ -305,7 +306,7 @@ export class ContextMenu {
                 // Render arrows
                 if (entry.subMenu !== undefined) {
                     ctx.beginPath()
-                    ctx.strokeStyle = Default.ContextMenu.FontColor;
+                    ctx.strokeStyle = Theme.ContextMenu.FontColor;
                     ctx.lineWidth = 1 * menuScale;
                     ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 2.5), this.#tempBox.Position.y + (scaledEntryHeight / 3))
                     ctx.lineTo(position.x + scaledEntryWidth - (scaledEntryHeight / 4), this.#tempBox.Position.y + (scaledEntryHeight / 2))
@@ -318,7 +319,7 @@ export class ContextMenu {
 
             // Draw a line seperating the groups
             if (groupIndex !== this.#groups.Count() - 1) {
-                ctx.strokeStyle = Default.ContextMenu.FontColor;
+                ctx.strokeStyle = Theme.ContextMenu.FontColor;
                 ctx.lineWidth = .5 * menuScale;
                 ctx.beginPath();
                 const startX = position.x + (scaledEntryHeight / 10);

@@ -1,13 +1,13 @@
-import { Default } from "../default";
-import { TextStyle, TextStyleConfig, TextStyleFallback } from '../styles/text';
+import { Theme } from "../theme";
+import { TextAlign } from "../styles/canvasTextAlign";
 import { Box } from "../types/box";
 import { Vector2 } from "../types/vector2";
-import { borderRadius, height, width } from "./widget";
+import { height, width } from "./widget";
+import { TextBaseline } from "../styles/canvasTextBaseline";
+import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 
 export interface ToggleStyleConfig {
-    textStyle?: TextStyleConfig;
-    backgroundColor?: string;
-    borderColor?: string;
+    textBox?: TextBoxStyleConfig,
     lightColor?: string;
     lightBorderColor?: string;
     lightBlur?: number;
@@ -23,11 +23,7 @@ export interface ToggleWidgetConfig {
 
 class ToggleStyle {
 
-    #textStyle: TextStyle;
-
-    #backgroundColor: string;
-
-    #borderColor: string;
+    #style: TextBoxStyle;
 
     #lightColor: string;
 
@@ -36,12 +32,17 @@ class ToggleStyle {
     #lightBlur?: number;
 
     constructor(config?: ToggleStyleConfig) {
-        this.#textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
-            color: Default.Node.Widget.FontColor,
+        this.#style = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBox, {
+            box: {
+                color: Theme.Widget.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                }
+            },
+            text: { color: Theme.Widget.FontColor },
         }));
-        this.#backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config.backgroundColor;
         this.#lightColor = config?.lightColor === undefined ? "#222222" : config.lightColor;
-        this.#borderColor = config?.borderColor === undefined ? "black" : config.borderColor;
         this.#lightBorderColor = config?.lightBorderColor === undefined ? "black" : config.lightBorderColor;
         this.#lightBlur = config?.lightBlur;
     }
@@ -51,18 +52,7 @@ class ToggleStyle {
         const scaledHeight = height * scale;
 
         // Background
-        ctx.fillStyle = this.#backgroundColor
-        ctx.strokeStyle = this.#borderColor;
-        ctx.beginPath();
-        ctx.roundRect(
-            position.x,
-            position.y,
-            scaledWidth,
-            scaledHeight,
-            borderRadius * scale
-        );
-        ctx.fill();
-        ctx.stroke();
+        this.#style.Draw(ctx, { Position: position, Size: { x: scaledWidth, y: scaledHeight } }, scale, text);
 
         // Light
         const lightScale = Math.min(scaledWidth, scaledHeight);
@@ -74,7 +64,7 @@ class ToggleStyle {
             position.y + (lightScale * .2),
             lightScale * .6,
             lightScale * .6,
-            borderRadius * scale
+            Theme.Widget.Border.Radius * scale
         );
         if (this.#lightBlur) {
             ctx.shadowBlur = this.#lightBlur * scale;
@@ -84,18 +74,7 @@ class ToggleStyle {
         if (this.#lightBlur) {
             ctx.shadowBlur = 0;
         }
-        ctx.stroke();
-
-
-        //  Text
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
-        this.#textStyle.setupStyle(ctx, scale);
-        ctx.fillText(
-            text,
-            position.x + (scaledWidth / 2),
-            position.y + (scaledHeight / 2),
-        );
+        // ctx.stroke();
 
         return {
             Position: position,
@@ -124,17 +103,31 @@ export class ToggleWidget {
         this.#enabled = config?.value === undefined ? false : config?.value;
         this.#callback = config?.callback
         this.#enabledStyle = new ToggleStyle({
-            backgroundColor: config?.enabledStyle?.backgroundColor,
-            borderColor: config?.enabledStyle?.borderColor,
-            textStyle: config?.enabledStyle?.textStyle,
+            textBox: TextBoxStyleWithFallback(config?.enabledStyle?.textBox, {
+                box: {
+                    color: Theme.Widget.BackgroundColor,
+                    border: {
+                        size: Theme.Widget.Border.Size,
+                        color: Theme.Widget.Border.Color,
+                    }
+                },
+                text: { color: Theme.Widget.FontColor },
+            }),
             lightBorderColor: config?.enabledStyle?.lightBorderColor,
             lightColor: config?.enabledStyle?.lightColor === undefined ? "#00FF00" : config?.enabledStyle?.lightColor,
             lightBlur: config?.enabledStyle?.lightBlur === undefined ? 15 : config?.enabledStyle?.lightBlur
         });
         this.#disabledStyle = new ToggleStyle({
-            backgroundColor: config?.disabledStyle?.backgroundColor,
-            borderColor: config?.disabledStyle?.borderColor,
-            textStyle: config?.disabledStyle?.textStyle,
+            textBox: TextBoxStyleWithFallback(config?.disabledStyle?.textBox, {
+                box: {
+                    color: Theme.Widget.BackgroundColor,
+                    border: {
+                        size: Theme.Widget.Border.Size,
+                        color: Theme.Widget.Border.Color,
+                    }
+                },
+                text: { color: Theme.Widget.FontColor },
+            }),
             lightBorderColor: config?.disabledStyle?.lightBorderColor,
             lightColor: config?.disabledStyle?.lightColor === undefined ? "#004400" : config?.enabledStyle?.lightColor,
         });

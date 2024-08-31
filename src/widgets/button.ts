@@ -1,10 +1,10 @@
-import { Default } from "../default";
+import { Theme } from "../theme";
 import { BoxStyle } from "../styles/box";
 import { TextStyle, TextStyleConfig } from "../styles/text";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 import { Box, InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
-import { borderRadius, height, width } from "./widget";
+import { height, width } from "./widget";
 
 
 export interface ButtonWidgetConfig {
@@ -35,16 +35,32 @@ export class ButtonWidget {
         this.#gettingClicked = false;
 
         this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleStyle, {
-            box: { color: Default.Node.Widget.BackgroundColor, },
-            text: { color: Default.Node.Widget.FontColor },
+            box: {
+                color: Theme.Widget.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                }
+            },
+            text: { color: Theme.Widget.FontColor },
         }));
         this.#hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.hoverStyle, {
-            box: { color: "#888888", },
-            text: { color: Default.Node.Widget.FontColor },
+            box: {
+                color: "#888888",
+                border: {
+                    size: Theme.Widget.Border.Size
+                }
+            },
+            text: { color: Theme.Widget.FontColor },
         }));
         this.#clickStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.clickStyle, {
-            box: { color: "#CCCCCC", },
-            text: { color: Default.Node.Widget.FontColor },
+            box: { 
+                color: "#CCCCCC",
+                border: {
+                    size: Theme.Widget.Border.Size
+                }
+            },
+            text: { color: Theme.Widget.FontColor },
         }))
     }
 

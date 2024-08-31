@@ -5,6 +5,7 @@ import { Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
 import { Popup } from "../popup";
 import { TextBoxStyle } from '../styles/textBox';
+import { Theme } from "../theme";
 
 export interface ColorWidgetConfig {
     value?: string;
@@ -44,7 +45,8 @@ export class ColorWidget {
             box: {
                 color: this.#value,
                 border: {
-                    color: this.#contrast
+                    color: this.#contrast,
+                    size: Theme.Widget.Border.Size
                 }
             },
             text: config?.textStyle

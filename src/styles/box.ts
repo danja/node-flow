@@ -28,7 +28,7 @@ export class BoxStyle {
         this.#radius = config?.radius === undefined ? 2 : config.radius;
     }
 
-    Draw(ctx: CanvasRenderingContext2D, box: Box, scale: number): void {
+    #box(ctx: CanvasRenderingContext2D, box: Box, scale: number, radius: any): void {
         ctx.fillStyle = this.#color
         this.#border?.setupStyle(ctx, scale);
         ctx.beginPath();
@@ -37,9 +37,29 @@ export class BoxStyle {
             box.Position.y,
             box.Size.x,
             box.Size.y,
-            this.#radius * scale
+            radius
         );
         ctx.fill();
+    }
+
+    #draw(ctx: CanvasRenderingContext2D, box: Box, scale: number, radius: any): void {
+        this.#box(ctx, box, scale, radius);
+        ctx.stroke();
+    }
+
+    Draw(ctx: CanvasRenderingContext2D, box: Box, scale: number): void {
+        this.#draw(ctx, box, scale, this.#radius * scale)
+    }
+
+    DrawRoundedTopOnly(ctx: CanvasRenderingContext2D, box: Box, scale: number): void {
+        this.#draw(ctx, box, scale, [this.#radius * scale * 2, this.#radius * scale * 2, 0, 0])
+    }
+
+    DrawUnderline(ctx: CanvasRenderingContext2D, box: Box, scale: number): void {
+        this.#box(ctx, box, scale, [this.#radius * scale * 2, this.#radius * scale * 2, 0, 0]);
+        ctx.beginPath();
+        ctx.moveTo(box.Position.x, box.Position.y + box.Size.y)
+        ctx.lineTo(box.Position.x + box.Size.x, box.Position.y + box.Size.y);
         ctx.stroke();
     }
 

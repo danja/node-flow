@@ -1,7 +1,7 @@
-import { Default } from "../default";
+import { Theme } from "../theme";
 import { Popup } from "../popup";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
-import { Box } from "../types/box";
+import { Box, InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { fitString } from "../utils/string";
 import { height, width } from "./widget";
@@ -18,15 +18,36 @@ export class StringWidget {
 
     #value: string;
 
-    #textBoxStyle: TextBoxStyle
+    #idleStyle: TextBoxStyle;
+
+    #hoverStyle: TextBoxStyle;
 
     #callback?: (newString: string) => void;
 
     constructor(config?: StringWidgetConfig) {
         this.#value = config?.value === undefined ? "" : config?.value;
-        this.#textBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
-            box: { color: Default.Node.Widget.BackgroundColor, },
-            text: { color: Default.Node.Widget.FontColor },
+        this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
+            box: {
+                color: Theme.Widget.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                },
+                radius: Theme.Widget.Border.Radius
+            },
+            text: { color: Theme.Widget.FontColor },
+        }));
+
+        this.#hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
+            box: {
+                color: Theme.Widget.String.Hover.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                },
+                radius: Theme.Widget.Border.Radius
+            },
+            text: { color: Theme.Widget.FontColor },
         }));
         this.#callback = config?.callback;
     }
@@ -78,7 +99,15 @@ export class StringWidget {
             }
         };
 
-        this.#textBoxStyle.Draw(ctx, box, scale, fitString(ctx, this.#value, box.Size.x - (20 * scale)))
+        let style: TextBoxStyle = this.#idleStyle;
+
+        if (mousePosition !== undefined) {
+            if (InBox(box, mousePosition)) {
+                style = this.#hoverStyle;
+            }
+        }
+
+        style.DrawUnderline(ctx, box, scale, fitString(ctx, this.#value, box.Size.x - (20 * scale)))
 
         return box;
     }

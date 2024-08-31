@@ -1,9 +1,11 @@
-import { Default } from "../default";
+import { Theme } from "../theme";
+import { TextAlign } from "../styles/canvasTextAlign";
 import { TextStyle, TextStyleConfig, TextStyleFallback } from "../styles/text";
 import { Box } from '../types/box';
 import { CopyVector2, Vector2 } from "../types/vector2";
 import { Clamp, Clamp01 } from "../utils/math";
-import { borderRadius, height, width } from "./widget";
+import { height, width } from "./widget";
+import { TextBaseline } from "../styles/canvasTextBaseline";
 
 export interface SliderWidgetConfig {
     min?: number;
@@ -75,11 +77,11 @@ export class SliderWidget {
         this.#change = config?.change;
         this.#release = config?.release;
 
-        this.#backgroundColor = config?.backgroundColor === undefined ? Default.Node.Widget.BackgroundColor : config?.backgroundColor;
-        this.#fillColor = config?.fillColor === undefined ? Default.Node.Widget.Slider.FillColor : config?.fillColor;
-        this.#borderColor = config?.borderColor === undefined ? "black" : config?.borderColor;
+        this.#backgroundColor = config?.backgroundColor === undefined ? Theme.Widget.BackgroundColor : config?.backgroundColor;
+        this.#fillColor = config?.fillColor === undefined ? Theme.Widget.Slider.FillColor : config?.fillColor;
+        this.#borderColor = config?.borderColor === undefined ? Theme.Widget.Border.Color : config?.borderColor;
         this.#textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
-            color: Default.Node.Widget.FontColor,
+            color: Theme.Widget.FontColor,
         }));
         this.#lastMousePosition = { x: 0, y: 0 };
         this.#clickStartMousePosition = { x: 0, y: 0 };
@@ -121,34 +123,39 @@ export class SliderWidget {
         const scaledWidth = width * scale;
         const scaledHeight = height * scale;
 
+        const scaledBorderThickness = Theme.Widget.Border.Size * scale;
+
         // Render background
         ctx.fillStyle = this.#backgroundColor;
+        ctx.strokeStyle = this.#borderColor;
+        ctx.lineWidth = scaledBorderThickness;
         ctx.beginPath();
         ctx.roundRect(
             position.x,
             position.y,
             scaledWidth,
             scaledHeight,
-            borderRadius * scale
+            Theme.Widget.Border.Radius * scale
         );
         ctx.fill();
+        ctx.stroke();
 
         // Render Fill
         const fill = Clamp01((this.#value - this.#min) / (this.#max - this.#min));
         ctx.fillStyle = this.#fillColor;
         ctx.beginPath();
         ctx.roundRect(
-            position.x,
-            position.y,
-            scaledWidth * fill,
-            scaledHeight,
-            borderRadius * scale
+            position.x + (scaledBorderThickness / 2),
+            position.y + (scaledBorderThickness / 2),
+            (scaledWidth * fill) - scaledBorderThickness,
+            scaledHeight - scaledBorderThickness,
+            Theme.Widget.Border.Radius * scale
         );
         ctx.fill();
 
         // Render Number
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
+        ctx.textAlign = TextAlign.Center;
+        ctx.textBaseline = TextBaseline.Middle;
         this.#textStyle.setupStyle(ctx, scale);
         ctx.fillText(
             this.#text,
@@ -160,8 +167,8 @@ export class SliderWidget {
         if (mousePosition !== undefined) {
             CopyVector2(this.#lastMousePosition, mousePosition);
             if (this.#clicking) {
-                const min = position.x;
-                const max = min + scaledWidth;
+                const min = position.x + (scaledBorderThickness / 2);
+                const max = min + scaledWidth - scaledBorderThickness;
                 const p = Clamp01((this.#lastMousePosition.x - min) / (max - min));
 
                 let value = (p * (this.#max - this.#min)) + this.#min;

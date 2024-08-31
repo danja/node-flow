@@ -1,7 +1,9 @@
 import { NodeFlowGraph } from './graph';
 import { FlowNode } from './node';
+import { Theme } from './theme';
 globalThis.NodeFlowGraph = NodeFlowGraph;
 globalThis.FlowNode = FlowNode;
+globalThis.NodeFlowTheme = Theme;
 
 // Widgets
 import { NumberWidget } from './widgets/number';

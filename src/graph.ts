@@ -1,6 +1,6 @@
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./connection";
 import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } from './contextMenu';
-import { Default } from "./default";
+import { Theme } from "./theme";
 import { MouseObserver } from "./input";
 import { FlowNode, NodeState } from "./node";
 import { NodeFactory, NodeFactoryConfig } from "./nodes/factory";
@@ -9,8 +9,9 @@ import { Port } from "./port";
 import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
 import { Widget } from "./widgets/widget";
+import { Clamp01 } from "./utils/math";
 
-export type GraphRenderer = (ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
+export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
 export interface ConnectionRendererConfiguration {
     size?: number;
@@ -36,18 +37,25 @@ function BuildConnectionRenderer(config: ConnectionRendererConfiguration | undef
 }
 
 function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
-    return (context: CanvasRenderingContext2D, position: Vector2, scale: number) => {
+    return (canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, position: Vector2, scale: number) => {
         context.fillStyle = backgroundColor;
-        context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        context.fillRect(0, 0, canvas.width, canvas.height);
 
-        context.strokeStyle = "black";
+        const alpha = Clamp01(scale - 0.3) * 255
+        if (alpha <= 0) {
+            return;
+        }
+
         const spacing = 100;
-        for (let x = 0; x < 10; x++) {
-            context.beginPath();
-            const xPos = x * spacing * scale;
-            context.moveTo(xPos + position.x, 0);
-            context.moveTo(xPos + position.x, 1000);
-            context.stroke();
+        context.fillStyle = `rgba(41, 54, 57, ${alpha})`;
+        for (let x = -100; x < 100; x++) {
+            const xPos = (x * spacing * scale) + position.x;
+            for (let y = -100; y < 100; y++) {
+                const yPos = (y * spacing * scale) + position.y;
+                context.beginPath();
+                context.arc(xPos, yPos, 2 * scale, 0, 2 * Math.PI);
+                context.fill();
+            }
         }
     }
 }
@@ -100,8 +108,6 @@ export class NodeFlowGraph {
 
     #nodeGrabbed: number;
 
-    #nodesSelected: Array<FlowNode>;
-
     #connectionSelected: Connection | null;
 
     #portHovering: PortIntersection | null;
@@ -119,10 +125,9 @@ export class NodeFlowGraph {
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.#nodes = [];
         this.#scale = 1;
-        
+
         this.#nodeHovering = -1;
         this.#nodeGrabbed = -1;
-        this.#nodesSelected = new Array<FlowNode>();
 
         this.#connectionSelected = null;
         this.#portHovering = null;
@@ -156,7 +161,7 @@ export class NodeFlowGraph {
         if (config?.backgroundRenderer !== undefined) {
             this.#backgroundRenderer = config?.backgroundRenderer
         } else {
-            const backgroundColor = config?.backgroundColor === undefined ? Default.Graph.BackgroundColor : config.backgroundColor;
+            const backgroundColor = config?.backgroundColor === undefined ? Theme.Graph.BackgroundColor : config.backgroundColor;
             this.#backgroundRenderer = BuildBackgroundRenderer(backgroundColor);
         }
 
@@ -191,8 +196,10 @@ export class NodeFlowGraph {
 
         if (this.#nodeHovering > -1) {
             this.#nodeGrabbed = this.#nodeHovering;
+            this.#nodes[this.#nodeHovering].select();
+        } else {
+            this.#unselectAllNodes();
         }
-        this.#nodesSelected.push(this.#nodes[this.#nodeHovering]);
 
         if (this.#widgetHovering !== null) {
             this.#widgetHovering.ClickStart();
@@ -244,7 +251,7 @@ export class NodeFlowGraph {
                     this.#lockNode(nodeToReview);
                 }
             }
-            if (this.#nodes[nodeToReview].isLocked()) {
+            if (this.#nodes[nodeToReview].locked()) {
                 lockOption = {
                     name: "Unlock Node Position",
                     group: group,
@@ -299,7 +306,7 @@ export class NodeFlowGraph {
     }
 
     #unselectAllNodes() {
-        for(let i = 0; i < this.#nodes.length; i ++) {
+        for (let i = 0; i < this.#nodes.length; i++) {
             this.#nodes[i].unselect();
         }
     }
@@ -405,7 +412,7 @@ export class NodeFlowGraph {
     }
 
     #mouseDragEvent(delta: Vector2): void {
-        if (this.#interactingWithNode() && !this.#nodes[this.#nodeGrabbed].isLocked()) {
+        if (this.#interactingWithNode() && !this.#nodes[this.#nodeGrabbed].locked()) {
             this.#nodes[this.#nodeGrabbed].translate({
                 x: delta.x * (1 / this.#scale),
                 y: delta.y * (1 / this.#scale)
@@ -513,7 +520,7 @@ export class NodeFlowGraph {
     }
 
     #renderBackground(): void {
-        this.#backgroundRenderer(this.#ctx, this.#position, this.#scale);
+        this.#backgroundRenderer(this.#canvas, this.#ctx, this.#position, this.#scale);
     }
 
     #renderContextMenu(): void {

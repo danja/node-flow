@@ -7,14 +7,22 @@ import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
 import { Text } from "./types/text";
 import { GlobalWidgetFactory } from "./widgets/factory";
-import { Default } from "./default";
+import { Theme } from "./theme";
+import { TextAlign } from "./styles/canvasTextAlign";
+import { TextBaseline } from "./styles/canvasTextBaseline";
 
 export interface WidgetConfig {
     type?: string,
     config?: any
 }
 
-export interface FlowNodeConfiguration {
+export interface FlowNodeTitleConfig {
+    textStyle?: TextStyleConfig;
+    color?: string;
+    padding?: number;
+}
+
+export interface FlowNodeConfig {
     position?: Vector2;
     title?: string;
     locked?: boolean;
@@ -33,14 +41,12 @@ export interface FlowNodeConfiguration {
     widgets?: Array<WidgetConfig>;
 
     // Styling
+    titleStyle?: FlowNodeTitleConfig;
     idleBorder?: BoxStyleConfig;
     mouseOverBorder?: BoxStyleConfig;
     grabbedBorder?: BoxStyleConfig;
     selectedBorder?: BoxStyleConfig;
-
-    titleTextStyle?: TextStyleConfig;
     portTextStyle?: TextStyleConfig;
-    padding?: number;
 }
 
 export enum NodeState {
@@ -85,7 +91,11 @@ export class FlowNode {
 
     // Styling ================================================================
 
-    #boxStyle: Map<NodeState, BoxStyle>;
+    #titleStyle: BoxStyle;
+
+    #selectedStyle: BoxStyle;
+
+    #stateStyles: Map<NodeState, BoxStyle>;
 
     #padding: number;
 
@@ -103,15 +113,16 @@ export class FlowNode {
 
     #widgetPositions: List<Box>;
 
-    constructor(config?: FlowNodeConfiguration) {
+    constructor(config?: FlowNodeConfig) {
         this.#input = new Array<Port>();
         this.#output = new Array<Port>();
         this.#widgets = new Array<Widget>();
         this.#inputPortPositions = new List<Box>();
         this.#outputPortPositions = new List<Box>();
         this.#widgetPositions = new List<Box>();
-        this.#elementSpacing = 10;
+        this.#elementSpacing = 15;
         this.#locked = config?.locked === undefined ? false : config.locked;
+
         this.#selected = false;
         this.#onSelect = config?.onSelect;
         this.#onUnselect = config?.onUnselect;
@@ -119,38 +130,43 @@ export class FlowNode {
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.#title = new Text(
             config?.title === undefined ? "" : config.title,
-            TextStyleFallback(config?.titleTextStyle, {
+            TextStyleFallback(config?.titleStyle?.textStyle, {
                 size: 16,
                 weight: FontWeight.Bold,
-                color: Default.Node.FontColor
+                color: Theme.Node.FontColor
             })
         );
 
-        this.#padding = config?.padding === undefined ? 15 : config.padding;
+        this.#padding = config?.titleStyle?.padding === undefined ? 15 : config?.titleStyle?.padding;
 
-        this.#boxStyle = new Map<NodeState, BoxStyle>();
-        this.#boxStyle.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
-            border: { color: "#1c1c1c", size: 1, },
-            color: Default.Node.BackgroundColor,
+        this.#stateStyles = new Map<NodeState, BoxStyle>();
+        this.#stateStyles.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
+            border: { color: "#1c1c1c", size: 1 },
+            radius: Theme.Node.BorderRadius,
+            color: Theme.Node.BackgroundColor,
         })));
-        this.#boxStyle.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
+        this.#stateStyles.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
             border: { color: "#6e6e6e", size: 1.1, },
-            color: Default.Node.BackgroundColor,
+            radius: Theme.Node.BorderRadius,
+            color: Theme.Node.BackgroundColor,
         })));
-        this.#boxStyle.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
+        this.#stateStyles.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
             border: { color: "white", size: 2, },
-            color: Default.Node.BackgroundColor,
+            radius: Theme.Node.BorderRadius,
+            color: Theme.Node.BackgroundColor,
         })));
-        // this.#boxStyle.set(NodeState.Selected, new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
-        //     border: { color: "white", size: 1, },
-        //     color: Default.Node.BackgroundColor,
-        // })));
+
+        this.#selectedStyle = new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
+            border: { color: "white", size: 1, },
+            radius: Theme.Node.BorderRadius,
+            color: Theme.Node.BackgroundColor,
+        }));
 
         this.#portTextStyle = new TextStyle({
             size: config?.portTextStyle?.size === undefined ? 14 : config?.portTextStyle?.size,
-            color: config?.portTextStyle?.color === undefined ? Default.Node.Port.FontColor : config?.portTextStyle?.color,
-            font: config?.titleTextStyle?.font,
-            weight: config?.titleTextStyle?.weight,
+            color: config?.portTextStyle?.color === undefined ? Theme.Node.Port.FontColor : config?.portTextStyle?.color,
+            font: config?.portTextStyle?.font,
+            weight: config?.portTextStyle?.weight,
         });
 
         if (config?.inputs !== undefined) {
@@ -196,7 +212,7 @@ export class FlowNode {
         }
     }
 
-    public isLocked(): boolean {
+    public locked(): boolean {
         return this.#locked;
     }
 
@@ -224,7 +240,7 @@ export class FlowNode {
         }
 
         const scaledTitleMeasurement = { x: 0, y: 0 };
-        this.#title.getSize(ctx, 1, scaledTitleMeasurement);
+        this.#title.size(ctx, 1, scaledTitleMeasurement);
 
         const size = {
             x: scaledTitleMeasurement.x + (scaledPadding * 2),
@@ -256,6 +272,9 @@ export class FlowNode {
             size.y += eleSize.y
             size.x = Math.max(size.x, (eleSize.x) + (scaledPadding * 2))
         }
+
+        // Add some padding at the end!
+        size.y += this.#elementSpacing
 
         size.x *= scale;
         size.y *= scale;
@@ -337,6 +356,20 @@ export class FlowNode {
         return this.#output[index];
     }
 
+    #renderBackground(ctx: CanvasRenderingContext2D, box: Box, scale: number, state: NodeState) {
+        let boxStyle = this.#stateStyles.get(state);
+        if (boxStyle === undefined) {
+            throw new Error("no registered border style for state: " + state)
+        }
+
+        // Let the node being selected override the idle style
+        if (this.#selected && state === NodeState.Idle) {
+            boxStyle = this.#selectedStyle;
+        }
+
+        boxStyle.Draw(ctx, box, scale);
+    }
+
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
         this.#inputPortPositions.Clear();
         this.#outputPortPositions.Clear();
@@ -344,34 +377,48 @@ export class FlowNode {
         const scaledPadding = this.#padding * scale;
         const scaledElementSpacing = this.#elementSpacing * scale;
 
-        const box = this.calculateBounds(ctx, graphPosition, scale);
+        const nodeBounds = this.calculateBounds(ctx, graphPosition, scale);
 
         // Background
-        const boxStyle = this.#boxStyle.get(state);
-        if (boxStyle === undefined) {
-            throw new Error("no registered border style for state: " + state)
-        }
-
-        boxStyle.Draw(ctx, box, scale);
+        this.#renderBackground(ctx, nodeBounds, scale, state);
 
         // Title
-        ctx.textAlign = "center";
-        ctx.textBaseline = 'middle';
+        ctx.textAlign = TextAlign.Center;
+        ctx.textBaseline = TextBaseline.Middle;
         const titleSize = { x: 0, y: 0 };
-        this.#title.getSize(ctx, scale, titleSize);
+        this.#title.size(ctx, scale, titleSize);
+        const titleBox: Box = {
+            Position: nodeBounds.Position,
+            Size: {
+                x: nodeBounds.Size.x,
+                y: titleSize.y + (scaledPadding*2)
+            }
+        }
+        ctx.fillStyle = "#154050"
+        ctx.beginPath();
+        ctx.roundRect(
+            titleBox.Position.x,
+            titleBox.Position.y,
+            titleBox.Size.x,
+            titleBox.Size.y,
+            [15 * scale, 15 * scale, 0, 0]
+        );
+        ctx.fill();
+        // ctx.stroke();
+
         this.#title.render(ctx, scale, {
-            x: box.Position.x + (box.Size.x / 2),
-            y: box.Position.y + scaledPadding + (titleSize.y / 2)
+            x: nodeBounds.Position.x + (nodeBounds.Size.x / 2),
+            y: nodeBounds.Position.y + scaledPadding + (titleSize.y / 2)
         });
 
-        // Input Ports 
-        let startY = box.Position.y + scaledPadding + titleSize.y + scaledElementSpacing;
-        const leftSide = box.Position.x + scaledPadding;
-        ctx.textAlign = "left";
+        // Input Ports
+        let startY = nodeBounds.Position.y + (scaledPadding*2) + titleSize.y + scaledElementSpacing;
+        const leftSide = nodeBounds.Position.x + scaledPadding;
+        ctx.textAlign = TextAlign.Left;
         for (let i = 0; i < this.#input.length; i++) {
             const port = this.#input[i];
             const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
-            const position = { x: box.Position.x, y: startY + (measurement.y / 2) }
+            const position = { x: nodeBounds.Position.x, y: startY + (measurement.y / 2) }
 
             // Text
             this.#portTextStyle.setupStyle(ctx, scale);
@@ -383,9 +430,9 @@ export class FlowNode {
             startY += measurement.y + scaledElementSpacing;
         }
 
-        // Output Ports 
-        const rightSide = box.Position.x + box.Size.x;
-        ctx.textAlign = "right";
+        // Output Ports
+        const rightSide = nodeBounds.Position.x + nodeBounds.Size.x;
+        ctx.textAlign = TextAlign.Right;
         for (let i = 0; i < this.#output.length; i++) {
             const port = this.#output[i];
             const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
@@ -406,7 +453,7 @@ export class FlowNode {
             const widgetSize = widget.Size();
             const scaledWidgetWidth = widgetSize.x * scale;
             const position = {
-                x: box.Position.x + ((box.Size.x - scaledWidgetWidth) / 2),
+                x: nodeBounds.Position.x + ((nodeBounds.Size.x - scaledWidgetWidth) / 2),
                 y: startY
             };
             this.#widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));

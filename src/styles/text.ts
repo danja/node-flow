@@ -1,3 +1,4 @@
+import { Theme } from "../theme";
 import { Vector2 } from "../types/vector2";
 
 export enum FontWeight {
@@ -12,9 +13,8 @@ export interface TextStyleConfig {
     weight?: FontWeight;
 }
 
-export const DefaultSize: number = 16;
-export const DefaultColor: string = "black";
-export const DefaultFont: string = "Courier New";
+const DefaultSize: number = 16;
+const DefaultColor: string = "black";
 
 export function TextStyleFallback(input?: TextStyleConfig, fallback?: TextStyleConfig): TextStyleConfig {
     return {
@@ -38,7 +38,7 @@ export class TextStyle {
     constructor(config: TextStyleConfig | undefined) {
         this.#size = config?.size === undefined ? DefaultSize : config.size;
         this.#color = config?.color === undefined ? DefaultColor : config.color;
-        this.#font = config?.font === undefined ? DefaultFont : config.font;
+        this.#font = config?.font === undefined ? Theme.FontFamily : config.font;
         this.#weight = config?.weight === undefined ? FontWeight.Normal : config.weight;
     }
 

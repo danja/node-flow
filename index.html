@@ -4,7 +4,9 @@
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
     <title>Node Flow Demo</title>
     <link rel="shortcut icon" href="#" />
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -37,6 +39,8 @@
         }
         window.addEventListener('resize', resizeCanvas, false);
         resizeCanvas();
+
+        NodeFlowTheme.FontFamily = "Source Code Pro";
 
         const node1 = new FlowNode({ title: "Test Node 1" });
         node1.addOutput({ name: "test out 1", type: "string" })

@@ -1,10 +1,10 @@
 import { ContextMenuConfig, ContextMenuItemConfig } from "../contextMenu";
 import { NodeFlowGraph } from "../graph";
-import { FlowNode, FlowNodeConfiguration } from '../node';
+import { FlowNode, FlowNodeConfig } from '../node';
 import { Vector2 } from "../types/vector2";
 
 interface PublisherNodes {
-    [name: string]: FlowNodeConfiguration
+    [name: string]: FlowNodeConfig
 }
 
 export interface PublisherConfig {
@@ -22,14 +22,14 @@ export class Publisher {
 
     #version: string;
 
-    #registeredNodes: Map<string, FlowNodeConfiguration>
+    #registeredNodes: Map<string, FlowNodeConfig>
 
     constructor(config?: PublisherConfig) {
         this.#name = config?.name === undefined ? "Unknown" : config.name;
         this.#description = config?.description === undefined ? "" : config.description;
         this.#version = config?.version === undefined ? "v0.0.0" : config.version;
 
-        this.#registeredNodes = new Map<string, FlowNodeConfiguration>();
+        this.#registeredNodes = new Map<string, FlowNodeConfig>();
 
         if (config?.nodes !== undefined) {
             for (const nodeKey in config.nodes) {
@@ -38,17 +38,17 @@ export class Publisher {
         }
     }
 
-    nodes(): Map<string, FlowNodeConfiguration> {
+    nodes(): Map<string, FlowNodeConfig> {
         return this.#registeredNodes;
     }
 
-    register(nodeType: string, config: FlowNodeConfiguration): void {
+    register(nodeType: string, config: FlowNodeConfig): void {
         this.#registeredNodes.set(nodeType, config);
     }
 
-    #recurseBuildMenu(graph: NodeFlowGraph, name: string, subMenu: Map<string, FlowNodeConfiguration>, position: Vector2): ContextMenuConfig {
+    #recurseBuildMenu(graph: NodeFlowGraph, name: string, subMenu: Map<string, FlowNodeConfig>, position: Vector2): ContextMenuConfig {
         const items: Array<ContextMenuItemConfig> = [];
-        const subMenus = new Map<string, Map<string, FlowNodeConfiguration>>();
+        const subMenus = new Map<string, Map<string, FlowNodeConfig>>();
 
         for (let [key, nodeConfig] of subMenu) {
             const elements = key.split("/");
@@ -63,7 +63,7 @@ export class Publisher {
                 });
             } else {
                 if (!subMenus.has(elements[0])) {
-                    subMenus.set(elements[0], new Map<string, FlowNodeConfiguration>());
+                    subMenus.set(elements[0], new Map<string, FlowNodeConfig>());
                 }
 
                 const menu = subMenus.get(elements[0]);
