@@ -192,6 +192,10 @@ export class FlowNode {
         }
     }
 
+    public selected(): boolean {
+        return this.#selected;
+    }
+
     public select(): void {
         if (this.#selected) {
             return;
@@ -356,18 +360,17 @@ export class FlowNode {
         return this.#output[index];
     }
 
-    #renderBackground(ctx: CanvasRenderingContext2D, box: Box, scale: number, state: NodeState) {
+    #calculateStyle(state: NodeState): BoxStyle {
+        // Let the node being selected override the idle style
+        if (this.#selected && state === NodeState.Idle) {
+            return this.#selectedStyle;
+        }
+
         let boxStyle = this.#stateStyles.get(state);
         if (boxStyle === undefined) {
             throw new Error("no registered border style for state: " + state)
         }
-
-        // Let the node being selected override the idle style
-        if (this.#selected && state === NodeState.Idle) {
-            boxStyle = this.#selectedStyle;
-        }
-
-        boxStyle.Draw(ctx, box, scale);
+        return boxStyle;
     }
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
@@ -380,9 +383,11 @@ export class FlowNode {
         const nodeBounds = this.calculateBounds(ctx, graphPosition, scale);
 
         // Background
-        this.#renderBackground(ctx, nodeBounds, scale, state);
+        const nodeStyle = this.#calculateStyle(state);
+        nodeStyle.Draw(ctx, nodeBounds, scale);
 
         // Title
+        const borderSize = nodeStyle.borderSize();
         ctx.textAlign = TextAlign.Center;
         ctx.textBaseline = TextBaseline.Middle;
         const titleSize = { x: 0, y: 0 };
@@ -391,17 +396,17 @@ export class FlowNode {
             Position: nodeBounds.Position,
             Size: {
                 x: nodeBounds.Size.x,
-                y: titleSize.y + (scaledPadding*2)
+                y: titleSize.y + (scaledPadding * 2)
             }
         }
         ctx.fillStyle = "#154050"
         ctx.beginPath();
         ctx.roundRect(
-            titleBox.Position.x,
-            titleBox.Position.y,
-            titleBox.Size.x,
-            titleBox.Size.y,
-            [15 * scale, 15 * scale, 0, 0]
+            titleBox.Position.x + (borderSize*scale*0.5),
+            titleBox.Position.y + (borderSize*scale*0.5),
+            titleBox.Size.x - (borderSize*scale),
+            titleBox.Size.y - (borderSize*scale*0.5),
+            [nodeStyle.radius() * scale, nodeStyle.radius() * scale, 0, 0]
         );
         ctx.fill();
         // ctx.stroke();
@@ -412,7 +417,7 @@ export class FlowNode {
         });
 
         // Input Ports
-        let startY = nodeBounds.Position.y + (scaledPadding*2) + titleSize.y + scaledElementSpacing;
+        let startY = nodeBounds.Position.y + (scaledPadding * 2) + titleSize.y + scaledElementSpacing;
         const leftSide = nodeBounds.Position.x + scaledPadding;
         ctx.textAlign = TextAlign.Left;
         for (let i = 0; i < this.#input.length; i++) {

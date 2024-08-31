@@ -63,6 +63,17 @@ export class BoxStyle {
         ctx.stroke();
     }
 
+    borderSize(): number {
+        if (this.#border === null) {
+            return 0;
+        }
+        return this.#border.size();
+    }
+
+    radius(): number {
+        return this.#radius;
+    }
+
     setColor(color: string): void {
         this.#color = color;
     }

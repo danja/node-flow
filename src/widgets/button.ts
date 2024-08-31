@@ -46,18 +46,20 @@ export class ButtonWidget {
         }));
         this.#hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.hoverStyle, {
             box: {
-                color: "#888888",
+                color: Theme.Widget.Hover.BackgroundColor,
                 border: {
-                    size: Theme.Widget.Border.Size
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
                 }
             },
             text: { color: Theme.Widget.FontColor },
         }));
         this.#clickStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.clickStyle, {
             box: { 
-                color: "#CCCCCC",
+                color: Theme.Widget.Button.Click.BackgroundColor,
                 border: {
-                    size: Theme.Widget.Border.Size
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
                 }
             },
             text: { color: Theme.Widget.FontColor },

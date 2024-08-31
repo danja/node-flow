@@ -9,7 +9,7 @@ export class MouseObserver {
     #ele: HTMLElement
     #dragCallback: (delta: Vector2) => void
     #moveCallback: (position: Vector2) => void
-    #clickStart: (position: Vector2) => void
+    #clickStart: (position: Vector2, shiftOrCtrl: boolean) => void
     #clickStop: () => void
     #contextMenu: (position: Vector2) => void
 
@@ -17,7 +17,7 @@ export class MouseObserver {
         ele: HTMLElement,
         dragCallback: (delta: Vector2) => void,
         moveCallback: (position: Vector2) => void,
-        clickStart: (position: Vector2) => void,
+        clickStart: (position: Vector2, shiftOrCtrl: boolean) => void,
         clickStop: () => void,
         contextMenu: (position: Vector2) => void
     ) {
@@ -92,7 +92,7 @@ export class MouseObserver {
 
     #down(event: MouseEvent): void {
         this.#clicked = true;
-        this.#clickStart(this.#mousePosition(event));
+        this.#clickStart(this.#mousePosition(event), event.ctrlKey || event.shiftKey);
     }
 
     #touchDown(event: TouchEvent) {
@@ -100,7 +100,7 @@ export class MouseObserver {
         const rect = this.#ele.getBoundingClientRect();
         this.#lastTouch.x = event.touches[0].clientX - rect.left;
         this.#lastTouch.y = event.touches[0].clientY - rect.top;
-        this.#clickStart(this.#lastTouch);
+        this.#clickStart(this.#lastTouch, false);
     }
 
     #up(): void {

@@ -10,7 +10,9 @@ export interface ConnectionRendererParams {
     graphScale: number;
     mouseOver: boolean;
 
+    inNode: FlowNode | null;
     inPort: Port | null;
+    outNode: FlowNode | null;
     outPort: Port | null;
 }
 
@@ -31,9 +33,9 @@ export function DefaultConnectionRenderer(connectionSize: number, connectionColo
             color = connectionColor;
         }
 
-        if (params.mouseOver) {
+        if (params.mouseOver  || params.inNode?.selected() || params.outNode?.selected()) {
             lineSize = mouseOverSize * params.graphScale;
-            params.ctx.shadowBlur = 15 * params.graphScale;
+            params.ctx.shadowBlur = 25 * params.graphScale;
 
             if (mouseOverColor !== undefined) {
                 color = mouseOverColor;
@@ -136,7 +138,9 @@ export class Connection {
             mouseOver: mouseOver,
 
             inPort: this.inPort(),
+            inNode: this.#inNode,
             outPort: this.outPort(),
+            outNode: this.#outNode,
         });
     }
 

@@ -42,7 +42,7 @@ export class NumberWidget {
         }));
         this.#highlightBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.highlightBoxStyle, {
             box: {
-                color: Theme.Widget.Number.Hover.BackgroundColor,
+                color: Theme.Widget.Hover.BackgroundColor,
                 border: {
                     size: Theme.Widget.Border.Size,
                     color: Theme.Widget.Border.Color,

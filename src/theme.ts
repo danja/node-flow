@@ -24,23 +24,34 @@ export const Theme = {
             Size: 2,
             Radius: 2
         },
+        Hover: {
+            BackgroundColor: "#195366"
+        },
         Slider: {
             FillColor: "#07212A",
         },
-        Number: {
-            Hover: {
-                BackgroundColor: "#195366"
-            }
-        },
-        String: {
-            Hover: {
-                BackgroundColor: "#195366"
-            }
+        Button: {
+            Click: {
+                BackgroundColor: "#1f637a"
+            },
         }
     },
     ContextMenu: {
         BackgroundColor: "#07212A",
         HighlightColor: "#205A6D",
         FontColor: "#afb9bb",
+    },
+    Note: {
+        FontColor: "#afb9bb",
+        FontSize: 16,
+        H1: {
+            FontSize: 32,
+        },
+        H2: {
+            FontSize: 16,
+        },
+        H3: {
+            FontSize: 16,
+        }
     }
 }

@@ -32,4 +32,8 @@ export class StrokeStyle {
     setSize(newSize: number): void {
         this.#size = newSize;
     }
+
+    size(): number {
+        return this.#size;
+    }
 }

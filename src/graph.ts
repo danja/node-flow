@@ -10,6 +10,7 @@ import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
 import { Widget } from "./widgets/widget";
 import { Clamp01 } from "./utils/math";
+import { FlowNote, FlowNoteConfig } from './note';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -31,7 +32,7 @@ function BuildConnectionRenderer(config: ConnectionRendererConfiguration | undef
     return DefaultConnectionRenderer(
         config?.size === undefined ? 2 : config.size,
         undefined, // config?.color === undefined ? "#00FF00" : config.color,
-        config?.mouseOverSize === undefined ? 3 : config.mouseOverSize,
+        config?.mouseOverSize === undefined ? 4 : config.mouseOverSize,
         undefined, // config?.mouseOverColor === undefined ? "#00FF22" : config.mouseOverColor
     );
 }
@@ -48,9 +49,9 @@ function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
 
         const spacing = 100;
         context.fillStyle = `rgba(41, 54, 57, ${alpha})`;
-        for (let x = -100; x < 100; x++) {
+        for (let x = -50; x < 50; x++) {
             const xPos = (x * spacing * scale) + position.x;
-            for (let y = -100; y < 100; y++) {
+            for (let y = -50; y < 50; y++) {
                 const yPos = (y * spacing * scale) + position.y;
                 context.beginPath();
                 context.arc(xPos, yPos, 2 * scale, 0, 2 * Math.PI);
@@ -75,6 +76,7 @@ export interface FlowNodeGraphConfiguration {
     idleConnection?: ConnectionRendererConfiguration
     contextMenu?: ContextMenuConfig
     nodes?: NodeFactoryConfig
+    notes?: Array<FlowNoteConfig>
 }
 
 interface OpenContextMenu {
@@ -91,6 +93,8 @@ export class NodeFlowGraph {
     #backgroundRenderer: GraphRenderer
 
     #idleConnectionRenderer: ConnectionRenderer
+
+    #notes: Array<FlowNote>;
 
     #nodes: Array<FlowNode>;
 
@@ -124,6 +128,7 @@ export class NodeFlowGraph {
 
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.#nodes = [];
+        this.#notes = [];
         this.#scale = 1;
 
         this.#nodeHovering = -1;
@@ -184,9 +189,16 @@ export class NodeFlowGraph {
             this.#clickEnd.bind(this),
             this.#openContextMenu.bind(this)
         );
+
+        if (config?.notes !== undefined) {
+            for (let i = 0; i < config?.notes?.length; i++) {
+                this.#notes.push(new FlowNote(config.notes[i]));
+            }
+        }
+
     }
 
-    #clickStart(mousePosition: Vector2): void {
+    #clickStart(mousePosition: Vector2, ctrlKey: boolean): void {
         if (this.#contextMenuEntryHovering !== null) {
             this.#contextMenuEntryHovering.click();
         }
@@ -196,9 +208,7 @@ export class NodeFlowGraph {
 
         if (this.#nodeHovering > -1) {
             this.#nodeGrabbed = this.#nodeHovering;
-            this.#nodes[this.#nodeHovering].select();
-        } else {
-            this.#unselectAllNodes();
+            this.#selectNode(this.#nodeHovering, !ctrlKey);
         }
 
         if (this.#widgetHovering !== null) {
@@ -305,11 +315,16 @@ export class NodeFlowGraph {
         this.#position.y = 0;
     }
 
-    #unselectAllNodes() {
+    #selectNode(nodeIndex: number, unselectOthers: boolean): void {
         for (let i = 0; i < this.#nodes.length; i++) {
-            this.#nodes[i].unselect();
+            if (nodeIndex === i) {
+                this.#nodes[i].select();
+            } else if (unselectOthers) {
+                this.#nodes[i].unselect();
+            }
         }
     }
+
 
     // Somethings wrong here. Needs more testing
     // #fitView(): void {
@@ -505,6 +520,7 @@ export class NodeFlowGraph {
         this.#cursor = CursorStyle.Default;
 
         TimeExecution("Render_Background", this.#renderBackground.bind(this));
+        TimeExecution("Render_Notes", this.#renderNotes.bind(this));
         TimeExecution("Render_Connections", this.#renderConnections.bind(this));
         TimeExecution("Render_Nodes", this.#renderNodes.bind(this));
         TimeExecution("Render_Conext", this.#renderContextMenu.bind(this));
@@ -517,6 +533,12 @@ export class NodeFlowGraph {
         this.#lastFrameCursor = this.#cursor;
 
         window.requestAnimationFrame(this.#render.bind(this));
+    }
+
+    #renderNotes(): void {
+        for (let i = 0; i < this.#notes.length; i++) {
+            this.#notes[i].render(this.#ctx, this.#position, this.#scale, this.#mousePosition);
+        }
     }
 
     #renderBackground(): void {

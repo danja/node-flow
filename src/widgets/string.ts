@@ -40,7 +40,7 @@ export class StringWidget {
 
         this.#hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
             box: {
-                color: Theme.Widget.String.Hover.BackgroundColor,
+                color: Theme.Widget.Hover.BackgroundColor,
                 border: {
                     size: Theme.Widget.Border.Size,
                     color: Theme.Widget.Border.Color,

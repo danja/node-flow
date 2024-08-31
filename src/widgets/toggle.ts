@@ -1,13 +1,12 @@
 import { Theme } from "../theme";
-import { TextAlign } from "../styles/canvasTextAlign";
-import { Box } from "../types/box";
+import { Box, InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
-import { TextBaseline } from "../styles/canvasTextBaseline";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 
 export interface ToggleStyleConfig {
-    textBox?: TextBoxStyleConfig,
+    idle?: TextBoxStyleConfig,
+    hover?: TextBoxStyleConfig,
     lightColor?: string;
     lightBorderColor?: string;
     lightBlur?: number;
@@ -23,7 +22,9 @@ export interface ToggleWidgetConfig {
 
 class ToggleStyle {
 
-    #style: TextBoxStyle;
+    #idleStyle: TextBoxStyle;
+
+    #hoverStyle: TextBoxStyle;
 
     #lightColor: string;
 
@@ -32,9 +33,19 @@ class ToggleStyle {
     #lightBlur?: number;
 
     constructor(config?: ToggleStyleConfig) {
-        this.#style = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBox, {
+        this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idle, {
             box: {
                 color: Theme.Widget.BackgroundColor,
+                border: {
+                    size: Theme.Widget.Border.Size,
+                    color: Theme.Widget.Border.Color,
+                }
+            },
+            text: { color: Theme.Widget.FontColor },
+        }));
+        this.#hoverStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.hover, {
+            box: {
+                color: Theme.Widget.Hover.BackgroundColor,
                 border: {
                     size: Theme.Widget.Border.Size,
                     color: Theme.Widget.Border.Color,
@@ -50,9 +61,16 @@ class ToggleStyle {
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, text: string, mousePosition: Vector2 | undefined): Box {
         const scaledWidth = width * scale;
         const scaledHeight = height * scale;
+        const box = { Position: position, Size: { x: scaledWidth, y: scaledHeight } };
 
         // Background
-        this.#style.Draw(ctx, { Position: position, Size: { x: scaledWidth, y: scaledHeight } }, scale, text);
+        let style: TextBoxStyle = this.#idleStyle;
+        if (mousePosition !== undefined) {
+            if (InBox(box, mousePosition)) {
+                style = this.#hoverStyle;
+            }
+        }
+        style.Draw(ctx, box, scale, text);
 
         // Light
         const lightScale = Math.min(scaledWidth, scaledHeight);
@@ -103,7 +121,7 @@ export class ToggleWidget {
         this.#enabled = config?.value === undefined ? false : config?.value;
         this.#callback = config?.callback
         this.#enabledStyle = new ToggleStyle({
-            textBox: TextBoxStyleWithFallback(config?.enabledStyle?.textBox, {
+            idle: TextBoxStyleWithFallback(config?.enabledStyle?.idle, {
                 box: {
                     color: Theme.Widget.BackgroundColor,
                     border: {
@@ -118,7 +136,7 @@ export class ToggleWidget {
             lightBlur: config?.enabledStyle?.lightBlur === undefined ? 15 : config?.enabledStyle?.lightBlur
         });
         this.#disabledStyle = new ToggleStyle({
-            textBox: TextBoxStyleWithFallback(config?.disabledStyle?.textBox, {
+            idle: TextBoxStyleWithFallback(config?.disabledStyle?.idle, {
                 box: {
                     color: Theme.Widget.BackgroundColor,
                     border: {
