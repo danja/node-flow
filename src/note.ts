@@ -1,26 +1,30 @@
 import { BuildMarkdown } from "./markdown";
+import { MarkdownEntry } from "./markdown/entry";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { TextBaseline } from "./styles/canvasTextBaseline";
-import { TextStyleConfig, TextStyleFallback } from "./styles/text";
+import { TextStyleConfig } from "./styles/text";
 import { Theme } from "./theme";
-import { Text } from "./types/text";
 import { Vector2 } from "./types/vector2";
 
 export interface FlowNoteConfig {
     text?: string;
     style?: TextStyleConfig;
     position?: Vector2;
+    width?: number;
 }
 
 export class FlowNote {
 
     #originalText: string;
 
-    #document: Array<Text>;
+    #document: Array<MarkdownEntry>;
 
     #position: Vector2;
 
+    #width: number;
+
     constructor(config?: FlowNoteConfig) {
+        this.#width = config?.width === undefined ? 500 : config.width;
         this.#originalText = config?.text === undefined ? "" : config?.text;
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.#document = BuildMarkdown(this.#originalText);
@@ -34,15 +38,13 @@ export class FlowNote {
         this.#tempPosition.x = (this.#position.x * scale) + graphPosition.x;
         this.#tempPosition.y = (this.#position.y * scale) + graphPosition.y;
 
-        const lineSpacing = 20 * scale;
+        const lineSpacing = Theme.Note.EntrySpacing * scale;
 
         ctx.textAlign = TextAlign.Left;
         ctx.textBaseline = TextBaseline.Alphabetic;
         for (let i = 0; i < this.#document.length; i++) {
             const text = this.#document[i];
-            text.size(ctx, scale, this.#tempTextSize);
-            text.render(ctx, scale, this.#tempPosition);
-            this.#tempPosition.y += this.#tempTextSize.y + lineSpacing;
+            this.#tempPosition.y += text.render(ctx, this.#tempPosition, scale, this.#width) + lineSpacing;
         }
     }
 }

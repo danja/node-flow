@@ -1,4 +1,5 @@
-import { TextStyle, TextStyleConfig } from "../styles/text";
+import { FontWeight, TextStyle, TextStyleConfig } from "../styles/text";
+import { splitStringIntoLines } from "../utils/string";
 import { CopyVector2, Vector2 } from "./vector2";
 
 export class Text {
@@ -27,6 +28,23 @@ export class Text {
         return this.#value;
     }
 
+    breakIntoLines(ctx: CanvasRenderingContext2D, maxWidth: number): Array<Text> {
+        const results = new Array<Text>();
+
+        this.#style.setupStyle(ctx, 1);
+        const entries = splitStringIntoLines(ctx, this.#value, maxWidth);
+        if (entries.length === 1) {
+            return [this];
+        }
+        for (let i = 0; i < entries.length; i++) {
+            const text = new Text(entries[i])
+            text.#style = this.#style;
+            results.push(text)
+        }
+
+        return results;
+    }
+
     #measure(ctx: CanvasRenderingContext2D): void {
         if (this.#measured) {
             return;
@@ -47,6 +65,18 @@ export class Text {
         CopyVector2(out, this.#size);
         out.x *= scale;
         out.y *= scale;
+    }
+
+    setColor(color: string): void {
+        this.#style.setColor(color);
+    }
+
+    setSize(size: number): void {
+        this.#style.setSize(size);
+    }
+
+    setWeight(weight: FontWeight): void {
+        this.#style.setWeight(weight);
     }
 
     render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2): void {

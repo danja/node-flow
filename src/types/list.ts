@@ -30,4 +30,12 @@ export class List<Type> {
         this.#count++;
     }
 
+    public ToArray(): Array<Type> {
+        let arr = new Array<Type>(this.Count());
+        for(let i = 0; i < this.#count; i ++) {
+            arr[i] = this.#arr[i]
+        }
+        return arr;
+    }
+
 }
