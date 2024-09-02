@@ -6,7 +6,8 @@
     <link rel="shortcut icon" href="#" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -42,7 +43,7 @@
 
         NodeFlowTheme.FontFamily = "Source Code Pro";
 
-        const node1 = new FlowNode({ title: "Test Node 1" });
+        const node1 = new FlowNode({ title: "Test Node 1", position: { x: 0, y: 100 } });
         node1.addOutput({ name: "test out 1", type: "string" })
         node1.addOutput({ name: "test out 2", type: "int" })
         node1.addOutput({ name: "A super duper long name!!!", type: "bool" })
@@ -67,14 +68,14 @@
 
         const node2 = new FlowNode({
             title: "Test Node 2 With a super long Title",
-            position: { x: 300, y: 100 },
+            position: { x: 300, y: 0 },
         });
         node2.addInput({ name: "test input 1", type: "string" })
         node2.addOutput({ name: "test out 1", type: "int" })
 
         const node3 = new FlowNode({
             title: "Node 3",
-            position: { x: 700, y: 200 },
+            position: { x: 850, y: 150 },
             inputs: [
                 { name: "test input 1", type: "int" }
             ],
@@ -182,15 +183,32 @@
             notes: [
                 {
                     text: `
-                    # Notes
-                    
-                    This is an example of a *note* written in **markdown**.
+# Notes
 
-                    Right click on this note and select "Edit Note" to put your own text here!
+This is an example of a *note* written in **markdown**.
+
+You can place notes around your graph to help explain your graph to other users.
+
+## Editting
+
+*Right click* on this note and select "Edit Note" to put your own text here!
+
+## Support
+
+This is a minimal implementation with graph specific functionality. Currently implemented features are:
+
+* H1
+* H2
+* H3
+* Bold
+* Itallic
+* Unordered Lists
+
+More are to come in the future, feel free to open up an issue for features you desire! (Please just search and check to make sure one hasn't already been opened up in the past)
                     `,
                     position: {
                         x: 300,
-                        y: 30
+                        y: 180
                     }
                 }
             ]

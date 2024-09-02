@@ -44,7 +44,9 @@ export const Theme = {
     Note: {
         FontColor: "#afb9bb",
         FontSize: 16,
-        EntrySpacing: 20,
+        EntrySpacing: 30,
+        LineSpacing: 5,
+        DotSize: 3,
         HeaderLineWidth: 2,
         H1: {
             FontSize: 32,

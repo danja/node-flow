@@ -30,6 +30,29 @@ export function fitString(ctx: CanvasRenderingContext2D, str: string, maxWidth: 
     return str.substring(0, index) + ellipsis;
 };
 
+export function splitString(ctx: CanvasRenderingContext2D, str: string, maxWidth: number): Array<string> {
+    let width = ctx.measureText(str).width;
+    if (width <= maxWidth) {
+        return [str];
+    }
+
+    let index = binarySearch({
+        max: str.length,
+        getValue: guess => ctx.measureText(str.substring(0, guess)).width,
+        match: maxWidth,
+    });
+
+    for (let backward = index - 1; backward >= 1; backward--) {
+        if (str.charAt(backward) === " ") {
+            index = backward + 1;
+            break;
+        }
+    }
+
+    return [str.substring(0, index), str.substring(index)];
+};
+
+
 export function splitStringIntoLines(ctx: CanvasRenderingContext2D, str: string, maxWidth: number): Array<string> {
     let width = ctx.measureText(str).width;
     if (width <= maxWidth) {
@@ -50,9 +73,9 @@ export function splitStringIntoLines(ctx: CanvasRenderingContext2D, str: string,
             break;
         }
 
-        for (let backward = index-1; backward >= 1; backward--) {
+        for (let backward = index - 1; backward >= 1; backward--) {
             if (remaining.charAt(backward) === " ") {
-                index = backward+1;
+                index = backward + 1;
                 break;
             }
         }

@@ -1,8 +1,7 @@
 import { FontStyle, FontWeight, TextStyleConfig } from "../styles/text";
 import { Theme } from "../theme";
-import { List } from "../types/list";
 import { Text } from "../types/text";
-import { MarkdownEntry } from "./entry";
+import { BasicMarkdownEntry, MarkdownEntry, UnorderedListMarkdownEntry } from "./entry";
 import { MarkdownToken, MarkdownTokenType } from "./token";
 
 export class MarkdownSyntaxParser {
@@ -16,18 +15,18 @@ export class MarkdownSyntaxParser {
         this.#tokens = tokens;
     }
 
-    current(): MarkdownToken | null {
+    #current(): MarkdownToken | null {
         if (this.#index >= this.#tokens.length - 1) {
             return null
         }
         return this.#tokens[this.#index];
     }
 
-    inc(): void {
+    #inc(): void {
         this.#index++
     }
 
-    next(): MarkdownToken | null {
+    #next(): MarkdownToken | null {
         if (this.#index >= this.#tokens.length - 1) {
             return null
         }
@@ -35,7 +34,14 @@ export class MarkdownSyntaxParser {
         return this.#tokens[this.#index];
     }
 
-    star(): Array<Text> {
+    #peak(): MarkdownToken | null {
+        if (this.#index + 1 >= this.#tokens.length - 1) {
+            return null
+        }
+        return this.#tokens[this.#index + 1];
+    }
+
+    #emphasis(): Array<Text> {
 
         // Cases to consider
         // =================
@@ -49,14 +55,18 @@ export class MarkdownSyntaxParser {
         // 8.  ** a **:  ** a **
         // 9.  **a **:   **a **
         // 10. **a f**:  <b>a f<b>
+        // 11. * Test:   <ul>Test</ul> 
 
-        let token = this.next();
+        let token = this.#next();
+        if (token?.type() === MarkdownTokenType.Space) {
+            return [new Text("*")];
+        }
 
         let bold = false;
         // Read off all leading stars
         while (token !== null && token.type() === MarkdownTokenType.Star) {
             bold = true;
-            token = this.next();
+            token = this.#next();
         }
 
         let textContent = "";
@@ -74,10 +84,9 @@ export class MarkdownSyntaxParser {
                 }
 
                 // If we're not bold, we just need a single star to close this off.
+                startingClose = true;
                 if (bold === false) {
                     break;
-                } else {
-                    startingClose = true;
                 }
             }
 
@@ -96,29 +105,33 @@ export class MarkdownSyntaxParser {
                 validClose = false;
             }
 
-            token = this.next();
+            token = this.#next();
         }
 
-        const textStlye: TextStyleConfig = {}
+        const style: TextStyleConfig = {}
 
-        if (validClose) {
+        if (validClose && startingClose) {
             if (boldClosed) {
-                textStlye.weight = FontWeight.Bold;
+                style.weight = FontWeight.Bold;
             } else {
-                textStlye.style = FontStyle.Italic;
+                style.style = FontStyle.Italic;
             }
         }
 
-        return [
-            new Text(textContent, textStlye)
-        ]
+        return [new Text(textContent, style)]
     }
 
-    text(): Array<Text> {
+    #text(): Array<Text> {
         let contents: Array<Text> = new Array<Text>();
         let textContent = "";
 
-        let token = this.current();
+        let token = this.#current();
+
+        // Read off all starting whitespace 
+        while (token !== null && token.type() === MarkdownTokenType.Space) {
+            token = this.#next();
+        }
+
         while (token !== null && token.type() !== MarkdownTokenType.NewLine) {
             switch (token.type()) {
                 case MarkdownTokenType.Text:
@@ -135,14 +148,14 @@ export class MarkdownSyntaxParser {
                         contents.push(new Text(textContent))
                         textContent = "";
                     }
-                    let starText = this.star()
+                    let starText = this.#emphasis()
                     for (let i = 0; i < starText.length; i++) {
                         contents.push(starText[i]);
                     }
                     break;
             }
 
-            token = this.next();
+            token = this.#next();
         }
 
         if (textContent !== "") {
@@ -153,50 +166,121 @@ export class MarkdownSyntaxParser {
         return contents;
     }
 
-    h1(): MarkdownEntry {
+    #h1(): BasicMarkdownEntry {
         // Move off of the header token
-        this.inc();
+        this.#inc();
 
-        const text = this.text();
+        const text = this.#text();
         for (let i = 0; i < text.length; i++) {
             text[i].setColor(Theme.Note.FontColor);
             text[i].setSize(Theme.Note.H1.FontSize);
             text[i].setWeight(FontWeight.Bold);
         }
 
-        return new MarkdownEntry(text, true);
+        return new BasicMarkdownEntry(text, true);
+    }
+
+    #h2(): BasicMarkdownEntry {
+        // Move off of the header token
+        this.#inc();
+
+        const text = this.#text();
+        for (let i = 0; i < text.length; i++) {
+            text[i].setColor(Theme.Note.FontColor);
+            text[i].setSize(Theme.Note.H2.FontSize);
+            text[i].setWeight(FontWeight.Bold);
+        }
+
+        return new BasicMarkdownEntry(text, true);
+    }
+
+    #h3(): BasicMarkdownEntry {
+        // Move off of the header token
+        this.#inc();
+
+        const text = this.#text();
+        for (let i = 0; i < text.length; i++) {
+            text[i].setColor(Theme.Note.FontColor);
+            text[i].setSize(Theme.Note.H3.FontSize);
+            text[i].setWeight(FontWeight.Bold);
+        }
+
+        return new BasicMarkdownEntry(text, false);
+    }
+
+    #starLineStart(): MarkdownEntry {
+        if (this.#peak()?.type() !== MarkdownTokenType.Space) {
+            const starEntries = this.#text();
+            for (let i = 0; i < starEntries.length; i++) {
+                starEntries[i].setColor(Theme.Note.FontColor);
+                starEntries[i].setSize(Theme.Note.FontSize);
+            }
+            return new BasicMarkdownEntry(starEntries, false);
+        }
+
+        // We've begun with a space, which means unordered list!
+
+        const entries = new Array<BasicMarkdownEntry>();
+
+        while (this.#current()?.type() === MarkdownTokenType.Star && this.#peak()?.type() === MarkdownTokenType.Space) {
+            this.#inc();
+            const starEntries = this.#text();
+            for (let i = 0; i < starEntries.length; i++) {
+                starEntries[i].setColor(Theme.Note.FontColor);
+                starEntries[i].setSize(Theme.Note.FontSize);
+            }
+            entries.push(new BasicMarkdownEntry(starEntries, false));
+
+            // Text reads to the end of the line, which means we're at the new
+            // line character. Move forward 1. 
+            this.#inc();
+        }
+
+        return new UnorderedListMarkdownEntry(entries);
+
     }
 
     parse(): Array<MarkdownEntry> {
-        let token = this.current();
+        let token = this.#current();
 
         const entries = new Array<MarkdownEntry>();
 
         while (token !== null) {
             switch (token.type()) {
                 case MarkdownTokenType.H1:
-                    entries.push(this.h1());
+                    entries.push(this.#h1());
+                    break;
+
+                case MarkdownTokenType.H2:
+                    entries.push(this.#h2());
+                    break;
+
+                case MarkdownTokenType.H3:
+                    entries.push(this.#h3());
                     break;
 
                 case MarkdownTokenType.Text:
-                case MarkdownTokenType.Star:
-                    const textEntries = this.text();
+                    const textEntries = this.#text();
                     for (let i = 0; i < textEntries.length; i++) {
                         textEntries[i].setColor(Theme.Note.FontColor);
                         textEntries[i].setSize(Theme.Note.FontSize);
                     }
-                    entries.push(new MarkdownEntry(textEntries, false));
+                    entries.push(new BasicMarkdownEntry(textEntries, false));
+                    break;
+
+                case MarkdownTokenType.Star:
+                    entries.push(this.#starLineStart());
                     break;
 
                 case MarkdownTokenType.NewLine:
-                    this.inc();
+                    this.#inc();
                     break;
 
                 default:
-                    this.inc();
+                    this.#inc();
             }
 
-            token = this.current();
+            token = this.#current();
         }
 
         return entries;

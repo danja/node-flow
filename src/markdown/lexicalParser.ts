@@ -18,18 +18,18 @@ export class MarkdownLexicalParser {
         return this.#tokens;
     }
 
-    current(): string {
+    #current(): string {
         if (this.#index >= this.#body.length - 1) {
             return ""
         }
         return this.#body.charAt(this.#index);
     }
 
-    inc(): void {
+    #inc(): void {
         this.#index++
     }
 
-    next(): string {
+    #next(): string {
         if (this.#index >= this.#body.length - 1) {
             return ""
         }
@@ -41,42 +41,42 @@ export class MarkdownLexicalParser {
         this.#tokens.push(new MarkdownToken(token, lexeme));
     }
 
-    h2(): void {
-        let char = this.next();
+    #h2(): void {
+        let char = this.#next();
         if (char === "#") {
             this.#addToken(MarkdownTokenType.H3, "###");
 
             // Move it off the character for the next reading
-            this.inc();
+            this.#inc();
         } else {
             this.#addToken(MarkdownTokenType.H2, "##");
         }
     }
 
-    h1(): void {
-        let char = this.next();
+    #h1(): void {
+        let char = this.#next();
         if (char === "#") {
-            this.h2();
+            this.#h2();
         } else {
             this.#addToken(MarkdownTokenType.H1, "#");
         }
     }
 
-    whiteSpace(): void {
-        let char = this.current();
+    #whiteSpace(): void {
+        let char = this.#current();
 
         while (char !== "") {
             if (char !== " " && char !== "\t") {
                 break;
             }
-            char = this.next();
+            char = this.#next();
         }
 
         this.#addToken(MarkdownTokenType.Space, " ")
     }
 
-    text(): void {
-        let char = this.current();
+    #text(): void {
+        let char = this.#current();
 
         let started = -1;
 
@@ -85,7 +85,7 @@ export class MarkdownLexicalParser {
 
                 // Eat white space if we haven't seen anything yet!
                 if (started === -1) {
-                    this.inc();
+                    this.#inc();
                     continue;
                 }
             }
@@ -102,7 +102,7 @@ export class MarkdownLexicalParser {
                 started = this.#index;
             }
 
-            char = this.next();
+            char = this.#next();
         }
 
         if (started != -1) {
@@ -118,24 +118,24 @@ export class MarkdownLexicalParser {
     // H2(#) => H3
     // H2(#) => H3
     parse(): void {
-        let char = this.current();
+        let char = this.#current();
 
         while (char !== "") {
             if (char === " " || char === "\t") {
-                this.whiteSpace();
+                this.#whiteSpace();
             } else if (char === "#") {
-                this.h1();
+                this.#h1();
             } else if (char === "\n") {
                 this.#addToken(MarkdownTokenType.NewLine, "\n");
-                this.inc();
+                this.#inc();
             } else if (char === "*") {
                 this.#addToken(MarkdownTokenType.Star, "*");
-                this.inc();
+                this.#inc();
             } else {
-                this.text();
+                this.#text();
             }
 
-            char = this.current();
+            char = this.#current();
         }
     }
 }

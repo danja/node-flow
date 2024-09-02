@@ -1,5 +1,5 @@
 import { FontWeight, TextStyle, TextStyleConfig } from "../styles/text";
-import { splitStringIntoLines } from "../utils/string";
+import { splitString, splitStringIntoLines } from "../utils/string";
 import { CopyVector2, Vector2 } from "./vector2";
 
 export class Text {
@@ -12,11 +12,14 @@ export class Text {
 
     #value: string
 
+    #lastUpdated: number;
+
     constructor(value: string, style?: TextStyleConfig) {
         this.#value = value;
         this.#measured = false;
         this.#size = { x: 0, y: 0 };
         this.#style = new TextStyle(style);
+        this.#lastUpdated = Date.now();
     }
 
     set(newValue: string): void {
@@ -45,8 +48,24 @@ export class Text {
         return results;
     }
 
+    splitAtWidth(ctx: CanvasRenderingContext2D, maxWidth: number): Array<Text> {
+        this.#style.setupStyle(ctx, 1);
+        const entries = splitString(ctx, this.#value, maxWidth);
+        if (entries.length === 1) {
+            return [this];
+        }
+
+        const results = new Array<Text>();
+        for (let i = 0; i < entries.length; i++) {
+            const text = new Text(entries[i])
+            text.#style = this.#style;
+            results.push(text)
+        }
+        return results;
+    }
+
     #measure(ctx: CanvasRenderingContext2D): void {
-        if (this.#measured) {
+        if (this.#measured && Date.now() - this.#lastUpdated < 1000) {
             return;
         }
 
@@ -55,12 +74,11 @@ export class Text {
         this.#size.x = measurements.width;
         this.#size.y = measurements.actualBoundingBoxAscent + measurements.actualBoundingBoxDescent;
         this.#measured = true;
+        this.#lastUpdated = Date.now();
     }
 
     size(ctx: CanvasRenderingContext2D, scale: number, out: Vector2): void {
-        if (!this.#measured) {
-            this.#measure(ctx);
-        }
+        this.#measure(ctx);
 
         CopyVector2(out, this.#size);
         out.x *= scale;
