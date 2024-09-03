@@ -11,6 +11,7 @@ import { Vector2 } from './types/vector2';
 import { Widget } from "./widgets/widget";
 import { Clamp01 } from "./utils/math";
 import { FlowNote, FlowNoteConfig } from './note';
+import { InBox } from "./types/box";
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -96,6 +97,8 @@ export class NodeFlowGraph {
 
     #notes: Array<FlowNote>;
 
+    #noteHovering: FlowNote | null;
+
     #nodes: Array<FlowNode>;
 
     #connections: Array<Connection>;
@@ -142,6 +145,7 @@ export class NodeFlowGraph {
         this.#connections = new Array<Connection>();
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
         this.#nodeFactory = new NodeFactory(config?.nodes);
+        this.#noteHovering = null;
 
         this.#contextMenuConfig = CombineContextMenus({
             items: [
@@ -192,10 +196,9 @@ export class NodeFlowGraph {
 
         if (config?.notes !== undefined) {
             for (let i = 0; i < config?.notes?.length; i++) {
-                this.#notes.push(new FlowNote(config.notes[i]));
+                this.addNote(new FlowNote(config.notes[i]));
             }
         }
-
     }
 
     #clickStart(mousePosition: Vector2, ctrlKey: boolean): void {
@@ -292,10 +295,52 @@ export class NodeFlowGraph {
             })
         }
 
+
+
+        if (this.#noteHovering !== null) {
+            const group = "node-flow-graph-note-menu";
+            const noteToReview = this.#noteHovering;
+            finalConfig = CombineContextMenus(finalConfig, {
+                items: [
+                    {
+                        name: "Set Note Contents",
+                        group: group,
+                        callback: noteToReview.edit.bind(noteToReview),
+                    },
+                    {
+                        name: "Delete Note",
+                        group: group,
+                        callback: () => {
+                            this.#removeNote(noteToReview);
+                            // this.#removeNodeConnections(nodeToReview);
+                        }
+                    },
+
+                ]
+            })
+        }
+
         const contextMenuPosition = {
             x: -(this.#position.x / this.#scale) + (position.x / this.#scale),
             y: -(this.#position.y / this.#scale) + (position.y / this.#scale),
         }
+
+        finalConfig = CombineContextMenus(finalConfig, {
+            items: [
+                {
+                    name: "New Note",
+                    group: contextMenuGroup,
+                    callback: () => {
+                        this.addNote(new FlowNote({
+                            text: "#Note\n\nRight-click this note and select \"edit note\" to put what you want here.",
+                            width: 300,
+                            position: contextMenuPosition
+                        }))
+                    }
+                }
+            ]
+        })
+
 
         finalConfig = CombineContextMenus(finalConfig, {
             subMenus: [
@@ -408,7 +453,7 @@ export class NodeFlowGraph {
 
         // Ight. Let's make the connection.
         if (this.#portHovering.InputPort) {
-            this.clearNodeInputPortConnection(this.#portHovering.Node, this.#portHovering.Index);
+            this.clearNodeInputConnection(this.#portHovering.Node, this.#portHovering.Index);
             conn.setInput(this.#portHovering.Node, this.#portHovering.Index)
         } else {
             conn.setOutput(this.#portHovering.Node, this.#portHovering.Index);
@@ -417,7 +462,7 @@ export class NodeFlowGraph {
         this.#connectionSelected = null;
     }
 
-    clearNodeInputPortConnection(node: FlowNode, index: number): void {
+    clearNodeInputConnection(node: FlowNode, index: number): void {
         const port = node.inputPort(index);
         for (let i = this.#connections.length - 1; i >= 0; i--) {
             if (this.#connections[i].inPort() === port) {
@@ -493,6 +538,15 @@ export class NodeFlowGraph {
         }
     }
 
+    #removeNote(note: FlowNote): void {
+        const index = this.#notes.indexOf(note);
+        if (index > -1) {
+            this.#notes.splice(index, 1);
+        } else {
+            console.error("no note found to remove");
+        }
+    }
+
     connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
         if (nodeOut.outputPort(outPort).getType() !== nodeIn.inputPort(inPort).getType()) {
             console.error("can't connect nodes of different types");
@@ -510,6 +564,10 @@ export class NodeFlowGraph {
 
     addNode(node: FlowNode): void {
         this.#nodes.push(node);
+    }
+
+    addNote(note: FlowNote): void {
+        this.#notes.push(note);
     }
 
     #lastFrameCursor: CursorStyle;
@@ -536,8 +594,16 @@ export class NodeFlowGraph {
     }
 
     #renderNotes(): void {
+        this.#noteHovering = null;
         for (let i = 0; i < this.#notes.length; i++) {
             this.#notes[i].render(this.#ctx, this.#position, this.#scale, this.#mousePosition);
+
+            if (this.#mousePosition) {
+                if (InBox(this.#notes[i].bounds(), this.#mousePosition)) {
+                    this.#noteHovering = this.#notes[i];
+                }
+            }
+
         }
     }
 

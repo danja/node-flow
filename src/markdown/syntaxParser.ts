@@ -16,7 +16,7 @@ export class MarkdownSyntaxParser {
     }
 
     #current(): MarkdownToken | null {
-        if (this.#index >= this.#tokens.length - 1) {
+        if (this.#index > this.#tokens.length - 1) {
             return null
         }
         return this.#tokens[this.#index];
@@ -27,10 +27,10 @@ export class MarkdownSyntaxParser {
     }
 
     #next(): MarkdownToken | null {
+        this.#index++
         if (this.#index >= this.#tokens.length - 1) {
             return null
         }
-        this.#index++
         return this.#tokens[this.#index];
     }
 
@@ -162,7 +162,6 @@ export class MarkdownSyntaxParser {
             contents.push(new Text(textContent))
         }
 
-
         return contents;
     }
 
@@ -211,10 +210,7 @@ export class MarkdownSyntaxParser {
     #starLineStart(): MarkdownEntry {
         if (this.#peak()?.type() !== MarkdownTokenType.Space) {
             const starEntries = this.#text();
-            for (let i = 0; i < starEntries.length; i++) {
-                starEntries[i].setColor(Theme.Note.FontColor);
-                starEntries[i].setSize(Theme.Note.FontSize);
-            }
+            this.#assignStandardStyling(starEntries);
             return new BasicMarkdownEntry(starEntries, false);
         }
 
@@ -225,10 +221,7 @@ export class MarkdownSyntaxParser {
         while (this.#current()?.type() === MarkdownTokenType.Star && this.#peak()?.type() === MarkdownTokenType.Space) {
             this.#inc();
             const starEntries = this.#text();
-            for (let i = 0; i < starEntries.length; i++) {
-                starEntries[i].setColor(Theme.Note.FontColor);
-                starEntries[i].setSize(Theme.Note.FontSize);
-            }
+            this.#assignStandardStyling(starEntries);
             entries.push(new BasicMarkdownEntry(starEntries, false));
 
             // Text reads to the end of the line, which means we're at the new
@@ -238,6 +231,13 @@ export class MarkdownSyntaxParser {
 
         return new UnorderedListMarkdownEntry(entries);
 
+    }
+
+    #assignStandardStyling(textEntries: Array<Text>): void {
+        for (let i = 0; i < textEntries.length; i++) {
+            textEntries[i].setColor(Theme.Note.FontColor);
+            textEntries[i].setSize(Theme.Note.FontSize);
+        }
     }
 
     parse(): Array<MarkdownEntry> {
@@ -261,10 +261,7 @@ export class MarkdownSyntaxParser {
 
                 case MarkdownTokenType.Text:
                     const textEntries = this.#text();
-                    for (let i = 0; i < textEntries.length; i++) {
-                        textEntries[i].setColor(Theme.Note.FontColor);
-                        textEntries[i].setSize(Theme.Note.FontSize);
-                    }
+                    this.#assignStandardStyling(textEntries);
                     entries.push(new BasicMarkdownEntry(textEntries, false));
                     break;
 

@@ -19,7 +19,7 @@ export class MarkdownLexicalParser {
     }
 
     #current(): string {
-        if (this.#index >= this.#body.length - 1) {
+        if (this.#index > this.#body.length - 1) {
             return ""
         }
         return this.#body.charAt(this.#index);
@@ -30,10 +30,10 @@ export class MarkdownLexicalParser {
     }
 
     #next(): string {
-        if (this.#index >= this.#body.length - 1) {
+        this.#index++
+        if (this.#index > this.#body.length - 1) {
             return ""
         }
-        this.#index++
         return this.#body.charAt(this.#index);
     }
 
