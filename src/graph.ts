@@ -178,7 +178,7 @@ export class NodeFlowGraph {
 
         this.#canvas.addEventListener('wheel', (event) => {
             event.preventDefault();
-            this.#scale += (event.deltaY / 100) * this.#scale;
+            this.#scale += Math.sign(event.deltaY) * this.#scale * 0.05;
         }, false);
 
         new MouseObserver(this.#canvas,
@@ -301,12 +301,23 @@ export class NodeFlowGraph {
             const group = "node-flow-graph-note-menu";
             const noteToReview = this.#noteHovering;
             finalConfig = CombineContextMenus(finalConfig, {
-                items: [
+                subMenus: [
                     {
-                        name: "Set Note Contents",
+                        name: "Edit Note",
                         group: group,
-                        callback: noteToReview.edit.bind(noteToReview),
-                    },
+                        items: [
+                            {
+                                name: "Contents",
+                                callback: noteToReview.editContent.bind(noteToReview),
+                            },
+                            {
+                                name: "Layout",
+                                callback: noteToReview.editLayout.bind(noteToReview),
+                            }
+                        ]
+                    }
+                ],
+                items: [
                     {
                         name: "Delete Note",
                         group: group,

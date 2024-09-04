@@ -28,10 +28,10 @@ export class UnorderedListMarkdownEntry {
         for (let i = 0; i < this.#entries.length; i++) {
 
             ctx.beginPath();
-            ctx.arc(position.x+dot, pos.y - (dot*2), dot, 0, 2 * Math.PI);
+            ctx.arc(position.x + dot, pos.y - (dot * 2), dot, 0, 2 * Math.PI);
             ctx.fill();
 
-            offset += this.#entries[i].render(ctx, pos, scale, maxWidth - shift) + (scale * Theme.Note.LineSpacing*2);
+            offset += this.#entries[i].render(ctx, pos, scale, maxWidth - shift) + (scale * Theme.Note.LineSpacing * 2);
             pos.y = position.y + offset;
         }
 
@@ -91,6 +91,10 @@ export class BasicMarkdownEntry {
             ctx.lineTo(curPosition.x + (maxWidth * scale), y);
             ctx.stroke();
         }
+
+        // ctx.beginPath();
+        // ctx.rect(position.x, position.y, maxWidth * scale, curPosition.y - position.y)
+        // ctx.stroke();
 
         return curPosition.y - position.y;
     }

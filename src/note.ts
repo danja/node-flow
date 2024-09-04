@@ -1,6 +1,7 @@
 import { BuildMarkdown } from "./markdown";
 import { MarkdownEntry } from "./markdown/entry";
 import { Popup } from "./popup";
+import { BoxStyle } from "./styles/box";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { TextBaseline } from "./styles/canvasTextBaseline";
 import { TextStyleConfig } from "./styles/text";
@@ -27,11 +28,23 @@ export class FlowNote {
 
     #lastRenderedBox: Box;
 
+    #edittingLayout: boolean;
+
+    #edittingStyle: BoxStyle;
+
     constructor(config?: FlowNoteConfig) {
+        this.#edittingLayout = false;
         this.#width = config?.width === undefined ? 500 : config.width;
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.setText(config?.text === undefined ? "" : config?.text);
         this.#lastRenderedBox = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
+
+        this.#edittingStyle = new BoxStyle({
+            border: {
+                color: "white",
+                size: 3
+            },
+        })
     }
 
     setText(text: string): void {
@@ -42,6 +55,10 @@ export class FlowNote {
     #tempPosition: Vector2 = { x: 0, y: 0 };
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
+        if (this.#edittingLayout) {
+            // this.#edittingStyle.Draw(ctx, this.#lastRenderedBox, scale);
+        }
+
         this.#tempPosition.x = (this.#position.x * scale) + graphPosition.x;
         this.#tempPosition.y = (this.#position.y * scale) + graphPosition.y;
         CopyVector2(this.#lastRenderedBox.Position, this.#tempPosition)
@@ -59,7 +76,7 @@ export class FlowNote {
         this.#lastRenderedBox.Size.y = this.#tempPosition.y - graphPosition.y;
     }
 
-    edit(): void {
+    editContent(): void {
         let input: HTMLTextAreaElement | null = null;
         let saveText = "Save";
 
@@ -84,6 +101,10 @@ export class FlowNote {
         });
 
         popup.Show();
+    }
+
+    editLayout(): void {
+        this.#edittingLayout = true;
     }
 
     bounds(): Box {
