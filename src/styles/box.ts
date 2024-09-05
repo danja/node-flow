@@ -47,6 +47,19 @@ export class BoxStyle {
         ctx.stroke();
     }
 
+    Outline(ctx: CanvasRenderingContext2D, box: Box, scale: number, radius: any): void {
+        this.#border?.setupStyle(ctx, scale);
+        ctx.beginPath();
+        ctx.roundRect(
+            box.Position.x,
+            box.Position.y,
+            box.Size.x,
+            box.Size.y,
+            radius
+        );
+        ctx.stroke();
+    }
+
     Draw(ctx: CanvasRenderingContext2D, box: Box, scale: number): void {
         this.#draw(ctx, box, scale, this.#radius * scale)
     }

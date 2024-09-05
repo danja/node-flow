@@ -24,6 +24,8 @@ export class FlowNote {
 
     #position: Vector2;
 
+    #lastMousePosition: Vector2;
+
     #width: number;
 
     #lastRenderedBox: Box;
@@ -36,13 +38,14 @@ export class FlowNote {
         this.#edittingLayout = false;
         this.#width = config?.width === undefined ? 500 : config.width;
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
+        this.#lastMousePosition = { x: 0, y: 0 }
         this.setText(config?.text === undefined ? "" : config?.text);
         this.#lastRenderedBox = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
 
         this.#edittingStyle = new BoxStyle({
             border: {
                 color: "white",
-                size: 3
+                size: 1
             },
         })
     }
@@ -56,11 +59,36 @@ export class FlowNote {
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
         if (this.#edittingLayout) {
-            // this.#edittingStyle.Draw(ctx, this.#lastRenderedBox, scale);
+
+            if (mousePosition) {
+                CopyVector2(this.#lastMousePosition, mousePosition);
+                this.#width = mousePosition.x - (this.#position.x + graphPosition.x)
+            }
+
+            const bigBox: Box = {
+                Position: {
+                    x: this.#lastRenderedBox.Position.x - 10,
+                    y: this.#lastRenderedBox.Position.y - 10,
+                },
+                Size: {
+                    x: this.#lastRenderedBox.Size.x + 20,
+                    y: this.#lastRenderedBox.Size.y + 20,
+                }
+            }
+            const smallBox: Box = {
+                Position: {
+                    x: this.#lastRenderedBox.Position.x + this.#lastRenderedBox.Size.x,
+                    y: this.#lastRenderedBox.Position.y + this.#lastRenderedBox.Size.y,
+                },
+                Size: { x: 10, y: 10, }
+            }
+            this.#edittingStyle.Outline(ctx, bigBox, scale, 2);
+            this.#edittingStyle.Outline(ctx, smallBox, scale, 2);
         }
+        const startY = (this.#position.y * scale) + graphPosition.y;
 
         this.#tempPosition.x = (this.#position.x * scale) + graphPosition.x;
-        this.#tempPosition.y = (this.#position.y * scale) + graphPosition.y;
+        this.#tempPosition.y = startY;
         CopyVector2(this.#lastRenderedBox.Position, this.#tempPosition)
 
         const lineSpacing = Theme.Note.EntrySpacing * scale;
@@ -73,7 +101,7 @@ export class FlowNote {
         }
 
         this.#lastRenderedBox.Size.x = scale * this.#width;
-        this.#lastRenderedBox.Size.y = this.#tempPosition.y - graphPosition.y;
+        this.#lastRenderedBox.Size.y = this.#tempPosition.y - startY;
     }
 
     editContent(): void {
