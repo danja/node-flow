@@ -12,14 +12,17 @@ export class Text {
 
     #value: string
 
-    #lastUpdated: number;
-
     constructor(value: string, style?: TextStyleConfig) {
         this.#value = value;
         this.#measured = false;
         this.#size = { x: 0, y: 0 };
         this.#style = new TextStyle(style);
-        this.#lastUpdated = Date.now();
+
+        if (!document.fonts.check(`16px "${this.#style.getFont()}"`)) {
+            document.fonts.addEventListener("loadingdone", (event) => {
+                this.#measured = false;
+            });
+        }
     }
 
     set(newValue: string): void {
@@ -50,8 +53,8 @@ export class Text {
 
     splitAtIndex(index: number): Array<Text> {
         const results = [
-            new Text(this.#value.substring(0, index)), 
-            new Text(this.#value.substring(index, 0)), 
+            new Text(this.#value.substring(0, index)),
+            new Text(this.#value.substring(index, 0)),
         ];
 
 
@@ -78,7 +81,7 @@ export class Text {
     }
 
     #measure(ctx: CanvasRenderingContext2D): void {
-        if (this.#measured && Date.now() - this.#lastUpdated < 1000) {
+        if (this.#measured) {
             return;
         }
 
@@ -87,7 +90,6 @@ export class Text {
         this.#size.x = measurements.width;
         this.#size.y = measurements.actualBoundingBoxAscent + measurements.actualBoundingBoxDescent;
         this.#measured = true;
-        this.#lastUpdated = Date.now();
     }
 
     size(ctx: CanvasRenderingContext2D, scale: number, out: Vector2): void {

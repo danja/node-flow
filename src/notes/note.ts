@@ -22,17 +22,21 @@ export class FlowNote {
 
     #document: Array<MarkdownEntry>;
 
+    #width: number;
+
+    #edittingStyle: BoxStyle;
+
+    // Runtime ================================================================
+
     #position: Vector2;
 
     #lastMousePosition: Vector2;
 
-    #width: number;
+    #edittingLayout: boolean;
 
     #lastRenderedBox: Box;
 
-    #edittingLayout: boolean;
-
-    #edittingStyle: BoxStyle;
+    // ========================================================================
 
     constructor(config?: FlowNoteConfig) {
         this.#edittingLayout = false;
@@ -55,6 +59,11 @@ export class FlowNote {
         this.#document = BuildMarkdown(this.#originalText);
     }
 
+    translate(delta: Vector2): void {
+        this.#position.x += delta.x;
+        this.#position.y += delta.y;
+    }
+
     #tempPosition: Vector2 = { x: 0, y: 0 };
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
@@ -65,25 +74,36 @@ export class FlowNote {
                 this.#width = Math.max(mousePosition.x - (this.#position.x + graphPosition.x), 1)
             }
 
-            const bigBox: Box = {
-                Position: {
-                    x: this.#lastRenderedBox.Position.x - 10,
-                    y: this.#lastRenderedBox.Position.y - 10,
-                },
-                Size: {
-                    x: this.#lastRenderedBox.Size.x + 20,
-                    y: this.#lastRenderedBox.Size.y + 20,
-                }
-            }
+            const boxSize = 10;
+            const spacing = 20;
+
             const smallBox: Box = {
                 Position: {
-                    x: this.#lastRenderedBox.Position.x + this.#lastRenderedBox.Size.x,
-                    y: this.#lastRenderedBox.Position.y + this.#lastRenderedBox.Size.y,
+                    x: this.#lastRenderedBox.Position.x - spacing - (boxSize / 2),
+                    y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (boxSize / 2),
                 },
-                Size: { x: 10, y: 10, }
+                Size: { x: boxSize, y: boxSize, }
             }
-            this.#edittingStyle.Outline(ctx, bigBox, scale, 2);
             this.#edittingStyle.Outline(ctx, smallBox, scale, 2);
+            smallBox.Position.x += this.#lastRenderedBox.Size.x + (spacing * 2);
+            this.#edittingStyle.Outline(ctx, smallBox, scale, 2);
+
+            ctx.beginPath();
+            const left = this.#lastRenderedBox.Position.x - spacing;
+            const right = this.#lastRenderedBox.Position.x + spacing + this.#lastRenderedBox.Size.x;
+            const bottom = this.#lastRenderedBox.Position.y - spacing;
+            const top = this.#lastRenderedBox.Position.y + spacing + this.#lastRenderedBox.Size.y;
+            ctx.moveTo(left, bottom + (this.#lastRenderedBox.Size.y / 2) - (boxSize));
+            ctx.lineTo(left, bottom);
+            ctx.lineTo(right, bottom);
+            ctx.lineTo(right, bottom + (this.#lastRenderedBox.Size.y / 2) - (boxSize));
+
+            ctx.moveTo(left, top - (this.#lastRenderedBox.Size.y / 2) + (boxSize));
+            ctx.lineTo(left, top);
+            ctx.lineTo(right, top);
+            ctx.lineTo(right, top - (this.#lastRenderedBox.Size.y / 2) + (boxSize));
+            ctx.stroke();
+            // this.#edittingStyle.Outline(ctx, bigBox, scale, 2);
         }
         const startY = (this.#position.y * scale) + graphPosition.y;
 

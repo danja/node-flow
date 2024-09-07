@@ -81,18 +81,21 @@ export class NodeSubsystem {
     }
 
     clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
+        let hoveringSomething = false;
         if (this.#nodeHovering > -1) {
             this.#nodeGrabbed = this.#nodeHovering;
             this.#selectNode(this.#nodeHovering, !ctrlKey);
+            hoveringSomething = true;
         }
 
         if (this.#widgetHovering !== null) {
             this.#widgetHovering.ClickStart();
             this.#widgetCurrentlyClicking = this.#widgetHovering;
+            hoveringSomething = true;
         }
 
         if (this.#portHovering === null) {
-            return false;
+            return hoveringSomething;
         }
 
         if (this.#portHovering.InputPort) {

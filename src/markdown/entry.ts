@@ -52,8 +52,6 @@ export class BasicMarkdownEntry {
 
     #calculatedForWidth: number;
 
-    #lastUpdated: number;
-
     constructor(lines: Array<Text>, underline: boolean) {
         this.#entries = lines;
         this.#underline = underline;
@@ -61,11 +59,14 @@ export class BasicMarkdownEntry {
 
         this.#calculatedEntries = new List<Text>();
         this.#calculatedPositions = new List<Vector2>();
-        this.#lastUpdated = Date.now();
+
+        document.fonts.addEventListener("loadingdone", (event) => {
+            this.#calculatedForWidth = -1
+        });
     }
 
     #calculateLayout(ctx: CanvasRenderingContext2D, maxWidth: number): void {
-        if (this.#calculatedForWidth === maxWidth && Date.now() - this.#lastUpdated < 1000) {
+        if (this.#calculatedForWidth === maxWidth) {
             return;
         }
         this.#calculatedEntries.Clear();
@@ -155,7 +156,6 @@ export class BasicMarkdownEntry {
         }
 
         this.#calculatedForWidth = maxWidth;
-        this.#lastUpdated = Date.now();
     }
 
     render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, maxWidth: number): number {

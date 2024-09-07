@@ -10,6 +10,8 @@ export class NoteSubsystem {
 
     #noteHovering: FlowNote | null;
 
+    #noteSelected: FlowNote | null;
+
     constructor(notes?: Array<FlowNoteConfig>) {
         this.#notes = [];
         this.#noteHovering = null;
@@ -67,7 +69,6 @@ export class NoteSubsystem {
                 group: group,
                 callback: () => {
                     this.#removeNote(noteToReview);
-                    // this.#removeNodeConnections(nodeToReview);
                 }
             });
         }
@@ -76,17 +77,26 @@ export class NoteSubsystem {
     }
 
     clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
-        // Left intentionally blank
+        if (this.#noteHovering !== null) {
+            this.#noteSelected = this.#noteHovering;
+            return true;
+        }
         return false;
     }
 
     clickEnd(): void {
-        // Left intentionally blank
+        this.#noteSelected = null;
     }
 
     mouseDragEvent(delta: Vector2, scale: number): boolean {
-        // Left intentionally blank
-        return false;
+        if (this.#noteSelected === null) {
+            return false;
+        }
+        this.#noteSelected.translate({
+            x: delta.x * (1 / scale),
+            y: delta.y * (1 / scale)
+        });
+        return true;
     }
 
     #removeNote(note: FlowNote): void {

@@ -2,7 +2,7 @@ import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } fro
 import { Theme } from "./theme";
 import { MouseObserver } from "./input";
 import { FlowNode } from "./node";
-import { NodeFactory, NodeFactoryConfig } from "./nodes/factory";
+import { NodeFactoryConfig } from "./nodes/factory";
 import { TimeExecution } from "./performance";
 import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
@@ -40,7 +40,6 @@ function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
 }
 
 export const contextMenuGroup = "graph-context-menu";
-
 
 export interface FlowNodeGraphConfiguration {
     backgroundRenderer?: GraphRenderer;
@@ -246,7 +245,10 @@ export class NodeFlowGraph {
 
         for (let i = 0; i < this.#subsystems.length; i++) {
             TimeExecution("Render_Subsystem_" + i, () => {
-                this.#subsystems[i].render(this.#ctx, this.#scale, this.#position, this.#mousePosition);
+                let results = this.#subsystems[i].render(this.#ctx, this.#scale, this.#position, this.#mousePosition);
+                if (results?.cursorStyle) {
+                    this.#cursor = results?.cursorStyle;
+                }
             })
         }
 
