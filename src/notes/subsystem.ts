@@ -1,4 +1,5 @@
 import { ContextMenuConfig } from "../contextMenu";
+import { RenderResults } from "../graphSubsystem";
 import { InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { FlowNote, FlowNoteConfig } from './note';
@@ -74,6 +75,20 @@ export class NoteSubsystem {
         return result;
     }
 
+    clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
+        // Left intentionally blank
+        return false;
+    }
+
+    clickEnd(): void {
+        // Left intentionally blank
+    }
+
+    mouseDragEvent(delta: Vector2, scale: number): boolean {
+        // Left intentionally blank
+        return false;
+    }
+
     #removeNote(note: FlowNote): void {
         const index = this.#notes.indexOf(note);
         if (index > -1) {
@@ -83,7 +98,7 @@ export class NoteSubsystem {
         }
     }
 
-    render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): void {
+    render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults | undefined {
         this.#noteHovering = null;
         for (let i = 0; i < this.#notes.length; i++) {
             this.#notes[i].render(ctx, position, scale, mousePosition);
@@ -94,5 +109,6 @@ export class NoteSubsystem {
                 }
             }
         }
+        return;
     }
 }

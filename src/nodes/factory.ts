@@ -3,6 +3,7 @@ import { Publisher, PublisherConfig } from "./publisher";
 import { ContextMenuConfig } from "../contextMenu";
 import { contextMenuGroup, NodeFlowGraph } from "../graph";
 import { Vector2 } from "../types/vector2";
+import { NodeSubsystem } from "./subsystem";
 
 interface NodeFactoryPublishers {
     [name: string]: PublisherConfig
@@ -49,7 +50,7 @@ export class NodeFactory {
         return publisherIdentifier.create(nodeType);
     }
 
-    public openMenu(graph: NodeFlowGraph, position: Vector2): ContextMenuConfig {
+    public openMenu(graph: NodeSubsystem, position: Vector2): ContextMenuConfig {
         const menus: Array<ContextMenuConfig> = [];
         for (let [_, publisher] of this.#registeredPublishers) {
             menus.push(publisher.contextMenu(graph, position))

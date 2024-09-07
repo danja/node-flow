@@ -2,6 +2,7 @@ import { ContextMenuConfig, ContextMenuItemConfig } from "../contextMenu";
 import { NodeFlowGraph } from "../graph";
 import { FlowNode, FlowNodeConfig } from '../node';
 import { Vector2 } from "../types/vector2";
+import { NodeSubsystem } from "./subsystem";
 
 interface PublisherNodes {
     [name: string]: FlowNodeConfig
@@ -46,7 +47,7 @@ export class Publisher {
         this.#registeredNodes.set(nodeType, config);
     }
 
-    #recurseBuildMenu(graph: NodeFlowGraph, name: string, subMenu: Map<string, FlowNodeConfig>, position: Vector2): ContextMenuConfig {
+    #recurseBuildMenu(graph: NodeSubsystem, name: string, subMenu: Map<string, FlowNodeConfig>, position: Vector2): ContextMenuConfig {
         const items: Array<ContextMenuItemConfig> = [];
         const subMenus = new Map<string, Map<string, FlowNodeConfig>>();
 
@@ -84,7 +85,7 @@ export class Publisher {
         }
     }
 
-    contextMenu(graph: NodeFlowGraph, position: Vector2): ContextMenuConfig {
+    contextMenu(graph: NodeSubsystem, position: Vector2): ContextMenuConfig {
         return this.#recurseBuildMenu(graph, this.#name, this.#registeredNodes, position);
     }
 

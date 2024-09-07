@@ -1,43 +1,19 @@
-import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "./connection";
 import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } from './contextMenu';
 import { Theme } from "./theme";
 import { MouseObserver } from "./input";
-import { FlowNode, NodeState } from "./node";
+import { FlowNode } from "./node";
 import { NodeFactory, NodeFactoryConfig } from "./nodes/factory";
 import { TimeExecution } from "./performance";
-import { Port } from "./port";
 import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
-import { Widget } from "./widgets/widget";
 import { Clamp01 } from "./utils/math";
 import { GraphSubsystem } from "./graphSubsystem";
 import { FlowNoteConfig } from "./notes/note";
 import { NoteSubsystem } from "./notes/subsystem";
+import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
+import { Connection } from './connection';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
-
-export interface ConnectionRendererConfiguration {
-    size?: number;
-    color?: string;
-
-    mouseOverSize?: number;
-    mouseOverColor?: string;
-
-    renderer?: ConnectionRenderer;
-}
-
-function BuildConnectionRenderer(config: ConnectionRendererConfiguration | undefined): ConnectionRenderer {
-    if (config?.renderer !== undefined) {
-        return config.renderer;
-    }
-
-    return DefaultConnectionRenderer(
-        config?.size === undefined ? 2 : config.size,
-        undefined, // config?.color === undefined ? "#00FF00" : config.color,
-        config?.mouseOverSize === undefined ? 4 : config.mouseOverSize,
-        undefined, // config?.mouseOverColor === undefined ? "#00FF22" : config.mouseOverColor
-    );
-}
 
 function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
     return (canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, position: Vector2, scale: number) => {
@@ -65,12 +41,6 @@ function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
 
 export const contextMenuGroup = "graph-context-menu";
 
-interface PortIntersection {
-    Node: FlowNode;
-    Port: Port;
-    Index: number;
-    InputPort: boolean;
-}
 
 export interface FlowNodeGraphConfiguration {
     backgroundRenderer?: GraphRenderer;
@@ -94,12 +64,6 @@ export class NodeFlowGraph {
 
     #backgroundRenderer: GraphRenderer
 
-    #idleConnectionRenderer: ConnectionRenderer
-
-    #nodes: Array<FlowNode>;
-
-    #connections: Array<Connection>;
-
     #contextMenuConfig: ContextMenuConfig;
 
     #position: Vector2;
@@ -108,44 +72,26 @@ export class NodeFlowGraph {
 
     #scale: number;
 
-    #nodeHovering: number;
-
-    #nodeGrabbed: number;
-
-    #connectionSelected: Connection | null;
-
-    #portHovering: PortIntersection | null;
-
-    #widgetHovering: Widget | null;
-
-    #widgetCurrentlyClicking: Widget | null;
-
     #openedContextMenu: OpenContextMenu | null;
 
     #contextMenuEntryHovering: ContextEntry | null;
 
-    #nodeFactory: NodeFactory;
-
     #subsystems: Array<GraphSubsystem>;
 
+    #mainNodeSubsystem: NodeSubsystem;
+
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
+        this.#mainNodeSubsystem = new NodeSubsystem({
+            nodes: config?.nodes,
+            idleConnection: config?.idleConnection
+        });
+
         this.#subsystems = [
-            new NoteSubsystem(config?.notes)
+            new NoteSubsystem(config?.notes),
+            this.#mainNodeSubsystem,
         ];
-        this.#nodes = [];
         this.#scale = 1;
-
-        this.#nodeHovering = -1;
-        this.#nodeGrabbed = -1;
-
-        this.#connectionSelected = null;
-        this.#portHovering = null;
-        this.#widgetHovering = null;
-        this.#widgetCurrentlyClicking = null;
         this.#position = { x: 0, y: 0 };
-        this.#connections = new Array<Connection>();
-        this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
-        this.#nodeFactory = new NodeFactory(config?.nodes);
 
         this.#contextMenuConfig = CombineContextMenus({
             items: [
@@ -203,110 +149,41 @@ export class NodeFlowGraph {
         this.#contextMenuEntryHovering = null;
         this.#mousePosition = mousePosition;
 
-        if (this.#nodeHovering > -1) {
-            this.#nodeGrabbed = this.#nodeHovering;
-            this.#selectNode(this.#nodeHovering, !ctrlKey);
-        }
-
-        if (this.#widgetHovering !== null) {
-            this.#widgetHovering.ClickStart();
-            this.#widgetCurrentlyClicking = this.#widgetHovering;
-        }
-
-        if (this.#portHovering === null) {
-            return
-        }
-
-        if (this.#portHovering.InputPort) {
-            for (let i = 0; i < this.#connections.length; i++) {
-                if (this.#connections[i].inPort() === this.#portHovering.Port) {
-                    this.#connections[i].clearInput();
-                    this.#connectionSelected = this.#connections[i];
-                }
+        // Since the graph is rendered from 0 => n, n is the last thing 
+        // rendererd and is always shown to the user. So if their clicking on
+        // two things technically, we need to make sure it's whatever was most 
+        // recently rendered. So we traverse n => 0. 
+        for (let i = this.#subsystems.length - 1; i >= 0; i--) {
+            // If the user sucesfully clicked on something in this layer, don't
+            // check any more layers.
+            if (this.#subsystems[i].clickStart(mousePosition, ctrlKey)) {
+                return;
             }
-        } else {
-            let inNode: FlowNode | null = this.#portHovering.Node
-            let inNodeIndex = this.#portHovering.Index
-            let outNode: FlowNode | null = this.#portHovering.Node
-            let outNodeIndex = this.#portHovering.Index
-
-            if (this.#portHovering.InputPort) {
-                outNode = null;
-                outNodeIndex = -1;
-            } else {
-                inNode = null;
-                inNodeIndex = -1;
-            }
-
-            const connection = new Connection(inNode, inNodeIndex, outNode, outNodeIndex, this.#idleConnectionRenderer);
-            this.#connectionSelected = connection;
-            this.#connections.push(connection);
         }
+    }
+
+    connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
+        return this.#mainNodeSubsystem.connectNodes(nodeOut, outPort, nodeIn, inPort);
+    }
+
+    addNode(node: FlowNode): void {
+        this.#mainNodeSubsystem.addNode(node);
     }
 
     #openContextMenu(position: Vector2): void {
         let finalConfig = this.#contextMenuConfig;
-
-        if (this.#nodeHovering > -1) {
-            const nodeToReview = this.#nodeHovering;
-            const group = "node-flow-graph-node-menu";
-
-            let lockOption = {
-                name: "Lock Node Position",
-                group: group,
-                callback: () => {
-                    this.#lockNode(nodeToReview);
-                }
-            }
-            if (this.#nodes[nodeToReview].locked()) {
-                lockOption = {
-                    name: "Unlock Node Position",
-                    group: group,
-                    callback: () => {
-                        this.#unlockNode(nodeToReview);
-                    }
-                }
-            }
-
-            finalConfig = CombineContextMenus(finalConfig, {
-                items: [
-                    {
-                        name: "Delete Node",
-                        group: group,
-                        callback: () => {
-                            this.#removeNodeByIndex(nodeToReview);
-                        }
-                    },
-                    {
-                        name: "Clear Node Connections",
-                        group: group,
-                        callback: () => {
-                            this.#removeNodeConnections(nodeToReview);
-                        }
-                    },
-                    lockOption
-                ]
-            })
-        }
-
 
         const contextMenuPosition = {
             x: -(this.#position.x / this.#scale) + (position.x / this.#scale),
             y: -(this.#position.y / this.#scale) + (position.y / this.#scale),
         }
 
-        for(let i = 0; i < this.#subsystems.length; i ++) {
+        for (let i = 0; i < this.#subsystems.length; i++) {
             const subSystemMenu = this.#subsystems[i].openContextMenu(contextMenuPosition);
-            if(subSystemMenu !== null) {
+            if (subSystemMenu !== null) {
                 finalConfig = CombineContextMenus(finalConfig, subSystemMenu);
             }
         }
-
-        finalConfig = CombineContextMenus(finalConfig, {
-            subMenus: [
-                this.#nodeFactory.openMenu(this, contextMenuPosition)
-            ]
-        })
 
         this.#openedContextMenu = {
             Menu: new ContextMenu(finalConfig),
@@ -319,17 +196,6 @@ export class NodeFlowGraph {
         this.#position.x = 0;
         this.#position.y = 0;
     }
-
-    #selectNode(nodeIndex: number, unselectOthers: boolean): void {
-        for (let i = 0; i < this.#nodes.length; i++) {
-            if (nodeIndex === i) {
-                this.#nodes[i].select();
-            } else if (unselectOthers) {
-                this.#nodes[i].unselect();
-            }
-        }
-    }
-
 
     // Somethings wrong here. Needs more testing
     // #fitView(): void {
@@ -350,174 +216,24 @@ export class NodeFlowGraph {
     //     CopyVector2(this.#position, curBox.Position);
     // }
 
-    #clearCurrentlySelectedConnection(): void {
-        if (this.#connectionSelected === null) {
-            return;
-        }
-        this.#removeConnection(this.#connectionSelected);
-        this.#connectionSelected = null;
-    }
-
     #clickEnd(): void {
-        this.#nodeGrabbed = -1;
-
-        if (this.#widgetCurrentlyClicking !== null) {
-            this.#widgetCurrentlyClicking.ClickEnd();
-            this.#widgetCurrentlyClicking = null;
-        }
-
-        if (this.#connectionSelected === null) {
-            return;
-        }
-
-        if (this.#portHovering === null) {
-            this.#clearCurrentlySelectedConnection();
-            return;
-        }
-
-        const port = this.#portHovering.Port;
-        const conn = this.#connectionSelected;
-
-        // If the port we're hovering is the one we started the connection 
-        // with...
-        if (port === conn.inPort() || port === conn.outPort()) {
-            this.#clearCurrentlySelectedConnection();
-            return;
-        }
-
-        // If the port we're hoving is input, and also we started the 
-        // connection with an input, we can't do anything. We can't connect
-        // input to input
-        if (this.#portHovering.InputPort && conn.inPort() !== null) {
-            this.#clearCurrentlySelectedConnection();
-            return;
-        }
-
-        // Same with out. Can't connect output to output
-        if (!this.#portHovering.InputPort && conn.outPort() !== null) {
-            this.#clearCurrentlySelectedConnection();
-            return;
-        }
-
-        // Different types, can't connect
-        if (this.#portHovering.InputPort && this.#portHovering.Port.getType() !== conn.outPort()?.getType()) {
-            this.#clearCurrentlySelectedConnection();
-            return;
-        }
-
-        // Different types, can't connect
-        if (!this.#portHovering.InputPort && this.#portHovering.Port.getType() !== conn.inPort()?.getType()) {
-            this.#clearCurrentlySelectedConnection();
-            return;
-        }
-
-        // Ight. Let's make the connection.
-        if (this.#portHovering.InputPort) {
-            this.clearNodeInputConnection(this.#portHovering.Node, this.#portHovering.Index);
-            conn.setInput(this.#portHovering.Node, this.#portHovering.Index)
-        } else {
-            conn.setOutput(this.#portHovering.Node, this.#portHovering.Index);
-        }
-
-        this.#connectionSelected = null;
-    }
-
-    clearNodeInputConnection(node: FlowNode, index: number): void {
-        const port = node.inputPort(index);
-        for (let i = this.#connections.length - 1; i >= 0; i--) {
-            if (this.#connections[i].inPort() === port) {
-                this.#removeConnection(this.#connections[i]);
-            }
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            this.#subsystems[i].clickEnd();
         }
     }
 
     #mouseDragEvent(delta: Vector2): void {
-        if (this.#interactingWithNode() && !this.#nodes[this.#nodeGrabbed].locked()) {
-            this.#nodes[this.#nodeGrabbed].translate({
-                x: delta.x * (1 / this.#scale),
-                y: delta.y * (1 / this.#scale)
-            });
-        } else if (this.#interactingWithConnection()) {
-            // intentionally left blank
-        } else if (this.#interactingWithWidget()) {
-            // intentionally left blank
-        } else {
+        let draggingSomething = false;
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            if (this.#subsystems[i].mouseDragEvent(delta, this.#scale)) {
+                draggingSomething = true;
+            }
+        }
+        if (!draggingSomething) {
             this.#position.x += delta.x;
             this.#position.y += delta.y;
         }
     }
-
-    #interactingWithNode(): boolean {
-        return this.#nodeGrabbed > -1;
-    }
-
-    #interactingWithConnection(): boolean {
-        return this.#connectionSelected !== null;
-    }
-
-    #interactingWithWidget(): boolean {
-        return this.#widgetCurrentlyClicking !== null;
-    }
-
-    #removeNodeConnections(nodeIndex: number): void {
-        if (nodeIndex >= this.#nodes.length || nodeIndex < 0) {
-            console.error("invalid node connection");
-            return;
-        }
-        for (let i = this.#connections.length - 1; i >= 0; i--) {
-            if (this.#connections[i].referencesNode(this.#nodes[nodeIndex])) {
-                this.#removeConnectionByIndex(i);
-            }
-        }
-    }
-
-    #lockNode(nodeIndex: number): void {
-        this.#nodes[nodeIndex].lock();
-    }
-
-    #unlockNode(nodeIndex: number): void {
-        this.#nodes[nodeIndex].unlock();
-    }
-
-    #removeNodeByIndex(nodeIndex: number): void {
-        this.#removeNodeConnections(nodeIndex);
-        this.#nodes.splice(nodeIndex, 1);
-    }
-
-    #removeConnectionByIndex(index: number): void {
-        this.#connections[index].clearPorts();
-        this.#connections.splice(index, 1);
-    }
-
-    #removeConnection(connection: Connection): void {
-        const index = this.#connections.indexOf(connection);
-        if (index > -1) {
-            this.#removeConnectionByIndex(index);
-        } else {
-            console.error("no connection found to remove");
-        }
-    }
-
-    connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
-        if (nodeOut.outputPort(outPort).getType() !== nodeIn.inputPort(inPort).getType()) {
-            console.error("can't connect nodes of different types");
-            return;
-        }
-
-        const connection = new Connection(
-            nodeIn, inPort,
-            nodeOut, outPort,
-            this.#idleConnectionRenderer,
-        );
-        this.#connections.push(connection);
-        return connection;
-    }
-
-    addNode(node: FlowNode): void {
-        this.#nodes.push(node);
-    }
-
-
 
     #lastFrameCursor: CursorStyle;
 
@@ -534,8 +250,6 @@ export class NodeFlowGraph {
             })
         }
 
-        TimeExecution("Render_Connections", this.#renderConnections.bind(this));
-        TimeExecution("Render_Nodes", this.#renderNodes.bind(this));
         TimeExecution("Render_Context", this.#renderContextMenu.bind(this));
 
         // Only update CSS style if things have changed
@@ -562,61 +276,6 @@ export class NodeFlowGraph {
             if (this.#contextMenuEntryHovering !== null) {
                 this.#cursor = CursorStyle.Pointer;
             }
-        }
-    }
-
-    #renderConnections(): void {
-        for (let i = 0; i < this.#connections.length; i++) {
-            let portMousedOver = false;
-            if (this.#mousePosition !== undefined) {
-                portMousedOver = this.#connections[i].mouseOverPort(this.#mousePosition) !== null;
-            }
-            this.#connections[i].render(this.#ctx, this.#scale, portMousedOver, this.#mousePosition);
-        }
-    }
-
-    #renderNodes() {
-        this.#portHovering = null;
-        this.#widgetHovering = null;
-        this.#nodeHovering = -1;
-
-        for (let i = 0; i < this.#nodes.length; i++) {
-            let state = NodeState.Idle;
-
-            if (this.#mousePosition !== undefined) {
-                const intersection = this.#nodes[i].inBounds(this.#ctx, this.#position, this.#scale, this.#mousePosition);
-
-                if (intersection.Node !== undefined && intersection.PortIndex === undefined && intersection.Widget === undefined) {
-                    state = NodeState.MouseOver;
-                    this.#nodeHovering = i;
-                    this.#cursor = CursorStyle.Grab;
-                }
-
-                if (intersection.Widget !== undefined) {
-                    this.#widgetHovering = intersection.Widget
-                    this.#cursor = CursorStyle.Pointer;
-                }
-
-                if (intersection.Port !== undefined && intersection.Node !== undefined && intersection.PortIndex !== undefined && intersection.PortIsInput !== undefined) {
-                    this.#portHovering = {
-                        Index: intersection.PortIndex,
-                        Node: intersection.Node,
-                        Port: intersection.Port,
-                        InputPort: intersection.PortIsInput
-                    };
-                }
-            }
-
-            // if (i === this.#nodeSelected) {
-            //     state = NodeState.Selected;
-            // }
-
-            if (i === this.#nodeGrabbed) {
-                state = NodeState.Grabbed;
-                this.#cursor = CursorStyle.Grabbing;
-            }
-
-            this.#nodes[i].render(this.#ctx, this.#position, this.#scale, state, this.#mousePosition);
         }
     }
 }
