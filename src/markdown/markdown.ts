@@ -1,6 +1,6 @@
-import { MarkdownEntry } from "./markdown/entry";
-import { MarkdownLexicalParser } from "./markdown/lexicalParser";
-import { MarkdownSyntaxParser } from "./markdown/syntaxParser";
+import { MarkdownEntry } from "./entry";
+import { MarkdownLexicalParser } from "./lexicalParser";
+import { MarkdownSyntaxParser } from "./syntaxParser";
 
 export function BuildMarkdown(data: string): Array<MarkdownEntry> {
     const lexicalParser = new MarkdownLexicalParser(data);

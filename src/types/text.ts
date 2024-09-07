@@ -48,6 +48,19 @@ export class Text {
         return results;
     }
 
+    splitAtIndex(index: number): Array<Text> {
+        const results = [
+            new Text(this.#value.substring(0, index)), 
+            new Text(this.#value.substring(index, 0)), 
+        ];
+
+
+        for (let i = 0; i < results.length; i++) {
+            results[i].#style = this.#style;
+        }
+        return results;
+    }
+
     splitAtWidth(ctx: CanvasRenderingContext2D, maxWidth: number): Array<Text> {
         this.#style.setupStyle(ctx, 1);
         const entries = splitString(ctx, this.#value, maxWidth);

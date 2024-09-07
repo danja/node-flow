@@ -78,11 +78,34 @@ export class BasicMarkdownEntry {
         const currentLineText = new List<Text>();
         const currentLineWidths = new List<number>();
 
+
         for (let entryIndex = 0; entryIndex < this.#entries.length; entryIndex++) {
             const entry = this.#entries[entryIndex];
 
             let lines = entry.splitAtWidth(ctx, maxWidth - curPosition.x);
-            while (lines.length > 1) {
+            let i = 0;
+            while (lines.length > 1 && i < 100) {
+                i++
+
+                // We can't collapse this thing any further. Break out of the 
+                // while loop before we have infinite loop on our hands
+                // if (lines[0].get() === "" && lines[1].get().length === 1) {
+                //     lines[0] = lines[1];
+                //     break;
+                // }
+
+                // We can't collapse this thing any further. Break out of the 
+                // while loop before we have infinite loop on our hands
+                if (lines[0].get() === "" && currentLineText.Count() === 0) {
+
+                    if (lines[1].get().length === 1) {
+                        lines[0] = lines[1];
+                        break;
+                    } else {
+                        lines = lines[1].splitAtIndex(1);
+                    }
+
+                }
 
                 // This effectiviely finishes off the line we're currenly working on.
                 if (lines[0].get() !== "") {
@@ -109,6 +132,9 @@ export class BasicMarkdownEntry {
                 curPosition.x = 0;
 
                 lines = lines[1].splitAtWidth(ctx, maxWidth);
+            }
+            if (i === 100) {
+                console.log(lines)
             }
 
             lines[0].size(ctx, 1, texSize);
@@ -140,7 +166,6 @@ export class BasicMarkdownEntry {
             const entry = this.#calculatedEntries.At(i);
             const pos = this.#calculatedPositions.At(i);
 
-
             entry.render(ctx, scale, {
                 x: (pos.x * scale) + position.x,
                 y: (pos.y * scale) + position.y
@@ -160,63 +185,6 @@ export class BasicMarkdownEntry {
             ctx.stroke();
         }
 
-
         return max;
-    }
-
-    render2(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, maxWidth: number): number {
-        const curPosition = { x: 0, y: 0 };
-        CopyVector2(curPosition, position);
-
-        const scaledLineSpacing = scale * Theme.Note.LineSpacing;
-        let curWidth = 0;
-        let texSize: Vector2 = { x: 0, y: 0 };
-        let lineCount = 1;
-        let maxLineHeight = 0;
-        for (let entryIndex = 0; entryIndex < this.#entries.length; entryIndex++) {
-            const entry = this.#entries[entryIndex];
-
-            let lines = entry.splitAtWidth(ctx, maxWidth - (curWidth / scale));
-            while (lines.length > 1) {
-                if (lines[0].get() !== "") {
-                    lines[0].size(ctx, scale, texSize);
-                    maxLineHeight = Math.max(maxLineHeight, texSize.y)
-                    lines[0].render(ctx, scale, curPosition);
-                }
-
-                curPosition.y += texSize.y + (scaledLineSpacing);
-                lineCount++;
-
-                curWidth = 0;
-                curPosition.x = position.x;
-                lines = lines[1].splitAtWidth(ctx, maxWidth);
-            }
-
-            lines[0].size(ctx, scale, texSize);
-            maxLineHeight = Math.max(maxLineHeight, texSize.y)
-            lines[0].render(ctx, scale, curPosition);
-
-            curWidth += texSize.x;
-            curPosition.x += texSize.x;
-        }
-        curPosition.y += maxLineHeight;
-
-        // Add underline 
-        if (this.#underline) {
-            const y = curPosition.y - (scale * 5)
-            ctx.strokeStyle = Theme.Note.FontColor;
-            ctx.lineWidth = Theme.Note.HeaderLineWidth * scale;
-            ctx.beginPath();
-            ctx.moveTo(position.x, y);
-            ctx.lineTo(position.x + (maxWidth * scale), y);
-            ctx.stroke();
-        }
-
-        let height = curPosition.y - position.y;
-        ctx.beginPath();
-        ctx.rect(position.x, position.y - maxLineHeight + ((lineCount - 1) * scaledLineSpacing), maxWidth * scale, height)
-        ctx.stroke();
-
-        return height;
     }
 }

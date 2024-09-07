@@ -10,8 +10,9 @@ import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
 import { Widget } from "./widgets/widget";
 import { Clamp01 } from "./utils/math";
-import { FlowNote, FlowNoteConfig } from './note';
-import { InBox } from "./types/box";
+import { GraphSubsystem } from "./graphSubsystem";
+import { FlowNoteConfig } from "./notes/note";
+import { NoteSubsystem } from "./notes/subsystem";
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -95,10 +96,6 @@ export class NodeFlowGraph {
 
     #idleConnectionRenderer: ConnectionRenderer
 
-    #notes: Array<FlowNote>;
-
-    #noteHovering: FlowNote | null;
-
     #nodes: Array<FlowNode>;
 
     #connections: Array<Connection>;
@@ -129,9 +126,13 @@ export class NodeFlowGraph {
 
     #nodeFactory: NodeFactory;
 
+    #subsystems: Array<GraphSubsystem>;
+
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
+        this.#subsystems = [
+            new NoteSubsystem(config?.notes)
+        ];
         this.#nodes = [];
-        this.#notes = [];
         this.#scale = 1;
 
         this.#nodeHovering = -1;
@@ -145,7 +146,6 @@ export class NodeFlowGraph {
         this.#connections = new Array<Connection>();
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
         this.#nodeFactory = new NodeFactory(config?.nodes);
-        this.#noteHovering = null;
 
         this.#contextMenuConfig = CombineContextMenus({
             items: [
@@ -193,12 +193,6 @@ export class NodeFlowGraph {
             this.#clickEnd.bind(this),
             this.#openContextMenu.bind(this)
         );
-
-        if (config?.notes !== undefined) {
-            for (let i = 0; i < config?.notes?.length; i++) {
-                this.addNote(new FlowNote(config.notes[i]));
-            }
-        }
     }
 
     #clickStart(mousePosition: Vector2, ctrlKey: boolean): void {
@@ -296,62 +290,17 @@ export class NodeFlowGraph {
         }
 
 
-
-        if (this.#noteHovering !== null) {
-            const group = "node-flow-graph-note-menu";
-            const noteToReview = this.#noteHovering;
-            finalConfig = CombineContextMenus(finalConfig, {
-                subMenus: [
-                    {
-                        name: "Edit Note",
-                        group: group,
-                        items: [
-                            {
-                                name: "Contents",
-                                callback: noteToReview.editContent.bind(noteToReview),
-                            },
-                            {
-                                name: "Layout",
-                                callback: noteToReview.editLayout.bind(noteToReview),
-                            }
-                        ]
-                    }
-                ],
-                items: [
-                    {
-                        name: "Delete Note",
-                        group: group,
-                        callback: () => {
-                            this.#removeNote(noteToReview);
-                            // this.#removeNodeConnections(nodeToReview);
-                        }
-                    },
-
-                ]
-            })
-        }
-
         const contextMenuPosition = {
             x: -(this.#position.x / this.#scale) + (position.x / this.#scale),
             y: -(this.#position.y / this.#scale) + (position.y / this.#scale),
         }
 
-        finalConfig = CombineContextMenus(finalConfig, {
-            items: [
-                {
-                    name: "New Note",
-                    group: contextMenuGroup,
-                    callback: () => {
-                        this.addNote(new FlowNote({
-                            text: "#Note\n\nRight-click this note and select \"edit note\" to put what you want here.",
-                            width: 300,
-                            position: contextMenuPosition
-                        }))
-                    }
-                }
-            ]
-        })
-
+        for(let i = 0; i < this.#subsystems.length; i ++) {
+            const subSystemMenu = this.#subsystems[i].openContextMenu(contextMenuPosition);
+            if(subSystemMenu !== null) {
+                finalConfig = CombineContextMenus(finalConfig, subSystemMenu);
+            }
+        }
 
         finalConfig = CombineContextMenus(finalConfig, {
             subMenus: [
@@ -549,15 +498,6 @@ export class NodeFlowGraph {
         }
     }
 
-    #removeNote(note: FlowNote): void {
-        const index = this.#notes.indexOf(note);
-        if (index > -1) {
-            this.#notes.splice(index, 1);
-        } else {
-            console.error("no note found to remove");
-        }
-    }
-
     connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
         if (nodeOut.outputPort(outPort).getType() !== nodeIn.inputPort(inPort).getType()) {
             console.error("can't connect nodes of different types");
@@ -577,9 +517,7 @@ export class NodeFlowGraph {
         this.#nodes.push(node);
     }
 
-    addNote(note: FlowNote): void {
-        this.#notes.push(note);
-    }
+
 
     #lastFrameCursor: CursorStyle;
 
@@ -589,10 +527,16 @@ export class NodeFlowGraph {
         this.#cursor = CursorStyle.Default;
 
         TimeExecution("Render_Background", this.#renderBackground.bind(this));
-        TimeExecution("Render_Notes", this.#renderNotes.bind(this));
+
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            TimeExecution("Render_Subsystem_" + i, () => {
+                this.#subsystems[i].render(this.#ctx, this.#scale, this.#position, this.#mousePosition);
+            })
+        }
+
         TimeExecution("Render_Connections", this.#renderConnections.bind(this));
         TimeExecution("Render_Nodes", this.#renderNodes.bind(this));
-        TimeExecution("Render_Conext", this.#renderContextMenu.bind(this));
+        TimeExecution("Render_Context", this.#renderContextMenu.bind(this));
 
         // Only update CSS style if things have changed
         // TODO: Does this actually have any measurable performance savings?
@@ -602,20 +546,6 @@ export class NodeFlowGraph {
         this.#lastFrameCursor = this.#cursor;
 
         window.requestAnimationFrame(this.#render.bind(this));
-    }
-
-    #renderNotes(): void {
-        this.#noteHovering = null;
-        for (let i = 0; i < this.#notes.length; i++) {
-            this.#notes[i].render(this.#ctx, this.#position, this.#scale, this.#mousePosition);
-
-            if (this.#mousePosition) {
-                if (InBox(this.#notes[i].bounds(), this.#mousePosition)) {
-                    this.#noteHovering = this.#notes[i];
-                }
-            }
-
-        }
     }
 
     #renderBackground(): void {

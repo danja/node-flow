@@ -1,13 +1,13 @@
-import { BuildMarkdown } from "./markdown";
-import { MarkdownEntry } from "./markdown/entry";
-import { Popup } from "./popup";
-import { BoxStyle } from "./styles/box";
-import { TextAlign } from "./styles/canvasTextAlign";
-import { TextBaseline } from "./styles/canvasTextBaseline";
-import { TextStyleConfig } from "./styles/text";
-import { Theme } from "./theme";
-import { Box } from "./types/box";
-import { CopyVector2, Vector2 } from "./types/vector2";
+import { BuildMarkdown } from "../markdown/markdown";
+import { MarkdownEntry } from "../markdown/entry";
+import { Popup } from "../popup";
+import { BoxStyle } from "../styles/box";
+import { TextAlign } from "../styles/canvasTextAlign";
+import { TextBaseline } from "../styles/canvasTextBaseline";
+import { TextStyleConfig } from "../styles/text";
+import { Theme } from "../theme";
+import { Box } from "../types/box";
+import { CopyVector2, Vector2 } from "../types/vector2";
 
 export interface FlowNoteConfig {
     text?: string;
@@ -62,7 +62,7 @@ export class FlowNote {
 
             if (mousePosition) {
                 CopyVector2(this.#lastMousePosition, mousePosition);
-                this.#width = mousePosition.x - (this.#position.x + graphPosition.x)
+                this.#width = Math.max(mousePosition.x - (this.#position.x + graphPosition.x), 1)
             }
 
             const bigBox: Box = {
