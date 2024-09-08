@@ -2,7 +2,8 @@ import { ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
 import { InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
-import { FlowNote, FlowNoteConfig } from './note';
+import { DragHandle, FlowNote, FlowNoteConfig } from './note';
+
 
 export class NoteSubsystem {
 
@@ -12,9 +13,13 @@ export class NoteSubsystem {
 
     #noteSelected: FlowNote | null;
 
+    #hoveringHandle: DragHandle;
+
     constructor(notes?: Array<FlowNoteConfig>) {
+        this.#hoveringHandle = DragHandle.None;
         this.#notes = [];
         this.#noteHovering = null;
+        this.#noteSelected = null;
 
         if (notes !== undefined) {
             for (let i = 0; i < notes.length; i++) {
@@ -49,42 +54,52 @@ export class NoteSubsystem {
 
         if (this.#noteHovering !== null) {
             const noteToReview = this.#noteHovering;
-            result.subMenus?.push({
-                name: "Edit Note",
-                group: group,
-                items: [
-                    {
-                        name: "Contents",
-                        callback: noteToReview.editContent.bind(noteToReview),
-                    },
-                    {
-                        name: "Layout",
-                        callback: noteToReview.editLayout.bind(noteToReview),
+            result.items?.push(
+                {
+                    name: "Delete Note",
+                    group: group,
+                    callback: () => {
+                        this.#removeNote(noteToReview);
                     }
-                ]
-            });
+                },
+                {
+                    name: "Edit Note",
+                    group: group,
+                    callback: noteToReview.editContent.bind(noteToReview),
+                },
+            );
 
-            result.items?.push({
-                name: "Delete Note",
-                group: group,
-                callback: () => {
-                    this.#removeNote(noteToReview);
-                }
-            });
+            if (!noteToReview.edittingLayout()) {
+                result.items?.push({
+                    name: "Unlock Note",
+                    group: group,
+                    callback: noteToReview.unlock.bind(noteToReview),
+                })
+            } else {
+                result.items?.push({
+                    name: "Lock Note",
+                    group: group,
+                    callback: noteToReview.lock.bind(noteToReview),
+                })
+            }
         }
 
         return result;
     }
 
     clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
-        if (this.#noteHovering !== null) {
+        if (this.#noteHovering !== null && this.#noteHovering.edittingLayout()) {
             this.#noteSelected = this.#noteHovering;
+            this.#noteSelected.selectHandle(this.#hoveringHandle);
             return true;
         }
         return false;
     }
 
     clickEnd(): void {
+        if (this.#noteSelected !== null) {
+            this.#noteSelected.selectHandle(DragHandle.None);
+        }
         this.#noteSelected = null;
     }
 
@@ -92,6 +107,12 @@ export class NoteSubsystem {
         if (this.#noteSelected === null) {
             return false;
         }
+
+        // Return early so we don't translate since we're moving a drag handle
+        if (this.#noteSelected.handleSelected()) {
+            return true;
+        }
+
         this.#noteSelected.translate({
             x: delta.x * (1 / scale),
             y: delta.y * (1 / scale)
@@ -110,14 +131,33 @@ export class NoteSubsystem {
 
     render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults | undefined {
         this.#noteHovering = null;
-        for (let i = 0; i < this.#notes.length; i++) {
-            this.#notes[i].render(ctx, position, scale, mousePosition);
+        this.#hoveringHandle = DragHandle.None;
 
-            if (mousePosition) {
+        // Set hovering to false on everything
+        if (mousePosition) {
+            for (let i = 0; i < this.#notes.length; i++) {
+                this.#notes[i].setHovering(false);
                 if (InBox(this.#notes[i].bounds(), mousePosition)) {
                     this.#noteHovering = this.#notes[i];
                 }
             }
+        }
+
+        // The note on top of everything is the one that get's to be in a 
+        // hover state
+        if (this.#noteHovering != null) {
+            this.#noteHovering.setHovering(true);
+            if (mousePosition) {
+                if (InBox(this.#noteHovering.leftResizeHandleBox(), mousePosition)) {
+                    this.#hoveringHandle = DragHandle.Left;
+                } else if (InBox(this.#noteHovering.rightResizeHandleBox(), mousePosition)) {
+                    this.#hoveringHandle = DragHandle.Right;
+                }
+            }
+        }
+
+        for (let i = 0; i < this.#notes.length; i++) {
+            this.#notes[i].render(ctx, position, scale, mousePosition);
         }
         return;
     }

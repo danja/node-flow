@@ -16,6 +16,15 @@ export interface FlowNoteConfig {
     width?: number;
 }
 
+export enum DragHandle {
+    None,
+    Left,
+    Right
+};
+
+const boundsSpacing = 20;
+const boxSize = 10;
+
 export class FlowNote {
 
     #originalText: string;
@@ -30,21 +39,24 @@ export class FlowNote {
 
     #position: Vector2;
 
-    #lastMousePosition: Vector2;
+    #handleSelected: DragHandle;
 
     #edittingLayout: boolean;
 
     #lastRenderedBox: Box;
 
+    #hovering: boolean;
+
     // ========================================================================
 
     constructor(config?: FlowNoteConfig) {
+        this.#hovering = false;
         this.#edittingLayout = false;
         this.#width = config?.width === undefined ? 500 : config.width;
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
-        this.#lastMousePosition = { x: 0, y: 0 }
         this.setText(config?.text === undefined ? "" : config?.text);
         this.#lastRenderedBox = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
+        this.#handleSelected = DragHandle.None;
 
         this.#edittingStyle = new BoxStyle({
             border: {
@@ -64,35 +76,43 @@ export class FlowNote {
         this.#position.y += delta.y;
     }
 
+    handleSelected(): DragHandle {
+        return this.#handleSelected;
+    }
+
+    selectHandle(handle: DragHandle): void {
+        this.#handleSelected = handle;
+    }
+
     #tempPosition: Vector2 = { x: 0, y: 0 };
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
-        if (this.#edittingLayout) {
+        if (this.#edittingLayout && (this.#hovering || this.#handleSelected !== DragHandle.None)) {
 
             if (mousePosition) {
-                CopyVector2(this.#lastMousePosition, mousePosition);
-                this.#width = Math.max(mousePosition.x - (this.#position.x + graphPosition.x), 1)
+                if (this.#handleSelected === DragHandle.Right) {
+
+                    const leftPosition = (this.#position.x * scale) + graphPosition.x;
+                    this.#width = Math.max((mousePosition.x - leftPosition) / scale, 1)
+
+                } else if (this.#handleSelected === DragHandle.Left) {
+
+                    const scaledWidth = this.#width * scale;
+                    const rightPosition = (this.#position.x * scale) + graphPosition.x + scaledWidth;
+                    this.#width = Math.max((rightPosition - mousePosition.x) / scale, 1)
+                    this.#position.x = rightPosition - (this.#width * scale) - graphPosition.x;
+                    this.#position.x /= scale; 
+                }
             }
 
-            const boxSize = 10;
-            const spacing = 20;
-
-            const smallBox: Box = {
-                Position: {
-                    x: this.#lastRenderedBox.Position.x - spacing - (boxSize / 2),
-                    y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (boxSize / 2),
-                },
-                Size: { x: boxSize, y: boxSize, }
-            }
-            this.#edittingStyle.Outline(ctx, smallBox, scale, 2);
-            smallBox.Position.x += this.#lastRenderedBox.Size.x + (spacing * 2);
-            this.#edittingStyle.Outline(ctx, smallBox, scale, 2);
+            this.#edittingStyle.Outline(ctx, this.leftResizeHandleBox(), scale, 2);
+            this.#edittingStyle.Outline(ctx, this.rightResizeHandleBox(), scale, 2);
 
             ctx.beginPath();
-            const left = this.#lastRenderedBox.Position.x - spacing;
-            const right = this.#lastRenderedBox.Position.x + spacing + this.#lastRenderedBox.Size.x;
-            const bottom = this.#lastRenderedBox.Position.y - spacing;
-            const top = this.#lastRenderedBox.Position.y + spacing + this.#lastRenderedBox.Size.y;
+            const left = this.#lastRenderedBox.Position.x;
+            const right = this.#lastRenderedBox.Position.x + this.#lastRenderedBox.Size.x;
+            const bottom = this.#lastRenderedBox.Position.y;
+            const top = this.#lastRenderedBox.Position.y + this.#lastRenderedBox.Size.y;
             ctx.moveTo(left, bottom + (this.#lastRenderedBox.Size.y / 2) - (boxSize));
             ctx.lineTo(left, bottom);
             ctx.lineTo(right, bottom);
@@ -120,8 +140,38 @@ export class FlowNote {
             this.#tempPosition.y += text.render(ctx, this.#tempPosition, scale, this.#width) + lineSpacing;
         }
 
-        this.#lastRenderedBox.Size.x = scale * this.#width;
-        this.#lastRenderedBox.Size.y = this.#tempPosition.y - startY;
+        this.#lastRenderedBox.Position.x -= boundsSpacing
+        this.#lastRenderedBox.Position.y -= boundsSpacing
+        this.#lastRenderedBox.Size.x = scale * this.#width + (boundsSpacing * 2);
+        this.#lastRenderedBox.Size.y = this.#tempPosition.y - startY + (boundsSpacing * 2);
+    }
+
+    leftResizeHandleBox(): Box {
+        return {
+            Position: {
+                x: this.#lastRenderedBox.Position.x - (boxSize / 2),
+                y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (boxSize / 2),
+            },
+            Size: { x: boxSize, y: boxSize, }
+        };
+    }
+
+    rightResizeHandleBox(): Box {
+        return {
+            Position: {
+                x: this.#lastRenderedBox.Position.x - (boxSize / 2) + this.#lastRenderedBox.Size.x,
+                y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (boxSize / 2),
+            },
+            Size: { x: boxSize, y: boxSize, }
+        };
+    }
+
+    edittingLayout(): boolean {
+        return this.#edittingLayout;
+    }
+
+    setHovering(hovering): void {
+        this.#hovering = hovering;
     }
 
     editContent(): void {
@@ -151,7 +201,11 @@ export class FlowNote {
         popup.Show();
     }
 
-    editLayout(): void {
+    lock(): void {
+        this.#edittingLayout = false;
+    }
+
+    unlock(): void {
         this.#edittingLayout = true;
     }
 
