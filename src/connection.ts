@@ -144,6 +144,14 @@ export class Connection {
         });
     }
 
+    inNode(): FlowNode | null {
+        return this.#inNode;
+    }
+
+    outNode(): FlowNode | null {
+        return this.#outNode;
+    }
+
     clearPort(mousePosition: Vector2): void {
         if (this.#inNode !== null) {
             const inPortBox = this.#inNode.inputPortPosition(this.#inNodePortIndex)

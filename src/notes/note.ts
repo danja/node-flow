@@ -14,6 +14,7 @@ export interface FlowNoteConfig {
     style?: TextStyleConfig;
     position?: Vector2;
     width?: number;
+    locked?: boolean;
 }
 
 export enum DragHandle {
@@ -51,7 +52,7 @@ export class FlowNote {
 
     constructor(config?: FlowNoteConfig) {
         this.#hovering = false;
-        this.#edittingLayout = false;
+        this.#edittingLayout = config?.locked === undefined ? true : !config?.locked;
         this.#width = config?.width === undefined ? 500 : config.width;
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.setText(config?.text === undefined ? "" : config?.text);

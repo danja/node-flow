@@ -2,6 +2,7 @@ import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "../co
 import { ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
 import { FlowNode, NodeState } from "../node";
+import { TimeExecution } from "../performance";
 import { Port } from "../port";
 import { CursorStyle } from "../styles/cursor";
 import { Vector2 } from "../types/vector2";
@@ -126,7 +127,7 @@ export class NodeSubsystem {
 
         return true;
     }
-    
+
     mouseDragEvent(delta: Vector2, scale: number): boolean {
         if (this.#interactingWithNode() && !this.#nodes[this.#nodeGrabbed].locked()) {
             this.#nodes[this.#nodeGrabbed].translate({
@@ -230,6 +231,54 @@ export class NodeSubsystem {
         );
         this.#connections.push(connection);
         return connection;
+    }
+
+    getNodes(): Array<FlowNode> {
+        return this.#nodes;
+    }
+
+    /**
+     * Returns all nodes who are connected to the inputs of the 
+     * node in question
+     * 
+     * @param nodeIndex index of the node to examine inputs to
+     */
+    connectedInputsNodeReferences(nodeIndex: number): Array<FlowNode> {
+        const node = this.#nodes[nodeIndex]
+        const connections = new Array<FlowNode>();
+        for (let i = 0; i < this.#connections.length; i++) {
+            const connection = this.#connections[i];
+            if (node !== connection.inNode()) {
+                continue;
+            }
+
+            const outNode = connection.outNode();
+            if (outNode === null) {
+                continue;
+            }
+
+            connections.push(outNode);
+        }
+        return connections;
+    }
+
+    connectedOutputsNodeReferences(nodeIndex: number): Array<FlowNode> {
+        const node = this.#nodes[nodeIndex]
+        const connections = new Array<FlowNode>();
+        for (let i = 0; i < this.#connections.length; i++) {
+            const connection = this.#connections[i];
+            if (node !== connection.outNode()) {
+                continue;
+            }
+
+            const inNode = connection.inNode();
+            if (inNode === null) {
+                continue;
+            }
+
+            connections.push(inNode);
+        }
+        return connections;
     }
 
     addNode(node: FlowNode): void {
@@ -411,8 +460,12 @@ export class NodeSubsystem {
 
     render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults | undefined {
         this.#cursor = CursorStyle.Default;
-        this.#renderConnections(ctx, scale, position, mousePosition);
-        this.#renderNodes(ctx, scale, position, mousePosition);
+        TimeExecution("Render_Connections", () => {
+            this.#renderConnections(ctx, scale, position, mousePosition);
+        })
+        TimeExecution("Render_Nodes", () => {
+            this.#renderNodes(ctx, scale, position, mousePosition);
+        })
         return {
             cursorStyle: this.#cursor,
         }

@@ -12,6 +12,7 @@ import { FlowNoteConfig } from "./notes/note";
 import { NoteSubsystem } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
+import { Organize } from './organize';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -20,19 +21,21 @@ function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
         context.fillStyle = backgroundColor;
         context.fillRect(0, 0, canvas.width, canvas.height);
 
-        const alpha = Clamp01(scale - 0.3) * 255
+        const alpha = Math.round(Clamp01(scale - 0.3) * 255)
         if (alpha <= 0) {
             return;
         }
 
-        const spacing = 100;
         context.fillStyle = `rgba(41, 54, 57, ${alpha})`;
+        const spacing = 100;
+        const pi2 = 2 * Math.PI
+        const dotScale =  2 * scale;
         for (let x = -50; x < 50; x++) {
             const xPos = (x * spacing * scale) + position.x;
             for (let y = -50; y < 50; y++) {
                 const yPos = (y * spacing * scale) + position.y;
                 context.beginPath();
-                context.arc(xPos, yPos, 2 * scale, 0, 2 * Math.PI);
+                context.arc(xPos, yPos, dotScale, 0, pi2);
                 context.fill();
             }
         }
@@ -159,6 +162,22 @@ export class NodeFlowGraph {
                 return;
             }
         }
+    }
+
+    organize(): void {
+        Organize(this.#ctx, this);
+    }
+
+    getNodes(): Array<FlowNode> {
+        return this.#mainNodeSubsystem.getNodes();
+    }
+
+    connectedInputsNodeReferences(nodeIndex: number): Array<FlowNode> {
+        return this.#mainNodeSubsystem.connectedInputsNodeReferences(nodeIndex);
+    }
+
+    connectedOutputsNodeReferences(nodeIndex: number): Array<FlowNode> {
+        return this.#mainNodeSubsystem.connectedOutputsNodeReferences(nodeIndex);
     }
 
     connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
