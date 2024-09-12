@@ -7,6 +7,104 @@ export interface MarkdownEntry {
     render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, maxWidth: number): number
 }
 
+export class CodeBlockEntry {
+
+    #text: Text
+
+    #calculatedPositions: List<Vector2>
+
+    #calculatedEntries: List<Text>
+
+    #calculatedForWidth: number;
+
+    constructor(text: Text) {
+        this.#text = text;
+        this.#calculatedForWidth = -1
+
+        this.#calculatedEntries = new List<Text>();
+        this.#calculatedPositions = new List<Vector2>();
+
+        document.fonts.addEventListener("loadingdone", (event) => {
+            this.#calculatedForWidth = -1
+        });
+    }
+
+    #calculateLayout(ctx: CanvasRenderingContext2D, maxWidth: number): void {
+        if (this.#calculatedForWidth === maxWidth) {
+            return;
+        }
+
+        let adjustedWith = maxWidth;
+        adjustedWith -= Theme.Note.CodeBlock.Padding * 2;
+
+        this.#calculatedEntries.Clear();
+        this.#calculatedPositions.Clear();
+
+        let curHeight = 0;
+        const lineInc = this.#text.style().getSize() + Theme.Note.LineSpacing;
+
+        let entries = this.#text.split("\n")
+
+        for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+            const entry = entries[entryIndex];
+
+            let lines = entry.breakIntoLines(ctx, adjustedWith);
+            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+
+                this.#calculatedEntries.Push(lines[lineIndex])
+                this.#calculatedPositions.Push({
+                    x: 0,
+                    y: curHeight,
+                })
+                
+                curHeight += lineInc;
+            }
+        }
+
+        this.#calculatedForWidth = maxWidth;
+    }
+
+    render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, maxWidth: number): number {
+        this.#calculateLayout(ctx, maxWidth);
+
+        let padding = Theme.Note.CodeBlock.Padding * scale;
+
+        let max = 0;
+        for (let i = 0; i < this.#calculatedEntries.Count(); i++) {
+            const pos = this.#calculatedPositions.At(i);
+            max = Math.max(max, pos.y * scale)
+        }
+
+        const y = position.y + max + (scale * 5)
+        ctx.fillStyle = Theme.Note.CodeBlock.BackgroundColor;
+        ctx.beginPath();
+        ctx.roundRect(
+            position.x,
+            position.y,
+            maxWidth * scale,
+            max + (padding * 2),
+            Theme.Note.CodeBlock.BorderRadius * scale
+        );
+        ctx.fill();
+
+
+        for (let i = 0; i < this.#calculatedEntries.Count(); i++) {
+            const entry = this.#calculatedEntries.At(i);
+            const pos = this.#calculatedPositions.At(i);
+
+            entry.render(ctx, scale, {
+                x: (pos.x * scale) + position.x + padding,
+                y: (pos.y * scale) + position.y + padding
+            });
+
+            max = Math.max(max, pos.y * scale)
+        }
+
+
+        return max + (padding * 2);
+    }
+}
+
 export class UnorderedListMarkdownEntry {
 
     #entries: Array<BasicMarkdownEntry>;
@@ -44,6 +142,8 @@ export class BasicMarkdownEntry {
 
     #underline: boolean;
 
+    #background: boolean;
+
     #entries: Array<Text>
 
     #calculatedPositions: List<Vector2>
@@ -52,9 +152,10 @@ export class BasicMarkdownEntry {
 
     #calculatedForWidth: number;
 
-    constructor(lines: Array<Text>, underline: boolean) {
+    constructor(lines: Array<Text>, underline: boolean, background: boolean) {
         this.#entries = lines;
         this.#underline = underline;
+        this.#background = background;
         this.#calculatedForWidth = -1
 
         this.#calculatedEntries = new List<Text>();
@@ -69,6 +170,12 @@ export class BasicMarkdownEntry {
         if (this.#calculatedForWidth === maxWidth) {
             return;
         }
+
+        let adjustedWith = maxWidth;
+        if (this.#background) {
+            adjustedWith -= Theme.Note.CodeBlock.Padding * 2;
+        }
+
         this.#calculatedEntries.Clear();
         this.#calculatedPositions.Clear();
 
@@ -79,11 +186,10 @@ export class BasicMarkdownEntry {
         const currentLineText = new List<Text>();
         const currentLineWidths = new List<number>();
 
-
         for (let entryIndex = 0; entryIndex < this.#entries.length; entryIndex++) {
             const entry = this.#entries[entryIndex];
 
-            let lines = entry.splitAtWidth(ctx, maxWidth - curPosition.x);
+            let lines = entry.splitAtWidth(ctx, adjustedWith - curPosition.x);
             let i = 0;
             while (lines.length > 1 && i < 100) {
                 i++
@@ -132,7 +238,7 @@ export class BasicMarkdownEntry {
                 currentLineHeight = 0;
                 curPosition.x = 0;
 
-                lines = lines[1].splitAtWidth(ctx, maxWidth);
+                lines = lines[1].splitAtWidth(ctx, adjustedWith);
             }
             if (i === 100) {
                 console.log(lines)
@@ -161,14 +267,41 @@ export class BasicMarkdownEntry {
     render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, maxWidth: number): number {
         this.#calculateLayout(ctx, maxWidth);
 
+        let padding = 0;
+        if (this.#background) {
+            padding += Theme.Note.CodeBlock.Padding * scale;
+        }
+
+
+        if (this.#background) {
+            let max = 0;
+            for (let i = 0; i < this.#calculatedEntries.Count(); i++) {
+                const pos = this.#calculatedPositions.At(i);
+                max = Math.max(max, pos.y * scale)
+            }
+
+            const y = position.y + max + (scale * 5)
+            ctx.fillStyle = Theme.Note.CodeBlock.BackgroundColor;
+            ctx.beginPath();
+            ctx.roundRect(
+                position.x,
+                position.y,
+                maxWidth * scale,
+                max + (padding * 2),
+                Theme.Note.CodeBlock.BorderRadius * scale
+            );
+            ctx.fill();
+        }
+
+
         let max = 0;
         for (let i = 0; i < this.#calculatedEntries.Count(); i++) {
             const entry = this.#calculatedEntries.At(i);
             const pos = this.#calculatedPositions.At(i);
 
             entry.render(ctx, scale, {
-                x: (pos.x * scale) + position.x,
-                y: (pos.y * scale) + position.y
+                x: (pos.x * scale) + position.x + padding,
+                y: (pos.y * scale) + position.y + padding
             });
 
             max = Math.max(max, pos.y * scale)
@@ -185,6 +318,6 @@ export class BasicMarkdownEntry {
             ctx.stroke();
         }
 
-        return max;
+        return max + (padding * 2);
     }
 }

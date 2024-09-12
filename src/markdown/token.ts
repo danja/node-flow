@@ -5,7 +5,8 @@ export enum MarkdownTokenType {
     H3 = "H3",
     NewLine = "New Line",
     Star = "Star",
-    Space = "Space"
+    Space = "Space",
+    BackTick = "`"
 }
 
 export class MarkdownToken {
@@ -14,9 +15,15 @@ export class MarkdownToken {
 
     #lexeme: string
 
-    constructor(type: MarkdownTokenType, lexeme: string) {
+    #tokenStart: number
+
+    #tokenEnd: number
+
+    constructor(type: MarkdownTokenType, lexeme: string, tokenStart: number, tokenEnd: number) {
         this.#type = type;
         this.#lexeme = lexeme;
+        this.#tokenStart = tokenStart;
+        this.#tokenEnd = tokenEnd;
     }
 
     type(): MarkdownTokenType {
@@ -25,5 +32,12 @@ export class MarkdownToken {
 
     lexeme(): string {
         return this.#lexeme;
+    }
+
+    tokenStart(): number {
+        return this.#tokenStart;
+    }
+    tokenEnd(): number {
+        return this.#tokenEnd;
     }
 }

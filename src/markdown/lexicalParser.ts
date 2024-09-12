@@ -37,8 +37,11 @@ export class MarkdownLexicalParser {
         return this.#body.charAt(this.#index);
     }
 
+    #lastToken = 0;
+    
     #addToken(token: MarkdownTokenType, lexeme: string): void {
-        this.#tokens.push(new MarkdownToken(token, lexeme));
+        this.#tokens.push(new MarkdownToken(token, lexeme, this.#lastToken, this.#index));
+        this.#lastToken = this.#index;
     }
 
     #h2(): void {
@@ -91,12 +94,13 @@ export class MarkdownLexicalParser {
             }
 
             // End of the line!
-            if (char === "\n" || char === "*") {
+            if (char === "\n" || char === "*" || char === "`") {
                 if (started != -1) {
                     this.#addToken(MarkdownTokenType.Text, this.#body.substring(started, this.#index))
                 }
                 return;
             }
+
 
             if (started === -1) {
                 started = this.#index;
@@ -130,6 +134,9 @@ export class MarkdownLexicalParser {
                 this.#inc();
             } else if (char === "*") {
                 this.#addToken(MarkdownTokenType.Star, "*");
+                this.#inc();
+            } else if (char === "`") {
+                this.#addToken(MarkdownTokenType.BackTick, "`");
                 this.#inc();
             } else {
                 this.#text();

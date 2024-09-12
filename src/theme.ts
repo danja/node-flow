@@ -56,6 +56,11 @@ export const Theme = {
         },
         H3: {
             FontSize: 16,
+        },
+        CodeBlock: {
+            BackgroundColor: "#0c2b35",
+            Padding: 16,
+            BorderRadius: 4,
         }
     }
 }

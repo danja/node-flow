@@ -51,6 +51,17 @@ export class Text {
         return results;
     }
 
+    split(char: string): Array<Text> {
+        const entries = this.#value.split(char)
+        const results = new Array<Text>();
+        for (let i = 0; i < entries.length; i++) {
+            const text = new Text(entries[i])
+            text.#style = this.#style;
+            results.push(text)
+        }
+        return results;
+    }
+
     splitAtIndex(index: number): Array<Text> {
         const results = [
             new Text(this.#value.substring(0, index)),
@@ -115,5 +126,9 @@ export class Text {
     render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2): void {
         this.#style.setupStyle(ctx, scale)
         ctx.fillText(this.#value, position.x, position.y);
+    }
+
+    style(): TextStyle {
+        return this.#style;
     }
 }

@@ -1,7 +1,7 @@
 import { FontStyle, FontWeight, TextStyleConfig } from "../styles/text";
 import { Theme } from "../theme";
 import { Text } from "../types/text";
-import { BasicMarkdownEntry, MarkdownEntry, UnorderedListMarkdownEntry } from "./entry";
+import { BasicMarkdownEntry, CodeBlockEntry, MarkdownEntry, UnorderedListMarkdownEntry } from "./entry";
 import { MarkdownToken, MarkdownTokenType } from "./token";
 
 export class MarkdownSyntaxParser {
@@ -10,7 +10,10 @@ export class MarkdownSyntaxParser {
 
     #index: number;
 
-    constructor(tokens: Array<MarkdownToken>) {
+    #originalText: string;
+
+    constructor(originalText: string, tokens: Array<MarkdownToken>) {
+        this.#originalText = originalText;
         this.#index = 0;
         this.#tokens = tokens;
     }
@@ -39,6 +42,13 @@ export class MarkdownSyntaxParser {
             return null
         }
         return this.#tokens[this.#index + 1];
+    }
+
+    #peakInto(amount: number): MarkdownToken | null {
+        if (this.#index + amount >= this.#tokens.length - 1) {
+            return null
+        }
+        return this.#tokens[this.#index + amount];
     }
 
     #emphasis(): Array<Text> {
@@ -176,7 +186,7 @@ export class MarkdownSyntaxParser {
             text[i].setWeight(FontWeight.Bold);
         }
 
-        return new BasicMarkdownEntry(text, true);
+        return new BasicMarkdownEntry(text, true, false);
     }
 
     #h2(): BasicMarkdownEntry {
@@ -190,7 +200,7 @@ export class MarkdownSyntaxParser {
             text[i].setWeight(FontWeight.Bold);
         }
 
-        return new BasicMarkdownEntry(text, true);
+        return new BasicMarkdownEntry(text, true, false);
     }
 
     #h3(): BasicMarkdownEntry {
@@ -204,14 +214,14 @@ export class MarkdownSyntaxParser {
             text[i].setWeight(FontWeight.Bold);
         }
 
-        return new BasicMarkdownEntry(text, false);
+        return new BasicMarkdownEntry(text, false, false);
     }
 
     #starLineStart(): MarkdownEntry {
         if (this.#peak()?.type() !== MarkdownTokenType.Space) {
             const starEntries = this.#text();
             this.#assignStandardStyling(starEntries);
-            return new BasicMarkdownEntry(starEntries, false);
+            return new BasicMarkdownEntry(starEntries, false, false);
         }
 
         // We've begun with a space, which means unordered list!
@@ -222,7 +232,7 @@ export class MarkdownSyntaxParser {
             this.#inc();
             const starEntries = this.#text();
             this.#assignStandardStyling(starEntries);
-            entries.push(new BasicMarkdownEntry(starEntries, false));
+            entries.push(new BasicMarkdownEntry(starEntries, false, false));
 
             // Text reads to the end of the line, which means we're at the new
             // line character. Move forward 1. 
@@ -238,6 +248,53 @@ export class MarkdownSyntaxParser {
             textEntries[i].setColor(Theme.Note.FontColor);
             textEntries[i].setSize(Theme.Note.FontSize);
         }
+    }
+
+    #backtickLineStart(): MarkdownEntry {
+
+        // If we're not a ```, just treat as regular text
+        if (this.#peak()?.type() !== MarkdownTokenType.BackTick || this.#peakInto(2)?.type() !== MarkdownTokenType.BackTick) {
+            const starEntries = this.#text();
+            this.#assignStandardStyling(starEntries);
+            return new BasicMarkdownEntry(starEntries, false, false);
+        }
+        this.#inc();
+        this.#inc();
+
+        let token = this.#next();
+
+        // Eat the first new line character
+        if (token?.type() === MarkdownTokenType.NewLine) {
+            token = this.#next();
+        }
+
+        let start = token?.tokenStart();
+        let end = start;
+
+        // Read until we hit another ``` 
+        while (token !== null) {
+
+            if (
+                token.type() === MarkdownTokenType.BackTick &&
+                this.#peak()?.type() === MarkdownTokenType.BackTick &&
+                this.#peakInto(2)?.type() === MarkdownTokenType.BackTick
+            ) {
+                end = token.tokenEnd() - 1;
+                break;
+            }
+
+            token = this.#next();
+        }
+
+        this.#inc(); // puts us on the 2nd
+        this.#inc(); // puts us on the 3rd
+        this.#inc(); // puts us on the next token
+
+        const codeBlockText = this.#originalText.substring(start as number, end);
+        const entryText = new Text(codeBlockText);
+        console.log(codeBlockText)
+        this.#assignStandardStyling([entryText])
+        return new CodeBlockEntry(entryText)
     }
 
     parse(): Array<MarkdownEntry> {
@@ -262,7 +319,7 @@ export class MarkdownSyntaxParser {
                 case MarkdownTokenType.Text:
                     const textEntries = this.#text();
                     this.#assignStandardStyling(textEntries);
-                    entries.push(new BasicMarkdownEntry(textEntries, false));
+                    entries.push(new BasicMarkdownEntry(textEntries, false, false));
                     break;
 
                 case MarkdownTokenType.Star:
@@ -271,6 +328,10 @@ export class MarkdownSyntaxParser {
 
                 case MarkdownTokenType.NewLine:
                     this.#inc();
+                    break;
+
+                case MarkdownTokenType.BackTick:
+                    entries.push(this.#backtickLineStart());
                     break;
 
                 default:

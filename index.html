@@ -43,35 +43,7 @@
 
         NodeFlowTheme.FontFamily = "Source Code Pro";
 
-        const node1 = new FlowNode({ title: "Test Node 1", position: { x: 0, y: 100 } });
-        node1.addOutput({ name: "test out 1", type: "string" })
-        node1.addOutput({ name: "test out 2", type: "int" })
-        node1.addOutput({ name: "A super duper long name!!!", type: "bool" })
-        node1.addWidget(new ColorWidget({ value: "#000000" }));
-        node1.addWidget(new NumberWidget({ value: 1.2345 }));
-        node1.addWidget(new StringWidget({ value: "woo!" }));
-        node1.addWidget(new StringWidget({ value: "A super duper long text input" }));
-        node1.addWidget(new ButtonWidget({
-            text: "Click Me!",
-            callback: () => {
-                alert("Node button clicked!")
-            }
-        }));
-        node1.addWidget(new ToggleWidget({
-            text: "Example",
-        }));
-        node1.addWidget(new SliderWidget({
-            min: 0,
-            max: 10,
-            value: 7.5
-        }))
 
-        const node2 = new FlowNode({
-            title: "Test Node 2 With a super long Title",
-            position: { x: 300, y: 0 },
-        });
-        node2.addInput({ name: "test input 1", type: "string" })
-        node2.addOutput({ name: "test out 1", type: "int" })
 
         const node3 = new FlowNode({
             title: "Node 3",
@@ -200,26 +172,131 @@ This is a minimal implementation with graph-specific functionality. Currently im
 * H1, H2, and H3
 * Bold and Italic
 * Unordered Lists
-
-More will come, so feel free to open an issue for desired features! (Please search and check to make sure one hasn't already been opened up in the past)
-                    `,
+* Code blocks
+`,
                     position: {
-                        x: 300,
-                        y: 180
+                        x: 2300,
+                        y: 20
                     },
                     locked: true,
+                },
+                {
+                    position: {
+                        x: 20,
+                        y: 20
+                    },
+                    locked: true,
+                    text: `
+# Node Flow
+
+Node Flow is a javascript library that enables developers to build node based tools similar to Unreal Blueprints or Blender Nodes. 
+
+## Example
+
+Scattered across this graph contains code snippets on how to accomplish different things within the library.
+
+\`\`\`
+// Create a canvas to render our graph to
+var canvas = document.createElement("canvas");
+
+// Create our Node Flow Graph
+var graph = new NodeFlowGraph(canvas)
+\`\`\`
+`
+                },
+                {
+                    position: {
+                        x: 800,
+                        y: 20
+                    },
+                    locked: true,
+                    text: `
+## Inputs and Outputs
+
+Create a Add node that takes two numbers and outputs a single number
+
+\`\`\`
+var node = new FlowNode({ 
+    title: "Add",
+    inputs: [
+        { name: "a", type: "float32" },
+        { name: "b", type: "float32" }
+    ],
+     outputs: [
+        { name: "sum", type: "float32" }
+    ],
+});
+graph.addNode(node);
+\`\`\`
+
+You can also add additional inputs and outputs to the node after it's been created
+
+\`\`\`
+node.addInput({ name: "c", type: "float32" })
+node.addOutput({ name: "sum", type: "float32" })
+\`\`\`
+`
                 }
             ]
         });
-        graph.addNode(node1);
-        graph.addNode(node2);
-        graph.addNode(node3);
 
-        graph.connectNodes(node1, 0, node2, 0)
-        graph.connectNodes(node2, 0, node3, 0)
 
-        // graph.organize();
-    </script>
+        var sumNode = new FlowNode({
+            position: {
+                x: 850,
+                y: 600
+            },
+            title: "Add",
+            inputs: [
+                { name: "a", type: "float32" },
+                { name: "b", type: "float32" }
+            ],
+            outputs: [
+                { name: "sum", type: "float32" }
+            ],
+        });
+
+        
+        var aNode = new FlowNode({
+            position: {
+                x: 550,
+                y: 500
+            },
+            title: "Number",
+            outputs: [
+                { name: "value", type: "float32" }
+            ],
+            widgets: [
+                {
+                    type: "number",
+                }
+            ]
+        });
+
+        var bNode = new FlowNode({
+            position: {
+                x: 550,
+                y: 650
+            },
+            title: "Number",
+            outputs: [
+                { name: "value", type: "float32" }
+            ],
+            widgets: [
+                {
+                    type: "number",
+                }
+            ]
+        })
+        
+        graph.addNode(sumNode)
+        graph.addNode(aNode)
+        graph.addNode(bNode)
+        
+        graph.connectNodes(aNode, 0, sumNode, 0)
+        graph.connectNodes(bNode, 0, sumNode, 1)
+        
+        </script>
 </body>
 
 </html>

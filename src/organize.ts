@@ -75,6 +75,22 @@ export function Organize(ctx: CanvasRenderingContext2D, graph: NodeFlowGraph): v
 
     entries.sort((a, b) => b.length - a.length);
 
+    interface Column {
+        Nodes: Array<FlowNode>;
+        Width: number;
+    }
+
+    const columns = Array<Column>(entries[0].length + 1);
+    for (let i = 0; i < columns.length; i++) {
+        columns[i] = { 
+            Nodes: new Array<FlowNode>(),
+            Width: 0
+        };
+    }
+
+    console.log(relativePosition)
+    console.log(entries)
+
     for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
         if (claimed[entry.node] === true) {
@@ -92,18 +108,44 @@ export function Organize(ctx: CanvasRenderingContext2D, graph: NodeFlowGraph): v
             if (claimed[p] === true) {
                 continue;
             }
-
-            let pos = {
-                x: -(position - entry.min ) * 400,
-                y: i * 300
-            }
-            console.log(pos);
-            nodes[p].setPosition(pos)
+            
+            const nodeBounds = bounds[p];
+            const column = columns[position - entry.min]; 
+            column.Nodes.push(nodes[p])
+            column.Width = Math.max(column.Width, nodeBounds.Size.x) 
 
             claimed[p] = true;
         }
     }
 
-    console.log(relativePosition)
-    console.log(entries);
+    let allColumnsWidths = 0;
+    for (let c = 0; c < columns.length; c++) {
+        allColumnsWidths += columns[c].Width;
+    }
+
+    const widthSpacing = 100;
+    const heightSpacing = 100;
+
+    let widthOffset = 0;
+    for (let c = 0; c < columns.length; c++) {
+        var column = columns[c];
+        let heightOffset = 0;
+
+        widthOffset -= widthSpacing + column.Width;
+
+        for (let n = 0; n < column.Nodes.length; n++) {
+            const node = column.Nodes[n];
+            const nodeBounds = bounds[nodeLUT.get(node) as number];
+            
+            let pos = {
+                x: widthOffset + allColumnsWidths + (columns.length * widthSpacing),
+                y: heightOffset
+            }
+            
+            heightOffset += nodeBounds.Size.y + heightSpacing 
+            console.log(pos);
+            node.setPosition(pos);
+        }
+    }
+
 }

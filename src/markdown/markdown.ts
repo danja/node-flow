@@ -7,7 +7,7 @@ export function BuildMarkdown(data: string): Array<MarkdownEntry> {
     lexicalParser.parse();
     // console.log(lexicalParser.tokens());
 
-    const syntaxParser = new MarkdownSyntaxParser(lexicalParser.tokens());
+    const syntaxParser = new MarkdownSyntaxParser(data, lexicalParser.tokens());
     const contents = syntaxParser.parse()
     // console.log(contents);
     return contents;

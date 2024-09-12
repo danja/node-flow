@@ -280,6 +280,7 @@ export class FlowNode {
         // Add some padding at the end!
         size.y += this.#elementSpacing
 
+        size.x = Math.max(size.x, 150)
         size.x *= scale;
         size.y *= scale;
 
