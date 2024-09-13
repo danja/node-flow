@@ -8,7 +8,7 @@ import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
 import { Clamp01 } from "./utils/math";
 import { GraphSubsystem } from "./graphSubsystem";
-import { FlowNoteConfig } from "./notes/note";
+import { FlowNote, FlowNoteConfig } from "./notes/note";
 import { NoteSubsystem } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
@@ -29,7 +29,7 @@ function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
         context.fillStyle = `rgba(41, 54, 57, ${alpha})`;
         const spacing = 100;
         const pi2 = 2 * Math.PI
-        const dotScale =  2 * scale;
+        const dotScale = 2 * scale;
         for (let x = -50; x < 50; x++) {
             const xPos = (x * spacing * scale) + position.x;
             for (let y = -50; y < 50; y++) {
@@ -82,14 +82,18 @@ export class NodeFlowGraph {
 
     #mainNodeSubsystem: NodeSubsystem;
 
+    #mainNoteSubsystem: NoteSubsystem;
+
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
         this.#mainNodeSubsystem = new NodeSubsystem({
             nodes: config?.nodes,
             idleConnection: config?.idleConnection
         });
 
+        this.#mainNoteSubsystem = new NoteSubsystem(config?.notes);
+
         this.#subsystems = [
-            new NoteSubsystem(config?.notes),
+            this.#mainNoteSubsystem,
             this.#mainNodeSubsystem,
         ];
         this.#scale = 1;
@@ -101,6 +105,11 @@ export class NodeFlowGraph {
                     name: "Reset View",
                     group: contextMenuGroup,
                     callback: this.#resetView.bind(this)
+                },
+                {
+                    name: "Organize Nodes",
+                    group: contextMenuGroup,
+                    callback: this.organize.bind(this)
                 }
             ],
         }, config?.contextMenu);
@@ -188,6 +197,10 @@ export class NodeFlowGraph {
         this.#mainNodeSubsystem.addNode(node);
     }
 
+    addNote(note: FlowNote): void {
+        this.#mainNoteSubsystem.addNote(note);
+    }
+
     #openContextMenu(position: Vector2): void {
         let finalConfig = this.#contextMenuConfig;
 
@@ -258,6 +271,13 @@ export class NodeFlowGraph {
     #cursor: CursorStyle;
 
     #render(): void {
+        if (this.#canvas.parentNode !== null) {
+            var rect = this.#canvas.parentNode.getBoundingClientRect();
+            this.#canvas.width = rect.width;
+            this.#canvas.height = rect.height;
+        }
+
+
         this.#cursor = CursorStyle.Default;
 
         TimeExecution("Render_Background", this.#renderBackground.bind(this));

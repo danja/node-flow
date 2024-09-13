@@ -4,6 +4,7 @@ import { Theme } from './theme';
 globalThis.NodeFlowGraph = NodeFlowGraph;
 globalThis.FlowNode = FlowNode;
 globalThis.NodeFlowTheme = Theme;
+globalThis.FlowNote = FlowNote;
 
 // Widgets
 import { NumberWidget } from './widgets/number';
@@ -13,6 +14,7 @@ import { ButtonWidget } from './widgets/button';
 import { ToggleWidget } from './widgets/toggle';
 import { SliderWidget } from './widgets/slider';
 import { GlobalWidgetFactory } from './widgets/factory';
+import { FlowNote } from './notes/note';
 globalThis.NumberWidget = NumberWidget;
 globalThis.ColorWidget = ColorWidget;
 globalThis.StringWidget = StringWidget;

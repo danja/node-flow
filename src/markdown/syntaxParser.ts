@@ -292,7 +292,6 @@ export class MarkdownSyntaxParser {
 
         const codeBlockText = this.#originalText.substring(start as number, end);
         const entryText = new Text(codeBlockText);
-        console.log(codeBlockText)
         this.#assignStandardStyling([entryText])
         return new CodeBlockEntry(entryText)
     }
