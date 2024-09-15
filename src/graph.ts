@@ -272,7 +272,8 @@ export class NodeFlowGraph {
 
     #render(): void {
         if (this.#canvas.parentNode !== null) {
-            var rect = this.#canvas.parentNode.getBoundingClientRect();
+            // Stupid as any because typescript doesn't think it exists
+            var rect = (this.#canvas.parentNode as any).getBoundingClientRect();
             this.#canvas.width = rect.width;
             this.#canvas.height = rect.height;
         }

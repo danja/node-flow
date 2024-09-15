@@ -1,12 +1,13 @@
 import { Widget } from "./widget";
-import { NumberWidget } from './number';
-import { ButtonWidget } from './button';
-import { ColorWidget } from './color';
-import { SliderWidget } from './slider';
-import { StringWidget } from './string';
-import { ToggleWidget } from './toggle';
+import { NumberWidget, NumberWidgetConfig } from './number';
+import { ButtonWidget, ButtonWidgetConfig } from './button';
+import { ColorWidget, ColorWidgetConfig } from './color';
+import { SliderWidget, SliderWidgetConfig } from './slider';
+import { StringWidget, StringWidgetConfig } from './string';
+import { ToggleWidget, ToggleWidgetConfig } from './toggle';
+import { FlowNode } from "../node";
 
-export type WidgetBuilder = (confg?: any) => Widget;
+export type WidgetBuilder = (node: FlowNode, confg?: any) => Widget;
 
 class WidgetFactory {
 
@@ -20,22 +21,22 @@ class WidgetFactory {
         this.#registeredWidgets.set(widgetType, builder);
     }
 
-    create(widgetType: string, config: any): Widget {
+    create(node: FlowNode, widgetType: string, config: any): Widget {
         const builder = this.#registeredWidgets.get(widgetType)
         if (builder === undefined) {
             throw new Error("no builder registered for widget: " + widgetType);
         }
-        return builder(config);
+        return builder(node, config);
     }
 }
 
 const GlobalWidgetFactory = new WidgetFactory();
 
-GlobalWidgetFactory.register("button", (config) => new ButtonWidget(config));
-GlobalWidgetFactory.register("number", (config) => new NumberWidget(config));
-GlobalWidgetFactory.register("color", (config) => new ColorWidget(config));
-GlobalWidgetFactory.register("slider", (config) => new SliderWidget(config));
-GlobalWidgetFactory.register("string", (config) => new StringWidget(config));
-GlobalWidgetFactory.register("toggle", (config) => new ToggleWidget(config));
+GlobalWidgetFactory.register("button", (node: FlowNode, config?: ButtonWidgetConfig) => new ButtonWidget(config));
+GlobalWidgetFactory.register("number", (node: FlowNode, config?: NumberWidgetConfig) => new NumberWidget(node, config));
+GlobalWidgetFactory.register("color", (node: FlowNode, config?: ColorWidgetConfig) => new ColorWidget(node, config));
+GlobalWidgetFactory.register("slider", (node: FlowNode, config?: SliderWidgetConfig) => new SliderWidget(node, config));
+GlobalWidgetFactory.register("string", (node: FlowNode, config?: StringWidgetConfig) => new StringWidget(node, config));
+GlobalWidgetFactory.register("toggle", (node: FlowNode, config?: ToggleWidgetConfig) => new ToggleWidget(node, config));
 
 export { GlobalWidgetFactory };

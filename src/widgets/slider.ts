@@ -6,8 +6,12 @@ import { CopyVector2, Vector2 } from "../types/vector2";
 import { Clamp, Clamp01 } from "../utils/math";
 import { height, width } from "./widget";
 import { TextBaseline } from "../styles/canvasTextBaseline";
+import { FlowNode } from "../node";
 
 export interface SliderWidgetConfig {
+
+    property?: string;
+
     min?: number;
 
     max?: number;
@@ -27,6 +31,7 @@ export interface SliderWidgetConfig {
     release?: (newValue: number) => void;
 
     snapIncrement?: number;
+
 }
 
 export class SliderWidget {
@@ -42,6 +47,10 @@ export class SliderWidget {
     #text: string;
 
     #snapIncrement?: number;
+
+    #node: FlowNode;
+
+    #nodeProperty: string | undefined;
 
     // Callbacks ==============================================================
 
@@ -67,14 +76,13 @@ export class SliderWidget {
 
     #clicking: boolean;
 
-    constructor(config?: SliderWidgetConfig) {
+    constructor(node: FlowNode, config?: SliderWidgetConfig) {
         this.#min = config?.min === undefined ? 0 : config?.min;
         this.#max = config?.max === undefined ? 1 : config?.max;
-        this.#value = config?.value === undefined ? 0 : config?.value;
-        this.#value = Clamp(this.#value, this.#min, this.#max);
         this.#snapIncrement = config?.snapIncrement;
-
-        this.#change = config?.change;
+        this.#nodeProperty = config?.property;
+        this.#text = "";
+        
         this.#release = config?.release;
 
         this.#backgroundColor = config?.backgroundColor === undefined ? Theme.Widget.BackgroundColor : config?.backgroundColor;
@@ -87,15 +95,30 @@ export class SliderWidget {
         this.#clickStartMousePosition = { x: 0, y: 0 };
         this.#clicking = false;
 
-        this.#text = this.#value.toFixed(3);
+
+        if (config?.property !== undefined && config?.property !== null) {
+            node.subscribeToProperty(config.property, (oldVal, newVal) => {
+                this.SetValue(newVal);
+            });
+        }
+
+        this.SetValue(config?.value === undefined ? 0 : config?.value);
+
+        // Setup change callback after we set the initial value to prevent the callback from being 
+        this.#change = config?.change;
     }
 
     SetValue(newValue: number): void {
-        if (this.#value === newValue) {
+        const cleanedValue = Clamp(newValue, this.#min, this.#max);
+        if (this.#value === cleanedValue) {
             return;
         }
 
-        this.#value = Clamp(newValue, this.#min, this.#max);
+        this.#value = cleanedValue;
+
+        if (this.#nodeProperty) {
+            this.#node.setProperty(this.#nodeProperty, this.#value);
+        }
 
         this.#text = this.#value.toFixed(3);
         if (this.#change !== undefined) {

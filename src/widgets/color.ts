@@ -6,9 +6,12 @@ import { height, width } from "./widget";
 import { Popup } from "../popup";
 import { TextBoxStyle } from '../styles/textBox';
 import { Theme } from "../theme";
+import { FlowNode } from "../node";
 
 export interface ColorWidgetConfig {
     value?: string;
+
+    property?: string;
 
     textStyle?: TextStyleConfig;
 
@@ -30,6 +33,10 @@ function contrastColor(color: string): string {
 
 export class ColorWidget {
 
+    #node: FlowNode;
+
+    #nodeProperty: string | undefined;
+
     #value: string;
 
     #contrast: string;
@@ -38,9 +45,10 @@ export class ColorWidget {
 
     #callback?: (newColor: string) => void;
 
-    constructor(config?: ColorWidgetConfig) {
-        this.#value = config?.value === undefined ? "#000000" : config?.value;
-        this.#contrast = contrastColor(this.#value);
+    constructor(node: FlowNode, config?: ColorWidgetConfig) {
+        this.#node = node;
+        this.#nodeProperty = config?.property;
+        this.Set(config?.value === undefined ? "#000000" : config?.value);
         this.#textBoxStyle = new TextBoxStyle({
             box: {
                 color: this.#value,
@@ -53,8 +61,11 @@ export class ColorWidget {
         });
         this.#callback = config?.callback;
 
-
-        this.#textBoxStyle.setTextColor(this.#contrast);
+        if (this.#nodeProperty !== undefined) {
+            this.#node.subscribeToProperty(this.#nodeProperty, (oldVal, newVal) => {
+                this.Set(newVal);
+            });
+        }
     }
 
     Size(): Vector2 {
@@ -62,16 +73,25 @@ export class ColorWidget {
     }
 
     Set(value: string): void {
-        this.#value = value;
-        this.#contrast = contrastColor(this.#value);
+        if (this.#value === value) {
+            return;
+        }
 
-        this.#textBoxStyle.setBoxColor(this.#value);
-        this.#textBoxStyle.setBorderColor(this.#contrast);
-        this.#textBoxStyle.setTextColor(this.#contrast);
+        this.#value = value;
 
         if (this.#callback !== undefined) {
             this.#callback(this.#value);
         }
+
+        if (this.#nodeProperty !== undefined) {
+            this.#node.setProperty(this.#nodeProperty, this.#value);
+        }
+
+        // Update Styling
+        this.#contrast = contrastColor(this.#value);
+        this.#textBoxStyle.setBoxColor(this.#value);
+        this.#textBoxStyle.setBorderColor(this.#contrast);
+        this.#textBoxStyle.setTextColor(this.#contrast);
     }
 
     ClickStart(): void {

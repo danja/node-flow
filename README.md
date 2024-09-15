@@ -16,7 +16,7 @@ Node Flow is a javascript library that enables developers to build node based to
 
 ## Install
 
-Download the latest build [here](https://github.com/EliCDavis/node-flow/blob/gh-pages/dist/web/index.js).
+Download the latest build [here](https://raw.githubusercontent.com/EliCDavis/node-flow/gh-pages/dist/web/NodeFlow.js).
 
 ## API
 

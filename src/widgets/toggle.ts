@@ -3,6 +3,7 @@ import { Box, InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
+import { FlowNode } from "../node";
 
 export interface ToggleStyleConfig {
     idle?: TextBoxStyleConfig,
@@ -13,6 +14,7 @@ export interface ToggleStyleConfig {
 }
 
 export interface ToggleWidgetConfig {
+    property?: string;
     value?: boolean;
     text?: string;
     callback?: () => void;
@@ -106,7 +108,11 @@ class ToggleStyle {
 
 export class ToggleWidget {
 
-    #enabled: boolean;
+    #node: FlowNode;
+
+    #nodeProperty: string | undefined;
+
+    #value: boolean;
 
     #text: string;
 
@@ -116,10 +122,13 @@ export class ToggleWidget {
 
     #callback?: (value: boolean) => void;
 
-    constructor(config?: ToggleWidgetConfig) {
+    constructor(node: FlowNode, config?: ToggleWidgetConfig) {
+        this.#node = node;
+        this.#nodeProperty = config?.property;
         this.#text = config?.text === undefined ? "Toggle" : config?.text;
-        this.#enabled = config?.value === undefined ? false : config?.value;
-        this.#callback = config?.callback
+        this.Set(config?.value === undefined ? false : config?.value);
+        this.#callback = config?.callback;
+
         this.#enabledStyle = new ToggleStyle({
             idle: TextBoxStyleWithFallback(config?.enabledStyle?.idle, {
                 box: {
@@ -149,6 +158,12 @@ export class ToggleWidget {
             lightBorderColor: config?.disabledStyle?.lightBorderColor,
             lightColor: config?.disabledStyle?.lightColor === undefined ? "#004400" : config?.enabledStyle?.lightColor,
         });
+
+        if (this.#nodeProperty !== undefined) {
+            this.#node.subscribeToProperty(this.#nodeProperty, (oldVal, newVal) => {
+                this.Set(newVal);
+            });
+        }
     }
 
     Size(): Vector2 {
@@ -156,15 +171,31 @@ export class ToggleWidget {
     }
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
-        let style = this.#enabled ? this.#enabledStyle : this.#disabledStyle;
+        let style = this.#value ? this.#enabledStyle : this.#disabledStyle;
         return style.Draw(ctx, position, scale, this.#text, mousePosition);
     }
 
-    ClickStart(): void {
-        this.#enabled = !this.#enabled;
-        if (this.#callback !== undefined) {
-            this.#callback(this.#enabled);
+    Toggle(): void {
+        this.Set(!this.#value);
+    }
+
+    Set(value: boolean): void {
+        if (this.#value === value) {
+            return;
         }
+        this.#value = value;
+
+        if (this.#nodeProperty !== undefined) {
+            this.#node.setProperty(this.#nodeProperty, this.#value);
+        }
+
+        if (this.#callback !== undefined) {
+            this.#callback(this.#value);
+        }
+    }
+
+    ClickStart(): void {
+        this.Toggle();
     }
 
     ClickEnd(): void {

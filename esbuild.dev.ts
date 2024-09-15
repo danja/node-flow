@@ -5,7 +5,7 @@ import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfil
 
 const buildOptsNode: BuildOptions = {
   entryPoints: ['./src/index.ts'],
-  outfile: './dist/node/index.js',
+  outfile: './dist/node/NodeFlow.js',
   platform: 'node',
   target: ['es2018'],
   format: 'cjs',
@@ -20,7 +20,7 @@ const buildOptsNode: BuildOptions = {
 const buildOptsWeb: BuildOptions = {
   entryPoints: ['./src/index.ts'],
   //   inject: [],
-  outfile: './dist/web/index.js',
+  outfile: './dist/web/NodeFlow.js',
   //   external: [],
   platform: 'browser',
   target: ['esNext'],

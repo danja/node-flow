@@ -5,8 +5,11 @@ import { Box, InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";
 import { fitString } from "../utils/string";
 import { height, width } from "./widget";
+import { FlowNode } from '../node';
 
 export interface StringWidgetConfig {
+    property?: string;
+
     value?: string;
 
     textBoxStyle?: TextBoxStyleConfig;
@@ -24,8 +27,13 @@ export class StringWidget {
 
     #callback?: (newString: string) => void;
 
-    constructor(config?: StringWidgetConfig) {
-        this.#value = config?.value === undefined ? "" : config?.value;
+    #node: FlowNode
+
+    #nodeProperty: string | undefined;
+
+    constructor(node: FlowNode, config?: StringWidgetConfig) {
+        this.#node = node;
+        this.#nodeProperty = config?.property;
         this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {
             box: {
                 color: Theme.Widget.BackgroundColor,
@@ -49,7 +57,14 @@ export class StringWidget {
             },
             text: { color: Theme.Widget.FontColor },
         }));
+
+        this.Set(config?.value === undefined ? "" : config?.value);
         this.#callback = config?.callback;
+        if (this.#nodeProperty !== undefined) {
+            this.#node.subscribeToProperty(this.#nodeProperty, (oldVal, newVal) => {
+                this.Set(newVal);
+            });
+        }
     }
 
     Size(): Vector2 {
@@ -57,7 +72,15 @@ export class StringWidget {
     }
 
     Set(value: string): void {
+        if (this.#value === value) {
+            return;
+        }
         this.#value = value;
+
+        if (this.#nodeProperty !== undefined) {
+            this.#node.setProperty(this.#nodeProperty, this.#value)
+        }
+
         if (this.#callback !== undefined) {
             this.#callback(this.#value);
         }

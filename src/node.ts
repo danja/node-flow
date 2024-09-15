@@ -11,6 +11,13 @@ import { Theme } from "./theme";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { TextBaseline } from "./styles/canvasTextBaseline";
 
+type AnyPropertyChangeCallback = (propertyName: string, oldValue: any, newValue: any) => void
+type PropertyChangeCallback = (oldValue: any, newValue: any) => void
+
+interface NodeData {
+    [name: string]: any;
+}
+
 export interface WidgetConfig {
     type?: string,
     config?: any
@@ -26,6 +33,7 @@ export interface FlowNodeConfig {
     position?: Vector2;
     title?: string;
     locked?: boolean;
+    data?: NodeData;
 
     // Ports
     inputs?: Array<PortConfig>;
@@ -113,6 +121,12 @@ export class FlowNode {
 
     #widgetPositions: List<Box>;
 
+    #data: NodeData;
+
+    #registeredAnyPropertyChangeCallbacks: Array<AnyPropertyChangeCallback>;
+
+    #registeredPropertyChangeCallbacks: Map<string, Array<PropertyChangeCallback>>;
+
     constructor(config?: FlowNodeConfig) {
         this.#input = new Array<Port>();
         this.#output = new Array<Port>();
@@ -122,6 +136,9 @@ export class FlowNode {
         this.#widgetPositions = new List<Box>();
         this.#elementSpacing = 15;
         this.#locked = config?.locked === undefined ? false : config.locked;
+        this.#data = config?.data === undefined ? {} : config?.data;
+        this.#registeredPropertyChangeCallbacks = new Map<string, Array<PropertyChangeCallback>>();
+        this.#registeredAnyPropertyChangeCallbacks = new Array<AnyPropertyChangeCallback>();
 
         this.#selected = false;
         this.#onSelect = config?.onSelect;
@@ -187,7 +204,7 @@ export class FlowNode {
                 if (widget.type === undefined) {
                     continue;
                 }
-                this.addWidget(GlobalWidgetFactory.create(widget.type, widget.config))
+                this.addWidget(GlobalWidgetFactory.create(this, widget.type, widget.config))
             }
         }
     }
@@ -204,6 +221,46 @@ export class FlowNode {
         if (this.#onSelect) {
             this.#onSelect();
         }
+    }
+
+    public subscribeToAnyPropertyChange(callback: AnyPropertyChangeCallback): void {
+        if (callback === undefined || callback === null) {
+        }
+        this.#registeredAnyPropertyChangeCallbacks.push(callback);
+    }
+
+    public subscribeToProperty(name: string, callback: PropertyChangeCallback): void {
+        if (!this.#registeredPropertyChangeCallbacks.has(name)) {
+            this.#registeredPropertyChangeCallbacks.set(name, []);
+        }
+
+        const callbacks = this.#registeredPropertyChangeCallbacks.get(name);
+        if (callbacks === undefined) {
+            return;
+        }
+        callbacks.push(callback);
+    }
+
+    public setProperty(name: string, value: any): void {
+        const oldValue = this.#data[name];
+        this.#data[name] = value;
+
+        for (let i = 0; i < this.#registeredAnyPropertyChangeCallbacks.length; i++) {
+            this.#registeredAnyPropertyChangeCallbacks[i](name, oldValue, value);
+        }
+
+        const callbacks = this.#registeredPropertyChangeCallbacks.get(name);
+        if (callbacks === undefined) {
+            return;
+        }
+
+        for (let i = 0; i < callbacks.length; i++) {
+            callbacks[i](oldValue, value);
+        }
+    }
+
+    public getProperty(name: string): any {
+        return this.#data[name];
     }
 
     public unselect(): void {
@@ -403,10 +460,10 @@ export class FlowNode {
         ctx.fillStyle = "#154050"
         ctx.beginPath();
         ctx.roundRect(
-            titleBox.Position.x + (borderSize*scale*0.5),
-            titleBox.Position.y + (borderSize*scale*0.5),
-            titleBox.Size.x - (borderSize*scale),
-            titleBox.Size.y - (borderSize*scale*0.5),
+            titleBox.Position.x + (borderSize * scale * 0.5),
+            titleBox.Position.y + (borderSize * scale * 0.5),
+            titleBox.Size.x - (borderSize * scale),
+            titleBox.Size.y - (borderSize * scale * 0.5),
             [nodeStyle.radius() * scale, nodeStyle.radius() * scale, 0, 0]
         );
         ctx.fill();

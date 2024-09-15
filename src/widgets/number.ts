@@ -4,9 +4,12 @@ import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../s
 import { Box, InBox } from '../types/box';
 import { Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
+import { FlowNode } from "../node";
 
 export interface NumberWidgetConfig {
     value?: number;
+
+    property?: string;
 
     idleBoxStyle?: TextBoxStyleConfig;
 
@@ -16,7 +19,11 @@ export interface NumberWidgetConfig {
 }
 
 export class NumberWidget {
-    
+
+    #node: FlowNode;
+
+    #nodeProperty: string | undefined;
+
     #value: number;
 
     #idleBoxStyle: TextBoxStyle;
@@ -27,8 +34,10 @@ export class NumberWidget {
 
     #callback?: (newNumber: number) => void;
 
-    constructor(config?: NumberWidgetConfig) {
-        this.#value = config?.value === undefined ? 0 : config?.value;
+    constructor(node: FlowNode, config?: NumberWidgetConfig) {
+        this.#node = node;
+        this.#nodeProperty = config?.property;
+        this.Set(config?.value === undefined ? 0 : config?.value);
         this.#idleBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleBoxStyle, {
             box: {
                 color: Theme.Widget.BackgroundColor,
@@ -53,8 +62,12 @@ export class NumberWidget {
         }));
         this.#callback = config?.callback;
 
-        // https://stackoverflow.com/questions/5765398/whats-the-best-way-to-convert-a-number-to-a-string-in-javascript
-        this.#text = '' + this.#value;
+        if (this.#nodeProperty !== undefined) {
+            this.#node.subscribeToProperty(this.#nodeProperty, (oldVal, newVal) => {
+                this.Set(newVal);
+            });
+        }
+
     }
 
     Size(): Vector2 {
@@ -62,11 +75,22 @@ export class NumberWidget {
     }
 
     Set(newNumber: number): void {
+        if (this.#value === newNumber) {
+            return;
+        }
+
         this.#value = newNumber;
-        this.#text = '' + this.#value;
+
+        if (this.#nodeProperty !== undefined) {
+            this.#node.setProperty(this.#nodeProperty, this.#value);
+        }
+
         if (this.#callback !== undefined) {
             this.#callback(this.#value);
         }
+
+        // https://stackoverflow.com/questions/5765398/whats-the-best-way-to-convert-a-number-to-a-string-in-javascript
+        this.#text = '' + this.#value;
     }
 
     ClickStart(): void {
