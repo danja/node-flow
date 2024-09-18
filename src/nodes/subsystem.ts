@@ -8,6 +8,7 @@ import { CursorStyle } from "../styles/cursor";
 import { Vector2 } from "../types/vector2";
 import { Widget } from "../widgets/widget";
 import { NodeFactory, NodeFactoryConfig } from "./factory";
+import { Publisher } from "./publisher";
 
 export interface ConnectionRendererConfiguration {
     size?: number;
@@ -79,6 +80,10 @@ export class NodeSubsystem {
         this.#connections = new Array<Connection>();
         this.#nodeFactory = new NodeFactory(config?.nodes);
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
+    }
+
+    addPublisher(identifier: string, publisher: Publisher): void {
+        this.#nodeFactory.addPublisher(identifier, publisher);
     }
 
     clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {

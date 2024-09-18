@@ -37,7 +37,6 @@ export class NumberWidget {
     constructor(node: FlowNode, config?: NumberWidgetConfig) {
         this.#node = node;
         this.#nodeProperty = config?.property;
-        this.Set(config?.value === undefined ? 0 : config?.value);
         this.#idleBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleBoxStyle, {
             box: {
                 color: Theme.Widget.BackgroundColor,
@@ -60,6 +59,7 @@ export class NumberWidget {
             },
             text: { color: Theme.Widget.FontColor },
         }));
+        this.Set(config?.value === undefined ? 0 : config?.value);
         this.#callback = config?.callback;
 
         if (this.#nodeProperty !== undefined) {

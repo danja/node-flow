@@ -243,6 +243,10 @@ export class FlowNode {
 
     public setProperty(name: string, value: any): void {
         const oldValue = this.#data[name];
+        if (oldValue === value) {
+            return;
+        }
+
         this.#data[name] = value;
 
         for (let i = 0; i < this.#registeredAnyPropertyChangeCallbacks.length; i++) {

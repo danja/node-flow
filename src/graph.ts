@@ -13,6 +13,7 @@ import { NoteSubsystem } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
 import { Organize } from './organize';
+import { Publisher } from './nodes/publisher';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -175,6 +176,10 @@ export class NodeFlowGraph {
 
     organize(): void {
         Organize(this.#ctx, this);
+    }
+
+    addPublisher(identifier: string, publisher: Publisher): void {
+        this.#mainNodeSubsystem.addPublisher(identifier, publisher);
     }
 
     getNodes(): Array<FlowNode> {

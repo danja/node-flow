@@ -34,16 +34,7 @@
     <canvas id="canvas"></canvas>
     <script>
         const canvas = document.getElementById("canvas");
-        // function resizeCanvas() {
-        //     canvas.width = window.innerWidth;
-        //     canvas.height = window.innerHeight;
-        // }
-        // window.addEventListener('resize', resizeCanvas, false);
-        // resizeCanvas();
-
         NodeFlowTheme.FontFamily = "Source Code Pro";
-
-
 
         const node3 = new FlowNode({
             title: "Node 3",
@@ -286,6 +277,12 @@ node.addOutput({ name: "sum", type: "float32" })
                 {
                     type: "number",
                     config: { value: 2 }
+                },
+                {
+                    type: "image",
+                    config: {
+                        image: "https://i.imgur.com/qRZgWC0.jpeg"
+                    }
                 }
             ]
         })

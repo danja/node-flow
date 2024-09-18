@@ -1,5 +1,4 @@
 import { ContextMenuConfig, ContextMenuItemConfig } from "../contextMenu";
-import { NodeFlowGraph } from "../graph";
 import { FlowNode, FlowNodeConfig } from '../node';
 import { Vector2 } from "../types/vector2";
 import { NodeSubsystem } from "./subsystem";

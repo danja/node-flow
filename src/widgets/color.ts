@@ -48,7 +48,6 @@ export class ColorWidget {
     constructor(node: FlowNode, config?: ColorWidgetConfig) {
         this.#node = node;
         this.#nodeProperty = config?.property;
-        this.Set(config?.value === undefined ? "#000000" : config?.value);
         this.#textBoxStyle = new TextBoxStyle({
             box: {
                 color: this.#value,
@@ -59,6 +58,7 @@ export class ColorWidget {
             },
             text: config?.textStyle
         });
+        this.Set(config?.value === undefined ? "#000000" : config?.value);
         this.#callback = config?.callback;
 
         if (this.#nodeProperty !== undefined) {

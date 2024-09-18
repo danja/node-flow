@@ -126,8 +126,6 @@ export class ToggleWidget {
         this.#node = node;
         this.#nodeProperty = config?.property;
         this.#text = config?.text === undefined ? "Toggle" : config?.text;
-        this.Set(config?.value === undefined ? false : config?.value);
-        this.#callback = config?.callback;
 
         this.#enabledStyle = new ToggleStyle({
             idle: TextBoxStyleWithFallback(config?.enabledStyle?.idle, {
@@ -159,6 +157,8 @@ export class ToggleWidget {
             lightColor: config?.disabledStyle?.lightColor === undefined ? "#004400" : config?.enabledStyle?.lightColor,
         });
 
+        this.Set(config?.value === undefined ? false : config?.value);
+        this.#callback = config?.callback;
         if (this.#nodeProperty !== undefined) {
             this.#node.subscribeToProperty(this.#nodeProperty, (oldVal, newVal) => {
                 this.Set(newVal);
