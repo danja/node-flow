@@ -10,7 +10,7 @@ export interface GraphSubsystem {
 
     render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults | undefined;
 
-    openContextMenu(position: Vector2): ContextMenuConfig | null;
+    openContextMenu(ctx: CanvasRenderingContext2D, position: Vector2): ContextMenuConfig | null;
 
     /**
      * Event for when the graph is clicked. 

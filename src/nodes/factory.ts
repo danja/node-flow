@@ -1,9 +1,8 @@
 import { FlowNode } from "../node";
 import { Publisher, PublisherConfig } from "./publisher";
 import { ContextMenuConfig } from "../contextMenu";
-import { contextMenuGroup, NodeFlowGraph } from "../graph";
 import { Vector2 } from "../types/vector2";
-import { NodeSubsystem } from "./subsystem";
+import { nodeFlowGroup as nodeFlowContextMenuGroup, NodeSubsystem } from "./subsystem";
 
 type NodeCreatedCallback = (publisher: string, nodeType: string, node: FlowNode) => void;
 
@@ -77,7 +76,7 @@ export class NodeFactory {
         }
         return {
             name: "New Node",
-            group: contextMenuGroup,
+            group: nodeFlowContextMenuGroup,
             subMenus: menus,
         };
     }

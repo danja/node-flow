@@ -32,7 +32,7 @@ export class NoteSubsystem {
         this.#notes.push(note);
     }
 
-    openContextMenu(position: Vector2): ContextMenuConfig | null {
+    openContextMenu(ctx: CanvasRenderingContext2D, position: Vector2): ContextMenuConfig | null {
         const group = "node-flow-graph-note-menu";
 
         const result: ContextMenuConfig = {

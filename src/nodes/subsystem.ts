@@ -2,13 +2,17 @@ import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "../co
 import { ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
 import { FlowNode, NodeState } from "../node";
+import { Organize } from "../organize";
 import { TimeExecution } from "../performance";
 import { Port } from "../port";
 import { CursorStyle } from "../styles/cursor";
+import { List } from "../types/list";
 import { Vector2 } from "../types/vector2";
 import { Widget } from "../widgets/widget";
 import { NodeFactory, NodeFactoryConfig } from "./factory";
 import { Publisher } from "./publisher";
+
+export const nodeFlowGroup = "node-flow-graph-node-menu";
 
 export interface ConnectionRendererConfiguration {
     size?: number;
@@ -53,7 +57,7 @@ export class NodeSubsystem {
 
     #nodeHovering: number;
 
-    #nodeGrabbed: number;
+    #nodesGrabbed: List<number>;
 
     #connectionSelected: Connection | null;
 
@@ -72,7 +76,7 @@ export class NodeSubsystem {
     constructor(config?: NodeSubsystemConfig) {
         this.#nodes = [];
         this.#nodeHovering = -1;
-        this.#nodeGrabbed = -1;
+        this.#nodesGrabbed = new List<number>();
         this.#connectionSelected = null;
         this.#portHovering = null;
         this.#widgetHovering = null;
@@ -86,11 +90,18 @@ export class NodeSubsystem {
         this.#nodeFactory.addPublisher(identifier, publisher);
     }
 
+
     clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
         let hoveringSomething = false;
         if (this.#nodeHovering > -1) {
-            this.#nodeGrabbed = this.#nodeHovering;
-            this.#selectNode(this.#nodeHovering, !ctrlKey);
+            this.#selectNodeByIndex(this.#nodeHovering, !ctrlKey);
+
+            for (let i = 0; i < this.#nodes.length; i++) {
+                if (this.#nodes[i].selected()) {
+                    this.#nodesGrabbed.Push(i);
+                }
+            }
+
             hoveringSomething = true;
         }
 
@@ -134,20 +145,25 @@ export class NodeSubsystem {
     }
 
     mouseDragEvent(delta: Vector2, scale: number): boolean {
-        if (this.#interactingWithNode() && !this.#nodes[this.#nodeGrabbed].locked()) {
-            this.#nodes[this.#nodeGrabbed].translate({
-                x: delta.x * (1 / scale),
-                y: delta.y * (1 / scale)
-            });
-            return true
-        } else if (this.#interactingWithConnection()) {
-            // intentionally left blank
-            return true
-        } else if (this.#interactingWithWidget()) {
-            // intentionally left blank
-            return true
+        if (this.#interactingWithNode()) {
+            let nodeMoved = false;
+            for (let i = 0; i < this.#nodesGrabbed.Count(); i++) {
+                const node = this.#nodes[this.#nodesGrabbed.At(i)];
+                if (node.locked()) {
+                    continue;
+                }
+                node.translate({
+                    x: delta.x * (1 / scale),
+                    y: delta.y * (1 / scale)
+                });
+                nodeMoved = true;
+            }
+
+            if (nodeMoved) {
+                return true;
+            }
         }
-        return false
+        return this.#interactingWithConnection() || this.#interactingWithWidget()
     }
 
     clearNodeInputConnection(node: FlowNode, index: number): void {
@@ -160,7 +176,7 @@ export class NodeSubsystem {
     }
 
     clickEnd(): void {
-        this.#nodeGrabbed = -1;
+        this.#nodesGrabbed.Clear();
 
         if (this.#widgetCurrentlyClicking !== null) {
             this.#widgetCurrentlyClicking.ClickEnd();
@@ -305,7 +321,7 @@ export class NodeSubsystem {
     }
 
     #interactingWithNode(): boolean {
-        return this.#nodeGrabbed > -1;
+        return this.#nodesGrabbed.Count() > 0;
     }
 
     #interactingWithConnection(): boolean {
@@ -343,10 +359,22 @@ export class NodeSubsystem {
         }
     }
 
-    openContextMenu(position: Vector2): ContextMenuConfig | null {
+    organize(ctx: CanvasRenderingContext2D): void {
+        Organize(ctx, this);
+    }
+
+    openContextMenu(ctx: CanvasRenderingContext2D, position: Vector2): ContextMenuConfig | null {
 
         let config: ContextMenuConfig = {
-            items: [],
+            items: [
+                {
+                    name: "Organize All Nodes",
+                    group: nodeFlowGroup,
+                    callback: () => {
+                        this.organize(ctx);
+                    }
+                }
+            ],
             subMenus: [
                 this.#nodeFactory.openMenu(this, position)
             ]
@@ -354,26 +382,35 @@ export class NodeSubsystem {
 
         if (this.#nodeHovering > -1) {
             const nodeToReview = this.#nodeHovering;
-            const group = "node-flow-graph-node-menu";
 
-            config.items?.push({
-                name: "Delete Node",
-                group: group,
-                callback: () => {
-                    this.#removeNodeByIndex(nodeToReview);
+            config.items?.push(
+                {
+                    name: "Delete Node",
+                    group: nodeFlowGroup,
+                    callback: () => {
+                        this.#removeNodeByIndex(nodeToReview);
+                    }
+                },
+                {
+                    name: "Select Connected Nodes",
+                    group: nodeFlowGroup,
+                    callback: () => {
+                        this.#selectConnectedNodes(nodeToReview);
+                    }
+                },
+                {
+                    name: "Clear Node Connections",
+                    group: nodeFlowGroup,
+                    callback: () => {
+                        this.#removeNodeConnections(nodeToReview);
+                    }
                 }
-            }, {
-                name: "Clear Node Connections",
-                group: group,
-                callback: () => {
-                    this.#removeNodeConnections(nodeToReview);
-                }
-            });
+            );
 
             if (this.#nodes[nodeToReview].locked()) {
                 config.items?.push({
                     name: "Unlock Node Position",
-                    group: group,
+                    group: nodeFlowGroup,
                     callback: () => {
                         this.#unlockNode(nodeToReview);
                     }
@@ -381,7 +418,7 @@ export class NodeSubsystem {
             } else {
                 config.items?.push({
                     name: "Lock Node Position",
-                    group: group,
+                    group: nodeFlowGroup,
                     callback: () => {
                         this.#lockNode(nodeToReview);
                     }
@@ -392,13 +429,39 @@ export class NodeSubsystem {
         return config;
     }
 
-    #selectNode(nodeIndex: number, unselectOthers: boolean): void {
+    #selectConnectedNodes(nodeIndex: number): void {
+        const node = this.#nodes[nodeIndex];
+        if (node === undefined) {
+            return;
+        }
+
+        const outputs = this.connectedOutputsNodeReferences(nodeIndex);
+        for (let i = 0; i < outputs.length; i++) {
+            this.#selectNode(outputs[i], false);
+        }
+
+        const inputs = this.connectedInputsNodeReferences(nodeIndex);
+        for (let i = 0; i < inputs.length; i++) {
+            this.#selectNode(inputs[i], false);
+        }
+    }
+
+    #selectNodeByIndex(nodeIndex: number, unselectOthers: boolean): void {
+        this.#selectNode(this.#nodes[nodeIndex], unselectOthers);
+    }
+
+    #selectNode(node: FlowNode, unselectOthers: boolean): void {
+        node.select();
+
+        if (!unselectOthers) {
+            return;
+        }
+
         for (let i = 0; i < this.#nodes.length; i++) {
-            if (nodeIndex === i) {
-                this.#nodes[i].select();
-            } else if (unselectOthers) {
-                this.#nodes[i].unselect();
+            if (node === this.#nodes[i]) {
+                continue
             }
+            this.#nodes[i].unselect();
         }
     }
 
@@ -456,7 +519,7 @@ export class NodeSubsystem {
             //     state = NodeState.Selected;
             // }
 
-            if (i === this.#nodeGrabbed) {
+            if (this.#nodes[i].selected() && this.#nodesGrabbed.Count() > 0) {
                 state = NodeState.Grabbed;
                 this.#cursor = CursorStyle.Grabbing;
             }

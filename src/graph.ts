@@ -12,7 +12,6 @@ import { FlowNote, FlowNoteConfig } from "./notes/note";
 import { NoteSubsystem } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
-import { Organize } from './organize';
 import { Publisher } from './nodes/publisher';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
@@ -43,7 +42,7 @@ function BuildBackgroundRenderer(backgroundColor: string): GraphRenderer {
     }
 }
 
-export const contextMenuGroup = "graph-context-menu";
+const contextMenuGroup = "graph-context-menu";
 
 export interface FlowNodeGraphConfiguration {
     backgroundRenderer?: GraphRenderer;
@@ -81,11 +80,11 @@ class GraphView {
         }
     }
 
-    openContextMenu(position: Vector2): ContextMenuConfig {
+    openContextMenu(ctx: CanvasRenderingContext2D, position: Vector2): ContextMenuConfig {
         let finalConfig: ContextMenuConfig = {};
 
         for (let i = 0; i < this.#subsystems.length; i++) {
-            const subSystemMenu = this.#subsystems[i].openContextMenu(position);
+            const subSystemMenu = this.#subsystems[i].openContextMenu(ctx, position);
             if (subSystemMenu !== null) {
                 finalConfig = CombineContextMenus(finalConfig, subSystemMenu);
             }
@@ -177,11 +176,6 @@ export class NodeFlowGraph {
                     group: contextMenuGroup,
                     callback: this.#resetView.bind(this)
                 },
-                {
-                    name: "Organize Nodes",
-                    group: contextMenuGroup,
-                    callback: this.organize.bind(this)
-                }
             ],
         }, config?.contextMenu);
 
@@ -244,11 +238,14 @@ export class NodeFlowGraph {
     #clickStart(mousePosition: Vector2, ctrlKey: boolean): void {
         if (this.#contextMenuEntryHovering !== null) {
             this.#contextMenuEntryHovering.click();
+            this.#openedContextMenu = null;
+            this.#contextMenuEntryHovering = null;
+            return;
         }
         this.#openedContextMenu = null;
         this.#contextMenuEntryHovering = null;
-        this.#mousePosition = mousePosition;
 
+        this.#mousePosition = mousePosition;
         this.currentView().clickStart(mousePosition, ctrlKey);
     }
 
@@ -257,7 +254,7 @@ export class NodeFlowGraph {
     }
 
     organize(): void {
-        Organize(this.#ctx, this);
+        this.#mainNodeSubsystem.organize(this.#ctx);
     }
 
     addPublisher(identifier: string, publisher: Publisher): void {
@@ -300,7 +297,7 @@ export class NodeFlowGraph {
 
         const contextMenuPosition = this.#sceenPositionToMousePosition(position);
 
-        finalConfig = CombineContextMenus(finalConfig, this.currentView().openContextMenu(contextMenuPosition));
+        finalConfig = CombineContextMenus(finalConfig, this.currentView().openContextMenu(this.#ctx, contextMenuPosition));
 
         this.#openedContextMenu = {
             Menu: new ContextMenu(finalConfig),

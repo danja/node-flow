@@ -1,10 +1,11 @@
 import { NodeFlowGraph } from "./graph";
 import { FlowNode } from "./node";
+import { NodeSubsystem } from "./nodes/subsystem";
 import { Box } from "./types/box";
 
 // TODO: Cyclical dependencies will end our life
 
-function MarkInputs(graph: NodeFlowGraph, positions: Array<number>, nodeLUT: Map<FlowNode, number>, node: number, depth: number) {
+function MarkInputs(graph: NodeSubsystem, positions: Array<number>, nodeLUT: Map<FlowNode, number>, node: number, depth: number) {
     const inputs = graph.connectedInputsNodeReferences(node);
     for (let i = 0; i < inputs.length; i++) {
         const nodeIndex = nodeLUT.get(inputs[i]) as number;
@@ -13,7 +14,7 @@ function MarkInputs(graph: NodeFlowGraph, positions: Array<number>, nodeLUT: Map
     }
 }
 
-function MarkOutputs(graph: NodeFlowGraph, positions: Array<number>, nodeLUT: Map<FlowNode, number>, node: number, depth: number) {
+function MarkOutputs(graph: NodeSubsystem, positions: Array<number>, nodeLUT: Map<FlowNode, number>, node: number, depth: number) {
     const outputs = graph.connectedInputsNodeReferences(node);
     for (let i = 0; i < outputs.length; i++) {
         const nodeIndex = nodeLUT.get(outputs[i]) as number;
@@ -22,7 +23,7 @@ function MarkOutputs(graph: NodeFlowGraph, positions: Array<number>, nodeLUT: Ma
     }
 }
 
-export function Organize(ctx: CanvasRenderingContext2D, graph: NodeFlowGraph): void {
+export function Organize(ctx: CanvasRenderingContext2D, graph: NodeSubsystem): void {
     const nodes = graph.getNodes();
     const nodeLUT = new Map<FlowNode, number>();
     const bounds = new Array<Box>(nodes.length);
@@ -87,9 +88,6 @@ export function Organize(ctx: CanvasRenderingContext2D, graph: NodeFlowGraph): v
             Width: 0
         };
     }
-
-    console.log(relativePosition)
-    console.log(entries)
 
     for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];

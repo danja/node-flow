@@ -91,6 +91,10 @@ export class MouseObserver {
     }
 
     #down(event: MouseEvent): void {
+        // Only register left clicks
+        if (event.button !== 0) {
+            return;
+        }
         this.#clicked = true;
         this.#clickStart(this.#mousePosition(event), event.ctrlKey || event.shiftKey);
     }
@@ -103,7 +107,11 @@ export class MouseObserver {
         this.#clickStart(this.#lastTouch, false);
     }
 
-    #up(): void {
+    #up(event: MouseEvent): void {
+        // Only register left clicks
+        if (event.button !== 0) {
+            return;
+        }
         this.#clicked = false
         this.#clickStop();
     }
