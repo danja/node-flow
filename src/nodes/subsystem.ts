@@ -224,8 +224,10 @@ export class NodeSubsystem {
     }
 
     connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
-        if (nodeOut.outputPort(outPort).getType() !== nodeIn.inputPort(inPort).getType()) {
-            console.error("can't connect nodes of different types");
+        const outType = nodeOut.outputPort(outPort).getType();
+        const inType = nodeIn.inputPort(inPort).getType();
+        if (outType !== inType) {
+            console.error("can't connect nodes of different types", outType, inType);
             return;
         }
 

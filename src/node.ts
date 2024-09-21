@@ -406,6 +406,10 @@ export class FlowNode {
         return intersection;
     }
 
+    setTitle(newTitle: string): void {
+        this.#title.set(newTitle);
+    }
+
     inputPortPosition(index: number): Box {
         return this.#inputPortPositions.At(index);
     }
@@ -414,12 +418,20 @@ export class FlowNode {
         return this.#input[index];
     }
 
+    inputs(): number {
+        return this.#input.length;
+    }
+
     outputPortPosition(index: number): Box {
         return this.#outputPortPositions.At(index);
     }
 
     outputPort(index: number): Port {
         return this.#output[index];
+    }
+
+    outputs(): number {
+        return this.#output.length;
     }
 
     #calculateStyle(state: NodeState): BoxStyle {

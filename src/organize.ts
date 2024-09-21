@@ -124,7 +124,7 @@ export function Organize(ctx: CanvasRenderingContext2D, graph: NodeFlowGraph): v
     }
 
     const widthSpacing = 100;
-    const heightSpacing = 100;
+    const heightSpacing = 50;
 
     let widthOffset = 0;
     for (let c = 0; c < columns.length; c++) {
@@ -143,7 +143,6 @@ export function Organize(ctx: CanvasRenderingContext2D, graph: NodeFlowGraph): v
             }
             
             heightOffset += nodeBounds.Size.y + heightSpacing 
-            console.log(pos);
             node.setPosition(pos);
         }
     }

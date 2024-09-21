@@ -27,7 +27,7 @@ const buildOptsWeb: BuildOptions = {
   //   format: 'cjs',
   bundle: true,
   sourcemap: true,
-  minify: false,
+  minify: true,
   treeShaking: true,
   plugins: [
     //     NodeModulesPolyfillPlugin(),

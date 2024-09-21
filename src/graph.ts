@@ -7,7 +7,7 @@ import { TimeExecution } from "./performance";
 import { CursorStyle } from "./styles/cursor";
 import { Vector2 } from './types/vector2';
 import { Clamp01 } from "./utils/math";
-import { GraphSubsystem } from "./graphSubsystem";
+import { GraphSubsystem, RenderResults } from './graphSubsystem';
 import { FlowNote, FlowNoteConfig } from "./notes/note";
 import { NoteSubsystem } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
@@ -59,6 +59,70 @@ interface OpenContextMenu {
     Position: Vector2
 }
 
+class GraphView {
+
+    #subsystems: Array<GraphSubsystem>;
+
+    constructor(subsystems: Array<GraphSubsystem>) {
+        this.#subsystems = subsystems;
+    }
+
+    clickStart(mousePosition: Vector2, ctrlKey: boolean) {
+        // Since the graph is rendered from 0 => n, n is the last thing 
+        // rendererd and is always shown to the user. So if their clicking on
+        // two things technically, we need to make sure it's whatever was most 
+        // recently rendered. So we traverse n => 0. 
+        for (let i = this.#subsystems.length - 1; i >= 0; i--) {
+            // If the user sucesfully clicked on something in this layer, don't
+            // check any more layers.
+            if (this.#subsystems[i].clickStart(mousePosition, ctrlKey)) {
+                return;
+            }
+        }
+    }
+
+    openContextMenu(position: Vector2): ContextMenuConfig {
+        let finalConfig: ContextMenuConfig = {};
+
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            const subSystemMenu = this.#subsystems[i].openContextMenu(position);
+            if (subSystemMenu !== null) {
+                finalConfig = CombineContextMenus(finalConfig, subSystemMenu);
+            }
+        }
+
+        return finalConfig;
+    }
+
+    clickEnd(): void {
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            this.#subsystems[i].clickEnd();
+        }
+    }
+
+    mouseDragEvent(delta: Vector2, scale: number): boolean {
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            if (this.#subsystems[i].mouseDragEvent(delta, scale)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults {
+        const results: RenderResults = {};
+        for (let i = 0; i < this.#subsystems.length; i++) {
+            TimeExecution("Render_Subsystem_" + i, () => {
+                let results = this.#subsystems[i].render(ctx, scale, position, mousePosition);
+                if (results?.cursorStyle) {
+                    results.cursorStyle = results?.cursorStyle;
+                }
+            })
+        }
+        return results;
+    }
+}
+
 export class NodeFlowGraph {
 
     #ctx: CanvasRenderingContext2D;
@@ -79,7 +143,9 @@ export class NodeFlowGraph {
 
     #contextMenuEntryHovering: ContextEntry | null;
 
-    #subsystems: Array<GraphSubsystem>;
+    #views: Array<GraphView>;
+
+    #currentView: number;
 
     #mainNodeSubsystem: NodeSubsystem;
 
@@ -93,10 +159,14 @@ export class NodeFlowGraph {
 
         this.#mainNoteSubsystem = new NoteSubsystem(config?.notes);
 
-        this.#subsystems = [
-            this.#mainNoteSubsystem,
-            this.#mainNodeSubsystem,
+        this.#views = [
+            new GraphView([
+                this.#mainNoteSubsystem,
+                this.#mainNodeSubsystem,
+            ])
         ];
+        this.#currentView = 0;
+
         this.#scale = 1;
         this.#position = { x: 0, y: 0 };
 
@@ -136,7 +206,7 @@ export class NodeFlowGraph {
 
         this.#canvas.addEventListener('wheel', (event) => {
             event.preventDefault();
-            this.#scale += Math.sign(event.deltaY) * this.#scale * 0.05;
+            this.zoom(Math.sign(event.deltaY));
         }, false);
 
         new MouseObserver(this.#canvas,
@@ -153,6 +223,24 @@ export class NodeFlowGraph {
         );
     }
 
+    zoom(amount: number): void {
+
+        let oldPos: Vector2 | undefined = undefined;
+        if (this.#mousePosition) {
+            oldPos = this.#sceenPositionToMousePosition(this.#mousePosition);;
+        }
+
+        this.#scale += amount * this.#scale * 0.05;
+
+        if (!oldPos || !this.#mousePosition) {
+            return;
+        }
+        // Attempt zoom around where the current mouse is.
+        const newPos = this.#sceenPositionToMousePosition(this.#mousePosition);
+        this.#position.x += (newPos.x - oldPos.x) * this.#scale;
+        this.#position.y += (newPos.y - oldPos.y) * this.#scale;
+    }
+
     #clickStart(mousePosition: Vector2, ctrlKey: boolean): void {
         if (this.#contextMenuEntryHovering !== null) {
             this.#contextMenuEntryHovering.click();
@@ -161,17 +249,11 @@ export class NodeFlowGraph {
         this.#contextMenuEntryHovering = null;
         this.#mousePosition = mousePosition;
 
-        // Since the graph is rendered from 0 => n, n is the last thing 
-        // rendererd and is always shown to the user. So if their clicking on
-        // two things technically, we need to make sure it's whatever was most 
-        // recently rendered. So we traverse n => 0. 
-        for (let i = this.#subsystems.length - 1; i >= 0; i--) {
-            // If the user sucesfully clicked on something in this layer, don't
-            // check any more layers.
-            if (this.#subsystems[i].clickStart(mousePosition, ctrlKey)) {
-                return;
-            }
-        }
+        this.currentView().clickStart(mousePosition, ctrlKey);
+    }
+
+    currentView(): GraphView {
+        return this.#views[this.#currentView];
     }
 
     organize(): void {
@@ -206,20 +288,19 @@ export class NodeFlowGraph {
         this.#mainNoteSubsystem.addNote(note);
     }
 
+    #sceenPositionToMousePosition(screenPosition: Vector2): Vector2 {
+        return {
+            x: (screenPosition.x / this.#scale) - (this.#position.x / this.#scale),
+            y: (screenPosition.y / this.#scale) - (this.#position.y / this.#scale),
+        }
+    }
+
     #openContextMenu(position: Vector2): void {
         let finalConfig = this.#contextMenuConfig;
 
-        const contextMenuPosition = {
-            x: -(this.#position.x / this.#scale) + (position.x / this.#scale),
-            y: -(this.#position.y / this.#scale) + (position.y / this.#scale),
-        }
+        const contextMenuPosition = this.#sceenPositionToMousePosition(position);
 
-        for (let i = 0; i < this.#subsystems.length; i++) {
-            const subSystemMenu = this.#subsystems[i].openContextMenu(contextMenuPosition);
-            if (subSystemMenu !== null) {
-                finalConfig = CombineContextMenus(finalConfig, subSystemMenu);
-            }
-        }
+        finalConfig = CombineContextMenus(finalConfig, this.currentView().openContextMenu(contextMenuPosition));
 
         this.#openedContextMenu = {
             Menu: new ContextMenu(finalConfig),
@@ -253,18 +334,11 @@ export class NodeFlowGraph {
     // }
 
     #clickEnd(): void {
-        for (let i = 0; i < this.#subsystems.length; i++) {
-            this.#subsystems[i].clickEnd();
-        }
+        this.currentView().clickEnd();
     }
 
     #mouseDragEvent(delta: Vector2): void {
-        let draggingSomething = false;
-        for (let i = 0; i < this.#subsystems.length; i++) {
-            if (this.#subsystems[i].mouseDragEvent(delta, this.#scale)) {
-                draggingSomething = true;
-            }
-        }
+        let draggingSomething = this.currentView().mouseDragEvent(delta, this.#scale);
         if (!draggingSomething) {
             this.#position.x += delta.x;
             this.#position.y += delta.y;
@@ -288,14 +362,12 @@ export class NodeFlowGraph {
 
         TimeExecution("Render_Background", this.#renderBackground.bind(this));
 
-        for (let i = 0; i < this.#subsystems.length; i++) {
-            TimeExecution("Render_Subsystem_" + i, () => {
-                let results = this.#subsystems[i].render(this.#ctx, this.#scale, this.#position, this.#mousePosition);
-                if (results?.cursorStyle) {
-                    this.#cursor = results?.cursorStyle;
-                }
-            })
-        }
+        TimeExecution("Render_View_" + this.#currentView, () => {
+            let results = this.currentView().render(this.#ctx, this.#scale, this.#position, this.#mousePosition);
+            if (results?.cursorStyle) {
+                this.#cursor = results?.cursorStyle;
+            }
+        });
 
         TimeExecution("Render_Context", this.#renderContextMenu.bind(this));
 

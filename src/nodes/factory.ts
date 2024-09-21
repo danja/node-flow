@@ -5,25 +5,39 @@ import { contextMenuGroup, NodeFlowGraph } from "../graph";
 import { Vector2 } from "../types/vector2";
 import { NodeSubsystem } from "./subsystem";
 
+type NodeCreatedCallback = (publisher: string, nodeType: string, node: FlowNode) => void;
+
 interface NodeFactoryPublishers {
     [name: string]: PublisherConfig
 }
 
 export interface NodeFactoryConfig {
     publishers?: NodeFactoryPublishers
+    onNodeCreated?: NodeCreatedCallback;
 }
 
 export class NodeFactory {
-    #registeredPublishers: Map<string, Publisher>
+    #registeredPublishers: Map<string, Publisher>;
+
+    #registeredCallbacks: Array<NodeCreatedCallback>;
 
     constructor(config?: NodeFactoryConfig) {
         this.#registeredPublishers = new Map<string, Publisher>();
+        this.#registeredCallbacks = new Array<NodeCreatedCallback>();
+
+        if (config?.onNodeCreated) {
+            this.#registeredCallbacks.push(config?.onNodeCreated);
+        }
 
         if (config?.publishers !== undefined) {
             for (let entry in config.publishers) {
                 this.addPublisher(entry, new Publisher(config.publishers[entry]));
             }
         }
+    }
+
+    public addOnNodeCreatedListener(callback: NodeCreatedCallback): void {
+        this.#registeredCallbacks.push(callback);
     }
 
     public addPublisher(identifier: string, publisher: Publisher): void {
@@ -47,7 +61,13 @@ export class NodeFactory {
         if (publisherIdentifier === undefined) {
             throw new Error("no publisher registered with identifier: " + publisher);
         }
-        return publisherIdentifier.create(nodeType);
+        const node = publisherIdentifier.create(nodeType);
+
+        for (let i = 0; i < this.#registeredCallbacks.length; i++) {
+            const callback = this.#registeredCallbacks[i];
+            callback(publisher, nodeType, node);
+        }
+        return node;
     }
 
     public openMenu(graph: NodeSubsystem, position: Vector2): ContextMenuConfig {
