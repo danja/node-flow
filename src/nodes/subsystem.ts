@@ -90,7 +90,6 @@ export class NodeSubsystem {
         this.#nodeFactory.addPublisher(identifier, publisher);
     }
 
-
     clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
         let hoveringSomething = false;
         if (this.#nodeHovering > -1) {
@@ -266,8 +265,11 @@ export class NodeSubsystem {
      * 
      * @param nodeIndex index of the node to examine inputs to
      */
-    connectedInputsNodeReferences(nodeIndex: number): Array<FlowNode> {
-        const node = this.#nodes[nodeIndex]
+    connectedInputsNodeReferencesByIndex(nodeIndex: number): Array<FlowNode> {
+        return this.connectedInputsNodeReferences(this.#nodes[nodeIndex]);
+    }
+
+    connectedInputsNodeReferences(node: FlowNode): Array<FlowNode> {
         const connections = new Array<FlowNode>();
         for (let i = 0; i < this.#connections.length; i++) {
             const connection = this.#connections[i];
@@ -363,49 +365,99 @@ export class NodeSubsystem {
         Organize(ctx, this);
     }
 
+    #nodesSelected(): Array<number> {
+        const selected = new Array<number>();
+        for (let i = 0; i < this.#nodes.length; i++) {
+            if (this.#nodes[i].selected()) {
+                selected.push(i);
+            }
+        }
+        return selected;
+    }
+
+    #organizeSelected(ctx: CanvasRenderingContext2D): void {
+        Organize(ctx, this, this.#nodesSelected());
+    }
+
     openContextMenu(ctx: CanvasRenderingContext2D, position: Vector2): ContextMenuConfig | null {
 
-        let config: ContextMenuConfig = {
+        const organizeNodesSubMenu: ContextMenuConfig = {
+            name: "Organize",
+            group: nodeFlowGroup,
             items: [
                 {
-                    name: "Organize All Nodes",
+                    name: "All Nodes",
                     group: nodeFlowGroup,
                     callback: () => {
                         this.organize(ctx);
                     }
                 }
-            ],
+            ]
+        }
+
+        let config: ContextMenuConfig = {
+            items: [],
             subMenus: [
+                organizeNodesSubMenu,
                 this.#nodeFactory.openMenu(this, position)
             ]
         }
 
+        if (this.#nodesSelected().length > 0) {
+            organizeNodesSubMenu.items?.push({
+                name: "Selected Nodes",
+                group: nodeFlowGroup,
+                callback: () => {
+                    this.#organizeSelected(ctx)
+                }
+            })
+        }
+
         if (this.#nodeHovering > -1) {
             const nodeToReview = this.#nodeHovering;
+            const nodeToReviewNode = this.#nodes[nodeToReview];
 
-            config.items?.push(
-                {
-                    name: "Delete Node",
-                    group: nodeFlowGroup,
-                    callback: () => {
-                        this.#removeNodeByIndex(nodeToReview);
+            config.subMenus?.push({
+                group: nodeFlowGroup,
+                name: "Select",
+                items: [
+                    {
+                        name: "Direct Connected Nodes",
+                        group: nodeFlowGroup,
+                        callback: () => {
+                            this.#selectConnectedNodes(nodeToReview);
+                        }
+                    },
+                    {
+                        name: "Input Nodes + Descendents",
+                        group: nodeFlowGroup,
+                        callback: () => {
+                            this.#selectInputNodesAndDescendents(nodeToReviewNode);
+                        }
+                    },
+                ]
+            })
+
+            config.subMenus?.push({
+                group: nodeFlowGroup,
+                name: "Delete",
+                items: [
+                    {
+                        name: "Node",
+                        group: nodeFlowGroup,
+                        callback: () => {
+                            this.#removeNodeByIndex(nodeToReview);
+                        }
+                    },
+                    {
+                        name: "Connections",
+                        group: nodeFlowGroup,
+                        callback: () => {
+                            this.#removeNodeConnections(nodeToReview);
+                        }
                     }
-                },
-                {
-                    name: "Select Connected Nodes",
-                    group: nodeFlowGroup,
-                    callback: () => {
-                        this.#selectConnectedNodes(nodeToReview);
-                    }
-                },
-                {
-                    name: "Clear Node Connections",
-                    group: nodeFlowGroup,
-                    callback: () => {
-                        this.#removeNodeConnections(nodeToReview);
-                    }
-                }
-            );
+                ]
+            })
 
             if (this.#nodes[nodeToReview].locked()) {
                 config.items?.push({
@@ -429,18 +481,31 @@ export class NodeSubsystem {
         return config;
     }
 
+    #selectInputNodesAndDescendents(node: FlowNode): void {
+        if (node === undefined) {
+            return;
+        }
+        this.#selectNode(node, false);
+
+        const inputs = this.connectedInputsNodeReferences(node);
+        for (let i = 0; i < inputs.length; i++) {
+            this.#selectInputNodesAndDescendents(inputs[i]);
+        }
+    }
+
     #selectConnectedNodes(nodeIndex: number): void {
         const node = this.#nodes[nodeIndex];
         if (node === undefined) {
             return;
         }
+        this.#selectNode(node, false);
 
         const outputs = this.connectedOutputsNodeReferences(nodeIndex);
         for (let i = 0; i < outputs.length; i++) {
             this.#selectNode(outputs[i], false);
         }
 
-        const inputs = this.connectedInputsNodeReferences(nodeIndex);
+        const inputs = this.connectedInputsNodeReferencesByIndex(nodeIndex);
         for (let i = 0; i < inputs.length; i++) {
             this.#selectNode(inputs[i], false);
         }

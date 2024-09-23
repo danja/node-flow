@@ -266,7 +266,7 @@ export class NodeFlowGraph {
     }
 
     connectedInputsNodeReferences(nodeIndex: number): Array<FlowNode> {
-        return this.#mainNodeSubsystem.connectedInputsNodeReferences(nodeIndex);
+        return this.#mainNodeSubsystem.connectedInputsNodeReferencesByIndex(nodeIndex);
     }
 
     connectedOutputsNodeReferences(nodeIndex: number): Array<FlowNode> {
