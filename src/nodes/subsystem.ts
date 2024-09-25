@@ -1,9 +1,10 @@
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "../connection";
-import { ContextMenuConfig } from "../contextMenu";
+import { CombineContextMenus, ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
 import { FlowNode, NodeState } from "../node";
 import { Organize } from "../organize";
 import { TimeExecution } from "../performance";
+import { SetStringPopup } from "../popups/string";
 import { Port } from "../port";
 import { CursorStyle } from "../styles/cursor";
 import { List } from "../types/list";
@@ -334,14 +335,6 @@ export class NodeSubsystem {
         return this.#widgetCurrentlyClicking !== null;
     }
 
-    #lockNode(nodeIndex: number): void {
-        this.#nodes[nodeIndex].lock();
-    }
-
-    #unlockNode(nodeIndex: number): void {
-        this.#nodes[nodeIndex].unlock();
-    }
-
     #removeNodeByIndex(nodeIndex: number): void {
         this.#removeNodeConnections(nodeIndex);
         this.#nodes.splice(nodeIndex, 1);
@@ -458,26 +451,8 @@ export class NodeSubsystem {
                     }
                 ]
             })
-
-            if (this.#nodes[nodeToReview].locked()) {
-                config.items?.push({
-                    name: "Unlock Node Position",
-                    group: nodeFlowGroup,
-                    callback: () => {
-                        this.#unlockNode(nodeToReview);
-                    }
-                });
-            } else {
-                config.items?.push({
-                    name: "Lock Node Position",
-                    group: nodeFlowGroup,
-                    callback: () => {
-                        this.#lockNode(nodeToReview);
-                    }
-                })
-            }
+            config = CombineContextMenus(config, nodeToReviewNode.contextMenu());
         }
-
         return config;
     }
 

@@ -6,6 +6,7 @@ import { Vector2 } from "../types/vector2";
 import { fitString } from "../utils/string";
 import { height, width } from "./widget";
 import { FlowNode } from '../node';
+import { SetStringPopup } from "../popups/string";
 
 export interface StringWidgetConfig {
     property?: string;
@@ -90,26 +91,13 @@ export class StringWidget {
     }
 
     ClickEnd(): void {
-        let input: HTMLInputElement | null = null;
-
-        const popup = new Popup({
+        const popup = SetStringPopup({
             title: "Set String",
-            options: ["Set", "Cancel"],
-            content: () => {
-                const container = document.createElement('div');
-                input = document.createElement('input')
-                input.value = this.#value;
-                container.append(input);
-                return container;
-            },
-            onClose: (button: string | null): void => {
-                if (button !== "Set" || input === null) {
-                    return;
-                }
-                this.Set(input.value);
+            startingValue: this.#value,
+            onUpdate: (value: string): void => {
+                this.Set(value);
             },
         });
-
         popup.Show();
     }
 

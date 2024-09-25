@@ -10,6 +10,11 @@ import { GlobalWidgetFactory } from "./widgets/factory";
 import { Theme } from "./theme";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { TextBaseline } from "./styles/canvasTextBaseline";
+import { CombineContextMenus, ContextMenuConfig } from "./contextMenu";
+import { nodeFlowGroup } from "./nodes/subsystem";
+import { SetStringPopup } from "./popups/string";
+import { ButtonWidget } from "./widgets/button";
+import { FormPopup } from "./popups/form";
 
 type AnyPropertyChangeCallback = (propertyName: string, oldValue: any, newValue: any) => void
 type PropertyChangeCallback = (oldValue: any, newValue: any) => void
@@ -34,6 +39,8 @@ export interface FlowNodeConfig {
     title?: string;
     locked?: boolean;
     data?: NodeData;
+    canEdit?: boolean;
+    contextMenu?: ContextMenuConfig;
 
     // Ports
     inputs?: Array<PortConfig>;
@@ -91,6 +98,10 @@ export class FlowNode {
 
     #locked: boolean;
 
+    #canEdit: boolean;
+
+    #contextMenu: ContextMenuConfig | null;
+
     // Callbacks
 
     #onSelect?: () => void;
@@ -139,6 +150,8 @@ export class FlowNode {
         this.#data = config?.data === undefined ? {} : config?.data;
         this.#registeredPropertyChangeCallbacks = new Map<string, Array<PropertyChangeCallback>>();
         this.#registeredAnyPropertyChangeCallbacks = new Array<AnyPropertyChangeCallback>();
+        this.#canEdit = config?.canEdit === undefined ? false : config.canEdit;
+        this.#contextMenu = config?.contextMenu === undefined ? null : config.contextMenu;
 
         this.#selected = false;
         this.#onSelect = config?.onSelect;
@@ -265,6 +278,157 @@ export class FlowNode {
 
     public getProperty(name: string): any {
         return this.#data[name];
+    }
+
+    #popupNodeTitleSelection(): void {
+        SetStringPopup({
+            title: "Set Node Title",
+            startingValue: this.title(),
+            onUpdate: (value: string): void => {
+                this.setTitle(value);
+            },
+        }).Show()
+    }
+
+    #popupNewButtonWidget(): void {
+        SetStringPopup({
+            title: "New Button Widget Text",
+            startingValue: "My Button",
+            onUpdate: (value: string): void => {
+                this.addWidget(new ButtonWidget({
+                    text: value
+                }));
+            },
+        }).Show()
+    }
+
+    public contextMenu(): ContextMenuConfig {
+        let config: ContextMenuConfig = {
+            group: nodeFlowGroup,
+            items: [],
+            subMenus: [],
+        }
+
+        if (this.canEdit()) {
+            config.subMenus?.push({
+                group: nodeFlowGroup,
+                name: "Edit",
+                items: [
+                    {
+                        name: "Title",
+                        callback: () => {
+                            this.#popupNodeTitleSelection();
+                        }
+                    },
+                ],
+                subMenus: [{
+                    name: "Add",
+                    items: [
+                        {
+                            name: "Input",
+                            callback: () => {
+                                FormPopup({
+                                    title: "New Input",
+                                    form: [
+                                        {
+                                            name: "name",
+                                            type: "string",
+                                            startingValue: "input"
+                                        },
+                                        {
+                                            name: "type",
+                                            type: "string",
+                                            startingValue: "string"
+                                        }
+                                    ],
+                                    onUpdate: (data: Array<any>) => {
+                                        this.addInput({
+                                            name: data[0],
+                                            type: data[1]
+                                        })
+                                    }
+                                }).Show();
+                            }
+                        },
+                        {
+                            name: "Output",
+                            callback: () => {
+                                FormPopup({
+                                    title: "New Output",
+                                    form: [
+                                        {
+                                            name: "name",
+                                            type: "string",
+                                            startingValue: "input"
+                                        },
+                                        {
+                                            name: "type",
+                                            type: "string",
+                                            startingValue: "string"
+                                        }
+                                    ],
+                                    onUpdate: (data: Array<any>) => {
+                                        this.addOutput({
+                                            name: data[0],
+                                            type: data[1]
+                                        })
+                                    }
+                                }).Show();
+                            }
+                        },
+                    ],
+                    subMenus: [
+                        {
+                            name: "Widget",
+                            items: [
+                                {
+                                    name: "Button",
+                                    callback: this.#popupNewButtonWidget.bind(this),
+                                },
+                                {
+                                    name: "Number",
+                                },
+                                {
+                                    name: "Color",
+                                },
+                                {
+                                    name: "Slider",
+                                },
+                                {
+                                    name: "String",
+                                },
+                                {
+                                    name: "Toggle",
+                                },
+                                {
+                                    name: "Image",
+                                }
+                            ]
+                        }
+                    ]
+                }],
+            })
+        }
+
+        if (this.locked()) {
+            config.items?.push({
+                name: "Unlock Node Position",
+                group: nodeFlowGroup,
+                callback: this.unlock.bind(this),
+            });
+        } else {
+            config.items?.push({
+                name: "Lock Node Position",
+                group: nodeFlowGroup,
+                callback: this.lock.bind(this),
+            })
+        }
+
+        if (this.#contextMenu !== null) {
+            config = CombineContextMenus(config, this.#contextMenu)
+        }
+
+        return config;
     }
 
     public unselect(): void {
@@ -406,7 +570,18 @@ export class FlowNode {
         return intersection;
     }
 
+    canEdit(): boolean {
+        return this.#canEdit;
+    }
+
+    title(): string {
+        return this.#title.get();
+    }
+
     setTitle(newTitle: string): void {
+        if (!this.#canEdit) {
+            console.warn("setTitle instruction ignored, as node has been marked un-editable");
+        }
         this.#title.set(newTitle);
     }
 

@@ -66,6 +66,10 @@
                         description: "Bunch of example nodes",
                         version: "v1.0.0",
                         nodes: {
+                            "empty": {
+                                title: "Empty Node",
+                                canEdit: true,
+                            },
                             "widgets/slider": {
                                 title: "Slider Node",
                                 widgets: [
@@ -102,46 +106,6 @@
                         }
                     },
                 },
-            },
-            contextMenu: {
-                name: "test",
-                items: [
-                    {
-                        name: "a",
-                        group: "test",
-                        callback: () => { alert("a") },
-                    },
-                    {
-                        name: "b",
-                        callback: () => { alert("b") }
-                    }
-                ],
-                subMenus: [
-                    {
-                        name: "sub 1",
-                        group: "test",
-                        items: [
-                            { name: "sub a" },
-                            { name: "sub b" }
-                        ]
-                    },
-                    {
-                        name: "sub 2",
-                        items: [
-                            { name: "sub c" },
-                            { name: "sub d" }
-                        ],
-                        subMenus: [
-                            {
-                                name: "sub 3",
-                                items: [
-                                    { name: "sub e", callback: () => { alert("e") } },
-                                    { name: "sub f" }
-                                ],
-                            }
-                        ]
-                    }
-                ]
             },
             notes: [
                 {
