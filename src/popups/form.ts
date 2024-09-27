@@ -2,7 +2,10 @@ import { Popup } from "../popup";
 
 interface FormValue {
     name: string;
+
+    // https://html.spec.whatwg.org/multipage/input.html#dom-input-type
     type: string;
+
     startingValue: any;
 }
 
@@ -21,12 +24,20 @@ export function FormPopup(config: Config): Popup {
         options: ["Set", "Cancel"],
         content: () => {
             const container = document.createElement('div');
+            container.style.flexDirection = "column";
+            container.style.display = "flex";
 
             for (let i = 0; i < config.form.length; i++) {
-                const ele = document.createElement('input')
+                const title = document.createElement("h4");
+                title.innerText = config.form[i].name;
+                container.append(title);
+
+                const ele = document.createElement('input');
                 ele.value = config.form[i].startingValue;
+                ele.type = config.form[i].type;
                 container.append(ele);
                 input.push(ele);
+                container.append(document.createElement("br"));
             }
 
             return container;

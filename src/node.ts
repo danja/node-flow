@@ -15,6 +15,12 @@ import { nodeFlowGroup } from "./nodes/subsystem";
 import { SetStringPopup } from "./popups/string";
 import { ButtonWidget } from "./widgets/button";
 import { FormPopup } from "./popups/form";
+import { NumberWidget } from "./widgets/number";
+import { StringWidget } from "./widgets/string";
+import { ToggleWidget } from "./widgets/toggle";
+import { ColorWidget } from "./widgets/color";
+import { SliderWidget } from "./widgets/slider";
+import { ImageWidget } from "./widgets/image";
 
 type AnyPropertyChangeCallback = (propertyName: string, oldValue: any, newValue: any) => void
 type PropertyChangeCallback = (oldValue: any, newValue: any) => void
@@ -302,6 +308,100 @@ export class FlowNode {
         }).Show()
     }
 
+    #widgetSubmenu(): ContextMenuConfig {
+        return {
+            name: "Widget",
+            items: [
+                {
+                    name: "Button",
+                    callback: this.#popupNewButtonWidget.bind(this),
+                },
+                {
+                    name: "Number",
+                    callback: () => {
+                        this.addWidget(new NumberWidget(this))
+                    }
+                },
+                {
+                    name: "Color",
+                    callback: () => {
+                        this.addWidget(new ColorWidget(this))
+                    }
+                },
+                {
+                    name: "Slider",
+                    callback: () => {
+                        FormPopup({
+                            title: "New Slider",
+                            form: [
+                                {
+                                    name: "min",
+                                    type: "number",
+                                    startingValue: 0
+                                },
+                                {
+                                    name: "max",
+                                    type: "number",
+                                    startingValue: 100
+                                }
+                            ],
+                            onUpdate: (data: Array<any>) => {
+                                this.addWidget(new SliderWidget(this, {
+                                    min: data[0],
+                                    max: data[1],
+                                }));
+                            }
+                        }).Show();
+                    }
+                },
+                {
+                    name: "String",
+                    callback: () => {
+                        this.addWidget(new StringWidget(this))
+                    }
+                },
+                {
+                    name: "Toggle",
+                    callback: () => {
+                        this.addWidget(new ToggleWidget(this))
+                    }
+                },
+                {
+                    name: "Image",
+                    callback: () => {
+                        FormPopup({
+                            title: "New Image",
+                            form: [
+                                {
+                                    name: "URL",
+                                    type: "text",
+                                    startingValue: "https://pbs.twimg.com/media/GYabtu6bsAA7m99?format=jpg&name=medium"
+                                },
+                                {
+                                    name: "Max Width",
+                                    type: "number",
+                                    startingValue: 150
+                                },
+                                {
+                                    name: "Max Height",
+                                    type: "number",
+                                    startingValue: 150
+                                }
+                            ],
+                            onUpdate: (data: Array<any>) => {
+                                this.addWidget(new ImageWidget({
+                                  image: data[0],
+                                  maxWidth: data[1],
+                                  maxHeight: data[2],
+                                }));
+                            }
+                        }).Show();
+                    }
+                }
+            ]
+        };
+    }
+
     public contextMenu(): ContextMenuConfig {
         let config: ContextMenuConfig = {
             group: nodeFlowGroup,
@@ -332,12 +432,12 @@ export class FlowNode {
                                     form: [
                                         {
                                             name: "name",
-                                            type: "string",
+                                            type: "text",
                                             startingValue: "input"
                                         },
                                         {
                                             name: "type",
-                                            type: "string",
+                                            type: "text",
                                             startingValue: "string"
                                         }
                                     ],
@@ -358,12 +458,12 @@ export class FlowNode {
                                     form: [
                                         {
                                             name: "name",
-                                            type: "string",
-                                            startingValue: "input"
+                                            type: "text",
+                                            startingValue: "output"
                                         },
                                         {
                                             name: "type",
-                                            type: "string",
+                                            type: "text",
                                             startingValue: "string"
                                         }
                                     ],
@@ -378,33 +478,7 @@ export class FlowNode {
                         },
                     ],
                     subMenus: [
-                        {
-                            name: "Widget",
-                            items: [
-                                {
-                                    name: "Button",
-                                    callback: this.#popupNewButtonWidget.bind(this),
-                                },
-                                {
-                                    name: "Number",
-                                },
-                                {
-                                    name: "Color",
-                                },
-                                {
-                                    name: "Slider",
-                                },
-                                {
-                                    name: "String",
-                                },
-                                {
-                                    name: "Toggle",
-                                },
-                                {
-                                    name: "Image",
-                                }
-                            ]
-                        }
+                        this.#widgetSubmenu(),
                     ]
                 }],
             })
