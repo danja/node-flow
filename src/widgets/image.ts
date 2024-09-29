@@ -7,6 +7,7 @@ export interface ImageWidgetConfig {
     image?: string;
     maxWidth?: number
     maxHeight?: number
+    blob?: Blob;
 }
 
 /**
@@ -80,11 +81,19 @@ export class ImageWidget {
         this.#maxWidth = config?.maxWidth === undefined ? 150 : config?.maxWidth;
         this.#maxHeight = config?.maxHeight === undefined ? 150 : config?.maxHeight;
         if (config?.image) {
-            this.Set(config?.image);
+            this.SetUrl(config?.image);
+        } else if (config?.blob) {
+            this.SetBlob(config?.blob);
         }
     }
 
-    Set(url: string) {
+    SetBlob(blob: Blob) {
+        const urlCreator = window.URL || window.webkitURL;
+        const imageUrl = urlCreator.createObjectURL(blob);
+        this.SetUrl(imageUrl);
+    }
+
+    SetUrl(url: string) {
         this.#image = undefined;
         this.#url = url;
 

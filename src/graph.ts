@@ -5,7 +5,7 @@ import { FlowNode } from "./node";
 import { NodeFactoryConfig } from "./nodes/factory";
 import { TimeExecution } from "./performance";
 import { CursorStyle } from "./styles/cursor";
-import { Vector2 } from './types/vector2';
+import { CopyVector2, Vector2 } from './types/vector2';
 import { Clamp01 } from "./utils/math";
 import { GraphSubsystem, RenderResults } from './graphSubsystem';
 import { FlowNote, FlowNoteConfig } from "./notes/note";
@@ -213,8 +213,34 @@ export class NodeFlowGraph {
 
             this.#clickStart.bind(this),
             this.#clickEnd.bind(this),
-            this.#openContextMenu.bind(this)
+            this.#openContextMenu.bind(this),
+            this.#fileDrop.bind(this)
         );
+    }
+
+    #fileDrop(file: File): void {
+
+        const contents = file.name.split('.');
+        const extension = contents[contents.length - 1];
+        if (extension !== "jpg" && extension !== "jpeg" && extension !== "png") {
+            return;
+        }
+
+        let pos = { x: 0, y: 0 };
+        if (this.#mousePosition) {
+            CopyVector2(pos, this.#sceenPositionToMousePosition(this.#mousePosition));
+        }
+
+        this.#mainNodeSubsystem.addNode(new FlowNode({
+            title: contents[0],
+            position: pos,
+            widgets: [{
+                type: "image",
+                config: {
+                    blob: file,
+                }
+            }]
+        }));
     }
 
     zoom(amount: number): void {

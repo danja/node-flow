@@ -19,7 +19,8 @@ export class MouseObserver {
         moveCallback: (position: Vector2) => void,
         clickStart: (position: Vector2, shiftOrCtrl: boolean) => void,
         clickStop: () => void,
-        contextMenu: (position: Vector2) => void
+        contextMenu: (position: Vector2) => void,
+        fileDrop: (file: File) => void
     ) {
         this.#ele = ele;
         this.#dragCallback = dragCallback;
@@ -46,6 +47,37 @@ export class MouseObserver {
         ele.addEventListener('mousemove', this.#move.bind(this), false);
         ele.addEventListener('touchmove', this.#moveTouch.bind(this), false);
 
+        ele.addEventListener('drop', (ev) => {
+            ev.preventDefault();
+            console.log(ev)
+
+            if (ev.dataTransfer?.items) {
+                // Use DataTransferItemList interface to access the file(s)
+                [...ev.dataTransfer.items].forEach((item, i) => {
+                    // If dropped items aren't files, reject them
+                    if (item.kind === "file") {
+                        const file = item.getAsFile();
+                        if(file) {
+                            fileDrop(file);
+                            console.log(file)
+                            console.log(`… file[${i}].name = ${file.name}`);
+                        }
+                    }
+                });
+            } else if (ev.dataTransfer) {
+                // Use DataTransfer interface to access the file(s)
+                [...ev.dataTransfer.files].forEach((file, i) => {
+                    console.log(`… file[${i}].name = ${file.name}`);
+                });
+            }
+        });
+
+        ele.addEventListener('dragover', (ev) => {
+            ev.preventDefault();
+            this.#moveCallback(this.#mousePosition(ev));
+            // console.log(ev)
+        });
+
         // Context
         ele.addEventListener('contextmenu', (evt) => {
             contextMenu(this.#mousePosition(evt));
@@ -53,7 +85,7 @@ export class MouseObserver {
         }, false);
     }
 
-    #mousePosition(event: MouseEvent): Vector2 {
+    #mousePosition(event: MouseEvent | DragEvent): Vector2 {
         var rect = this.#ele.getBoundingClientRect();
         return {
             x: event.clientX - rect.left,
