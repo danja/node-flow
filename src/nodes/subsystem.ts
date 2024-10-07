@@ -4,7 +4,6 @@ import { RenderResults } from "../graphSubsystem";
 import { FlowNode, NodeState } from "../node";
 import { Organize } from "../organize";
 import { TimeExecution } from "../performance";
-import { SetStringPopup } from "../popups/string";
 import { Port } from "../port";
 import { CursorStyle } from "../styles/cursor";
 import { List } from "../types/list";
@@ -309,6 +308,14 @@ export class NodeSubsystem {
 
     addNode(node: FlowNode): void {
         this.#nodes.push(node);
+    }
+
+    fileDrop(file: File): boolean {
+        if (this.#nodeHovering === -1) {
+            return false;
+        }
+        this.#nodes[this.#nodeHovering].dropFile(file);
+        return true;
     }
 
     #removeNodeConnections(nodeIndex: number): void {

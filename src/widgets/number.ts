@@ -90,7 +90,7 @@ export class NumberWidget {
         }
 
         // https://stackoverflow.com/questions/5765398/whats-the-best-way-to-convert-a-number-to-a-string-in-javascript
-        this.#text = '' + this.#value;
+        this.#text = '' + parseFloat(this.#value.toPrecision(6));
     }
 
     ClickStart(): void {
@@ -99,9 +99,11 @@ export class NumberWidget {
     ClickEnd(): void {
         let input: HTMLInputElement | null = null;
 
+        const setOption = "Set";
+        const cancelOption = "Cancel";
         const popup = new Popup({
             title: "Set Number",
-            options: ["Set", "Cancel"],
+            options: [setOption, cancelOption],
             content: () => {
                 const container = document.createElement('div');
                 input = document.createElement('input')
@@ -111,7 +113,7 @@ export class NumberWidget {
                 return container;
             },
             onClose: (button: string | null): void => {
-                if (button !== "Set" || input === null) {
+                if (button !== setOption || input === null) {
                     return;
                 }
 

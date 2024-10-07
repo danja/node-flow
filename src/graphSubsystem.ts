@@ -24,5 +24,7 @@ export interface GraphSubsystem {
 
     mouseDragEvent(delta: Vector2, scale: number): boolean;
 
+    fileDrop(file: File): boolean;
+
     clickEnd(): void;
 }

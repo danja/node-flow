@@ -120,6 +120,10 @@ export class NoteSubsystem {
         return true;
     }
 
+    fileDrop(file: File): boolean {
+        return false;
+    }
+
     #removeNote(note: FlowNote): void {
         const index = this.#notes.indexOf(note);
         if (index > -1) {

@@ -19,9 +19,12 @@ interface Config {
 export function FormPopup(config: Config): Popup {
     let input = new Array<HTMLInputElement | null>();
 
+    const setOption = "Set";
+    const cancelOption = "Cancel";
+
     return new Popup({
         title: config.title,
-        options: ["Set", "Cancel"],
+        options: [setOption, cancelOption],
         content: () => {
             const container = document.createElement('div');
             container.style.flexDirection = "column";
@@ -43,7 +46,7 @@ export function FormPopup(config: Config): Popup {
             return container;
         },
         onClose: (button: string | null): void => {
-            if (button !== "Set" || input === null) {
+            if (button !== setOption || input === null) {
                 if (config.onCancel) {
                     config.onCancel();
                 }

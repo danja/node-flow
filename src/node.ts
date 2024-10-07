@@ -57,6 +57,7 @@ export interface FlowNodeConfig {
     onRelease?: () => void;
     onSelect?: () => void;
     onUnselect?: () => void;
+    onFileDrop?: (file: File) => void;
 
     // Widgets
     widgets?: Array<WidgetConfig>;
@@ -110,9 +111,11 @@ export class FlowNode {
 
     // Callbacks
 
-    #onSelect?: () => void;
+    #onSelect: Array<() => void>;
 
-    #onUnselect?: () => void;
+    #onUnselect: Array<() => void>;
+
+    #onFiledrop: Array<(file: File) => void>;
 
     // Styling ================================================================
 
@@ -160,8 +163,21 @@ export class FlowNode {
         this.#contextMenu = config?.contextMenu === undefined ? null : config.contextMenu;
 
         this.#selected = false;
-        this.#onSelect = config?.onSelect;
-        this.#onUnselect = config?.onUnselect;
+        this.#onSelect = new Array<() => void>;
+        this.#onUnselect = new Array<() => void>;
+        this.#onFiledrop = new Array<(file: File) => void>;
+
+        if (config?.onSelect) {
+            this.#onSelect.push(config?.onSelect);
+        }
+
+        if (config?.onUnselect) {
+            this.#onUnselect.push(config?.onUnselect);
+        }
+
+        if (config?.onFileDrop) {
+            this.#onFiledrop.push(config?.onFileDrop);
+        }
 
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.#title = new Text(
@@ -237,8 +253,8 @@ export class FlowNode {
             return;
         }
         this.#selected = true;
-        if (this.#onSelect) {
-            this.#onSelect();
+        for (let i = 0; i < this.#onSelect.length; i++) {
+            this.#onSelect[i]();
         }
     }
 
@@ -390,9 +406,9 @@ export class FlowNode {
                             ],
                             onUpdate: (data: Array<any>) => {
                                 this.addWidget(new ImageWidget({
-                                  image: data[0],
-                                  maxWidth: data[1],
-                                  maxHeight: data[2],
+                                    image: data[0],
+                                    maxWidth: data[1],
+                                    maxHeight: data[2],
                                 }));
                             }
                         }).Show();
@@ -510,9 +526,27 @@ export class FlowNode {
             return;
         }
         this.#selected = false;
-        if (this.#onUnselect) {
-            this.#onUnselect();
+        for (let i = 0; i < this.#onUnselect.length; i++) {
+            this.#onUnselect[i]();
         }
+    }
+
+    public addUnselectListener(callback: () => void): void {
+        this.#onUnselect.push(callback);
+    }
+
+    public addSelectListener(callback: () => void): void {
+        this.#onSelect.push(callback);
+    }
+
+    public dropFile(file: File): void {
+        for(let i = 0; i < this.#onFiledrop.length; i ++) {
+            this.#onFiledrop[i](file);
+        }
+    }
+
+    public addFileDropListener(callback: (file: File) => void): void {
+        this.#onFiledrop.push(callback);
     }
 
     public locked(): boolean {
@@ -601,6 +635,14 @@ export class FlowNode {
         this.#widgets.push(widget);
     }
 
+    getWidget(index: number): Widget {
+        return this.#widgets[index];
+    }
+
+    widgetCount(): number {
+        return this.#widgets.length;
+    }
+
     translate(delta: Vector2): void {
         this.#position.x += delta.x;
         this.#position.y += delta.y;
@@ -653,9 +695,9 @@ export class FlowNode {
     }
 
     setTitle(newTitle: string): void {
-        if (!this.#canEdit) {
-            console.warn("setTitle instruction ignored, as node has been marked un-editable");
-        }
+        // if (!this.#canEdit) {
+        //     console.warn("setTitle instruction ignored, as node has been marked un-editable");
+        // }
         this.#title.set(newTitle);
     }
 

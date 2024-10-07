@@ -7,6 +7,7 @@ import { StringWidget, StringWidgetConfig } from './string';
 import { ToggleWidget, ToggleWidgetConfig } from './toggle';
 import { FlowNode } from "../node";
 import { ImageWidget, ImageWidgetConfig } from "./image";
+import { TextWidget, TextWidgetConfig } from "./text";
 
 export type WidgetBuilder = (node: FlowNode, confg?: any) => Widget;
 
@@ -40,5 +41,6 @@ GlobalWidgetFactory.register("slider", (node: FlowNode, config?: SliderWidgetCon
 GlobalWidgetFactory.register("string", (node: FlowNode, config?: StringWidgetConfig) => new StringWidget(node, config));
 GlobalWidgetFactory.register("toggle", (node: FlowNode, config?: ToggleWidgetConfig) => new ToggleWidget(node, config));
 GlobalWidgetFactory.register("image", (node: FlowNode, config?: ImageWidgetConfig) => new ImageWidget(config));
+GlobalWidgetFactory.register("text", (node: FlowNode, config?: TextWidgetConfig) => new TextWidget(node, config));
 
 export { GlobalWidgetFactory };

@@ -1,5 +1,4 @@
 import { Theme } from "../theme";
-import { Popup } from "../popup";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 import { Box, InBox } from "../types/box";
 import { Vector2 } from "../types/vector2";

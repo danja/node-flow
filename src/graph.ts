@@ -80,6 +80,15 @@ class GraphView {
         }
     }
 
+    fileDrop(file: File): boolean {
+        for (let i = this.#subsystems.length - 1; i >= 0; i--) {
+            if (this.#subsystems[i].fileDrop(file)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     openContextMenu(ctx: CanvasRenderingContext2D, position: Vector2): ContextMenuConfig {
         let finalConfig: ContextMenuConfig = {};
 
@@ -219,6 +228,10 @@ export class NodeFlowGraph {
     }
 
     #fileDrop(file: File): void {
+
+        if (this.currentView().fileDrop(file)) {
+            return;
+        }
 
         const contents = file.name.split('.');
         const extension = contents[contents.length - 1];
