@@ -8,6 +8,7 @@ import { TextStyleConfig } from "../styles/text";
 import { Theme } from "../theme";
 import { Box } from "../types/box";
 import { CopyVector2, Vector2 } from "../types/vector2";
+import { Camera } from "../camera";
 
 export interface FlowNoteConfig {
     text?: string;
@@ -87,27 +88,27 @@ export class FlowNote {
 
     #tempPosition: Vector2 = { x: 0, y: 0 };
 
-    render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, mousePosition: Vector2 | undefined): void {
+    render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): void {
         if (this.#edittingLayout && (this.#hovering || this.#handleSelected !== DragHandle.None)) {
 
             if (mousePosition) {
                 if (this.#handleSelected === DragHandle.Right) {
 
-                    const leftPosition = (this.#position.x * scale) + graphPosition.x;
-                    this.#width = Math.max((mousePosition.x - leftPosition) / scale, 1)
+                    const leftPosition = (this.#position.x * camera.zoom) + camera.position.x;
+                    this.#width = Math.max((mousePosition.x - leftPosition) / camera.zoom, 1)
 
                 } else if (this.#handleSelected === DragHandle.Left) {
 
-                    const scaledWidth = this.#width * scale;
-                    const rightPosition = (this.#position.x * scale) + graphPosition.x + scaledWidth;
-                    this.#width = Math.max((rightPosition - mousePosition.x) / scale, 1)
-                    this.#position.x = rightPosition - (this.#width * scale) - graphPosition.x;
-                    this.#position.x /= scale; 
+                    const scaledWidth = this.#width * camera.zoom;
+                    const rightPosition = (this.#position.x * camera.zoom) + camera.position.x + scaledWidth;
+                    this.#width = Math.max((rightPosition - mousePosition.x) / camera.zoom, 1)
+                    this.#position.x = rightPosition - (this.#width * camera.zoom) - camera.position.x;
+                    this.#position.x /= camera.zoom; 
                 }
             }
 
-            this.#edittingStyle.Outline(ctx, this.leftResizeHandleBox(), scale, 2);
-            this.#edittingStyle.Outline(ctx, this.rightResizeHandleBox(), scale, 2);
+            this.#edittingStyle.Outline(ctx, this.leftResizeHandleBox(), camera.zoom, 2);
+            this.#edittingStyle.Outline(ctx, this.rightResizeHandleBox(), camera.zoom, 2);
 
             ctx.beginPath();
             const left = this.#lastRenderedBox.Position.x;
@@ -124,26 +125,26 @@ export class FlowNote {
             ctx.lineTo(right, top);
             ctx.lineTo(right, top - (this.#lastRenderedBox.Size.y / 2) + (boxSize));
             ctx.stroke();
-            // this.#edittingStyle.Outline(ctx, bigBox, scale, 2);
+            // this.#edittingStyle.Outline(ctx, bigBox, camera.zoom, 2);
         }
-        const startY = (this.#position.y * scale) + graphPosition.y;
+        const startY = (this.#position.y * camera.zoom) + camera.position.y;
 
-        this.#tempPosition.x = (this.#position.x * scale) + graphPosition.x;
+        this.#tempPosition.x = (this.#position.x * camera.zoom) + camera.position.x;
         this.#tempPosition.y = startY;
         CopyVector2(this.#lastRenderedBox.Position, this.#tempPosition)
 
-        const lineSpacing = Theme.Note.EntrySpacing * scale;
+        const lineSpacing = Theme.Note.EntrySpacing * camera.zoom;
 
         ctx.textAlign = TextAlign.Left;
         ctx.textBaseline = TextBaseline.Alphabetic;
         for (let i = 0; i < this.#document.length; i++) {
             const text = this.#document[i];
-            this.#tempPosition.y += text.render(ctx, this.#tempPosition, scale, this.#width) + lineSpacing;
+            this.#tempPosition.y += text.render(ctx, this.#tempPosition, camera.zoom, this.#width) + lineSpacing;
         }
 
         this.#lastRenderedBox.Position.x -= boundsSpacing
         this.#lastRenderedBox.Position.y -= boundsSpacing
-        this.#lastRenderedBox.Size.x = scale * this.#width + (boundsSpacing * 2);
+        this.#lastRenderedBox.Size.x = camera.zoom * this.#width + (boundsSpacing * 2);
         this.#lastRenderedBox.Size.y = this.#tempPosition.y - startY + (boundsSpacing * 2);
     }
 

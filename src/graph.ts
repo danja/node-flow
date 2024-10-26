@@ -13,6 +13,8 @@ import { NoteSubsystem } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
 import { Publisher } from './nodes/publisher';
+import { VectorPool } from './types/pool';
+import { Camera } from './camera';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -66,7 +68,7 @@ class GraphView {
         this.#subsystems = subsystems;
     }
 
-    clickStart(mousePosition: Vector2, ctrlKey: boolean) {
+    clickStart(mousePosition: Vector2, camera: Camera, ctrlKey: boolean) {
         // Since the graph is rendered from 0 => n, n is the last thing 
         // rendererd and is always shown to the user. So if their clicking on
         // two things technically, we need to make sure it's whatever was most 
@@ -74,7 +76,7 @@ class GraphView {
         for (let i = this.#subsystems.length - 1; i >= 0; i--) {
             // If the user sucesfully clicked on something in this layer, don't
             // check any more layers.
-            if (this.#subsystems[i].clickStart(mousePosition, ctrlKey)) {
+            if (this.#subsystems[i].clickStart(mousePosition, camera, ctrlKey)) {
                 return;
             }
         }
@@ -117,11 +119,11 @@ class GraphView {
         return false;
     }
 
-    render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults {
+    render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): RenderResults {
         const results: RenderResults = {};
         for (let i = 0; i < this.#subsystems.length; i++) {
             TimeExecution("Render_Subsystem_" + i, () => {
-                let results = this.#subsystems[i].render(ctx, scale, position, mousePosition);
+                let results = this.#subsystems[i].render(ctx, camera, mousePosition);
                 if (results?.cursorStyle) {
                     results.cursorStyle = results?.cursorStyle;
                 }
@@ -141,11 +143,9 @@ export class NodeFlowGraph {
 
     #contextMenuConfig: ContextMenuConfig;
 
-    #position: Vector2;
-
     #mousePosition: Vector2 | undefined;
 
-    #scale: number;
+    #camera: Camera;
 
     #openedContextMenu: OpenContextMenu | null;
 
@@ -175,15 +175,14 @@ export class NodeFlowGraph {
         ];
         this.#currentView = 0;
 
-        this.#scale = 1;
-        this.#position = { x: 0, y: 0 };
+        this.#camera = new Camera();
 
         this.#contextMenuConfig = CombineContextMenus({
             items: [
                 {
                     name: "Reset View",
                     group: contextMenuGroup,
-                    callback: this.#resetView.bind(this)
+                    callback: this.#camera.reset.bind(this.#camera)
                 },
             ],
         }, config?.contextMenu);
@@ -241,7 +240,7 @@ export class NodeFlowGraph {
 
         let pos = { x: 0, y: 0 };
         if (this.#mousePosition) {
-            CopyVector2(pos, this.#sceenPositionToMousePosition(this.#mousePosition));
+            CopyVector2(pos, this.#sceenPositionToGraphPosition(this.#mousePosition));
         }
 
         this.#mainNodeSubsystem.addNode(new FlowNode({
@@ -260,18 +259,18 @@ export class NodeFlowGraph {
 
         let oldPos: Vector2 | undefined = undefined;
         if (this.#mousePosition) {
-            oldPos = this.#sceenPositionToMousePosition(this.#mousePosition);;
+            oldPos = this.#sceenPositionToGraphPosition(this.#mousePosition);;
         }
 
-        this.#scale += amount * this.#scale * 0.05;
+        this.#camera.zoom += amount * this.#camera.zoom * 0.05;
 
         if (!oldPos || !this.#mousePosition) {
             return;
         }
         // Attempt zoom around where the current mouse is.
-        const newPos = this.#sceenPositionToMousePosition(this.#mousePosition);
-        this.#position.x += (newPos.x - oldPos.x) * this.#scale;
-        this.#position.y += (newPos.y - oldPos.y) * this.#scale;
+        const newPos = this.#sceenPositionToGraphPosition(this.#mousePosition);
+        this.#camera.position.x += (newPos.x - oldPos.x) * this.#camera.zoom;
+        this.#camera.position.y += (newPos.y - oldPos.y) * this.#camera.zoom;
     }
 
     #clickStart(mousePosition: Vector2, ctrlKey: boolean): void {
@@ -285,7 +284,7 @@ export class NodeFlowGraph {
         this.#contextMenuEntryHovering = null;
 
         this.#mousePosition = mousePosition;
-        this.currentView().clickStart(mousePosition, ctrlKey);
+        this.currentView().clickStart(mousePosition, this.#camera, ctrlKey);
     }
 
     currentView(): GraphView {
@@ -324,17 +323,16 @@ export class NodeFlowGraph {
         this.#mainNoteSubsystem.addNote(note);
     }
 
-    #sceenPositionToMousePosition(screenPosition: Vector2): Vector2 {
-        return {
-            x: (screenPosition.x / this.#scale) - (this.#position.x / this.#scale),
-            y: (screenPosition.y / this.#scale) - (this.#position.y / this.#scale),
-        }
+    #sceenPositionToGraphPosition(screenPosition: Vector2): Vector2 {
+        const out = { x: 0, y: 0 };
+        this.#camera.screenSpaceToGraphSpace(screenPosition, out);
+        return out;
     }
 
     #openContextMenu(position: Vector2): void {
         let finalConfig = this.#contextMenuConfig;
 
-        const contextMenuPosition = this.#sceenPositionToMousePosition(position);
+        const contextMenuPosition = this.#sceenPositionToGraphPosition(position);
 
         finalConfig = CombineContextMenus(finalConfig, this.currentView().openContextMenu(this.#ctx, contextMenuPosition));
 
@@ -342,12 +340,6 @@ export class NodeFlowGraph {
             Menu: new ContextMenu(finalConfig),
             Position: contextMenuPosition,
         };
-    }
-
-    #resetView(): void {
-        this.#scale = 1;
-        this.#position.x = 0;
-        this.#position.y = 0;
     }
 
     // Somethings wrong here. Needs more testing
@@ -360,13 +352,13 @@ export class NodeFlowGraph {
     //         Position: { x: 0, y: 0 },
     //         Size: { x: 0, y: 0 }
     //     };
-    //     CopyBox(curBox, this.#nodes[0].calculateBounds(this.#ctx, this.#position, this.#scale));
+    //     CopyBox(curBox, this.#nodes[0].calculateBounds(this.#ctx, this.#graphState.position, this.#graphState.scale));
 
     //     for (let i = 1; i < this.#nodes.length; i++) {
-    //         ExpandBox(curBox, this.#nodes[i].calculateBounds(this.#ctx, this.#position, this.#scale));
+    //         ExpandBox(curBox, this.#nodes[i].calculateBounds(this.#ctx, this.#graphState.position, this.#graphState.scale));
     //     }
 
-    //     CopyVector2(this.#position, curBox.Position);
+    //     CopyVector2(this.#graphState.position, curBox.Position);
     // }
 
     #clickEnd(): void {
@@ -374,10 +366,10 @@ export class NodeFlowGraph {
     }
 
     #mouseDragEvent(delta: Vector2): void {
-        let draggingSomething = this.currentView().mouseDragEvent(delta, this.#scale);
+        let draggingSomething = this.currentView().mouseDragEvent(delta, this.#camera.zoom);
         if (!draggingSomething) {
-            this.#position.x += delta.x;
-            this.#position.y += delta.y;
+            this.#camera.position.x += delta.x;
+            this.#camera.position.y += delta.y;
         }
     }
 
@@ -399,7 +391,7 @@ export class NodeFlowGraph {
         TimeExecution("Render_Background", this.#renderBackground.bind(this));
 
         TimeExecution("Render_View_" + this.#currentView, () => {
-            let results = this.currentView().render(this.#ctx, this.#scale, this.#position, this.#mousePosition);
+            let results = this.currentView().render(this.#ctx, this.#camera, this.#mousePosition);
             if (results?.cursorStyle) {
                 this.#cursor = results?.cursorStyle;
             }
@@ -418,19 +410,20 @@ export class NodeFlowGraph {
     }
 
     #renderBackground(): void {
-        this.#backgroundRenderer(this.#canvas, this.#ctx, this.#position, this.#scale);
+        this.#backgroundRenderer(this.#canvas, this.#ctx, this.#camera.position, this.#camera.zoom);
     }
 
     #renderContextMenu(): void {
-        if (this.#openedContextMenu !== null) {
-            this.#contextMenuEntryHovering = this.#openedContextMenu.Menu.render(this.#ctx, {
-                x: this.#position.x + (this.#openedContextMenu.Position.x * this.#scale),
-                y: this.#position.y + (this.#openedContextMenu.Position.y * this.#scale),
-            }, this.#scale, this.#mousePosition);
+        VectorPool.run(() => {
+            if (this.#openedContextMenu !== null) {
+                const pos = VectorPool.get();
+                this.#camera.graphSpaceToScreenSpace(this.#openedContextMenu.Position, pos)
+                this.#contextMenuEntryHovering = this.#openedContextMenu.Menu.render(this.#ctx, pos, this.#camera.zoom, this.#mousePosition);
 
-            if (this.#contextMenuEntryHovering !== null) {
-                this.#cursor = CursorStyle.Pointer;
+                if (this.#contextMenuEntryHovering !== null) {
+                    this.#cursor = CursorStyle.Pointer;
+                }
             }
-        }
+        });
     }
 }

@@ -1,3 +1,4 @@
+import { Camera } from "../camera";
 import { Connection, ConnectionRenderer, DefaultConnectionRenderer } from "../connection";
 import { CombineContextMenus, ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
@@ -5,9 +6,11 @@ import { FlowNode, NodeState } from "../node";
 import { Organize } from "../organize";
 import { TimeExecution } from "../performance";
 import { Port } from "../port";
+import { BoxStyle } from "../styles/box";
 import { CursorStyle } from "../styles/cursor";
 import { List } from "../types/list";
-import { Vector2 } from "../types/vector2";
+import { Pool, VectorPool } from "../types/pool";
+import { AddVector2, CopyVector2, SubVector2, Vector2 } from "../types/vector2";
 import { Widget } from "../widgets/widget";
 import { NodeFactory, NodeFactoryConfig } from "./factory";
 import { Publisher } from "./publisher";
@@ -73,6 +76,12 @@ export class NodeSubsystem {
 
     #nodeFactory: NodeFactory;
 
+    #boxSelect: boolean;
+
+    #boxSelectStart_graphSpace: Vector2;
+
+    #boxSelectEnd_graphSpace: Vector2;
+
     constructor(config?: NodeSubsystemConfig) {
         this.#nodes = [];
         this.#nodeHovering = -1;
@@ -84,13 +93,18 @@ export class NodeSubsystem {
         this.#connections = new Array<Connection>();
         this.#nodeFactory = new NodeFactory(config?.nodes);
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
+        this.#boxSelect = false;
+        this.#boxSelectStart_graphSpace = { x: 0, y: 0 };
+        this.#boxSelectEnd_graphSpace = { x: 0, y: 0 };
     }
 
     addPublisher(identifier: string, publisher: Publisher): void {
         this.#nodeFactory.addPublisher(identifier, publisher);
     }
 
-    clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
+    clickStart(mousePosition: Vector2, camera: Camera, ctrlKey: boolean): boolean {
+        this.#boxSelect = false;
+
         let hoveringSomething = false;
         if (this.#nodeHovering > -1) {
             this.#selectNodeByIndex(this.#nodeHovering, !ctrlKey);
@@ -111,7 +125,14 @@ export class NodeSubsystem {
         }
 
         if (this.#portHovering === null) {
-            return hoveringSomething;
+
+            if (ctrlKey) {
+                camera.screenSpaceToGraphSpace(mousePosition, this.#boxSelectStart_graphSpace)
+                CopyVector2(this.#boxSelectEnd_graphSpace, this.#boxSelectStart_graphSpace);
+                this.#boxSelect = true;
+            }
+
+            return hoveringSomething || ctrlKey;
         }
 
         if (this.#portHovering.InputPort) {
@@ -144,25 +165,30 @@ export class NodeSubsystem {
     }
 
     mouseDragEvent(delta: Vector2, scale: number): boolean {
-        if (this.#interactingWithNode()) {
-            let nodeMoved = false;
-            for (let i = 0; i < this.#nodesGrabbed.Count(); i++) {
-                const node = this.#nodes[this.#nodesGrabbed.At(i)];
-                if (node.locked()) {
-                    continue;
-                }
-                node.translate({
-                    x: delta.x * (1 / scale),
-                    y: delta.y * (1 / scale)
-                });
-                nodeMoved = true;
-            }
+        let nodeMoved = false;
 
-            if (nodeMoved) {
-                return true;
+        VectorPool.run(() => {
+            const scaledDelta = VectorPool.get();
+            scaledDelta.x = delta.x / scale;
+            scaledDelta.y = delta.y / scale;
+            AddVector2(this.#boxSelectEnd_graphSpace, this.#boxSelectEnd_graphSpace, scaledDelta);
+
+            if (this.#interactingWithNode()) {
+                for (let i = 0; i < this.#nodesGrabbed.Count(); i++) {
+                    const node = this.#nodes[this.#nodesGrabbed.At(i)];
+                    if (node.locked()) {
+                        continue;
+                    }
+                    node.translate(scaledDelta);
+                    nodeMoved = true;
+                }
             }
+        });
+
+        if (nodeMoved) {
+            return true;
         }
-        return this.#interactingWithConnection() || this.#interactingWithWidget()
+        return this.#interactingWithConnection() || this.#interactingWithWidget() || this.#boxSelect;
     }
 
     clearNodeInputConnection(node: FlowNode, index: number): void {
@@ -176,6 +202,7 @@ export class NodeSubsystem {
 
     clickEnd(): void {
         this.#nodesGrabbed.Clear();
+        this.#boxSelect = false;
 
         if (this.#widgetCurrentlyClicking !== null) {
             this.#widgetCurrentlyClicking.ClickEnd();
@@ -520,17 +547,17 @@ export class NodeSubsystem {
         this.#connectionSelected = null;
     }
 
-    #renderConnections(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): void {
+    #renderConnections(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): void {
         for (let i = 0; i < this.#connections.length; i++) {
             let portMousedOver = false;
             if (mousePosition !== undefined) {
                 portMousedOver = this.#connections[i].mouseOverPort(mousePosition) !== null;
             }
-            this.#connections[i].render(ctx, scale, portMousedOver, mousePosition);
+            this.#connections[i].render(ctx, camera.zoom, portMousedOver, mousePosition);
         }
     }
 
-    #renderNodes(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined) {
+    #renderNodes(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined) {
         this.#portHovering = null;
         this.#widgetHovering = null;
         this.#nodeHovering = -1;
@@ -539,7 +566,7 @@ export class NodeSubsystem {
             let state = NodeState.Idle;
 
             if (mousePosition !== undefined) {
-                const intersection = this.#nodes[i].inBounds(ctx, position, scale, mousePosition);
+                const intersection = this.#nodes[i].inBounds(ctx, camera.position, camera.zoom, mousePosition);
 
                 if (intersection.Node !== undefined && intersection.PortIndex === undefined && intersection.Widget === undefined) {
                     state = NodeState.MouseOver;
@@ -571,18 +598,39 @@ export class NodeSubsystem {
                 this.#cursor = CursorStyle.Grabbing;
             }
 
-            this.#nodes[i].render(ctx, position, scale, state, mousePosition);
+            this.#nodes[i].render(ctx, camera.position, camera.zoom, state, mousePosition);
         }
     }
 
-    render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults | undefined {
+    render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): RenderResults | undefined {
         this.#cursor = CursorStyle.Default;
         TimeExecution("Render_Connections", () => {
-            this.#renderConnections(ctx, scale, position, mousePosition);
+            this.#renderConnections(ctx, camera, mousePosition);
         })
         TimeExecution("Render_Nodes", () => {
-            this.#renderNodes(ctx, scale, position, mousePosition);
+            this.#renderNodes(ctx, camera, mousePosition);
         })
+
+        VectorPool.runIf(this.#boxSelect, () => {
+            const start = VectorPool.get();
+            const end = VectorPool.get();
+
+            camera.graphSpaceToScreenSpace(this.#boxSelectStart_graphSpace, start);
+            camera.graphSpaceToScreenSpace(this.#boxSelectEnd_graphSpace, end);
+
+            const size = VectorPool.get();
+            SubVector2(size, end, start);
+
+            new BoxStyle({
+                border: {
+                    color: "#00FF00",
+                    size: 2,
+                },
+                color: "rgba(0,0,0,0)",
+                radius: 2
+            }).Draw(ctx, { Position: start, Size: size }, 1);
+        })
+
         return {
             cursorStyle: this.#cursor,
         }

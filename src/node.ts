@@ -21,6 +21,7 @@ import { ToggleWidget } from "./widgets/toggle";
 import { ColorWidget } from "./widgets/color";
 import { SliderWidget } from "./widgets/slider";
 import { ImageWidget } from "./widgets/image";
+import { VectorPool } from "./types/pool";
 
 type AnyPropertyChangeCallback = (propertyName: string, oldValue: any, newValue: any) => void
 type PropertyChangeCallback = (oldValue: any, newValue: any) => void
@@ -540,7 +541,7 @@ export class FlowNode {
     }
 
     public dropFile(file: File): void {
-        for(let i = 0; i < this.#onFiledrop.length; i ++) {
+        for (let i = 0; i < this.#onFiledrop.length; i++) {
             this.#onFiledrop[i](file);
         }
     }
@@ -739,95 +740,105 @@ export class FlowNode {
     }
 
     render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
-        this.#inputPortPositions.Clear();
-        this.#outputPortPositions.Clear();
-        this.#widgetPositions.Clear();
-        const scaledPadding = this.#padding * scale;
-        const scaledElementSpacing = this.#elementSpacing * scale;
 
-        const nodeBounds = this.calculateBounds(ctx, graphPosition, scale);
+        VectorPool.run(() => {
+            this.#inputPortPositions.Clear();
+            this.#outputPortPositions.Clear();
+            this.#widgetPositions.Clear();
+            const scaledPadding = this.#padding * scale;
+            const scaledElementSpacing = this.#elementSpacing * scale;
 
-        // Background
-        const nodeStyle = this.#calculateStyle(state);
-        nodeStyle.Draw(ctx, nodeBounds, scale);
+            const nodeBounds = this.calculateBounds(ctx, graphPosition, scale);
 
-        // Title
-        const borderSize = nodeStyle.borderSize();
-        ctx.textAlign = TextAlign.Center;
-        ctx.textBaseline = TextBaseline.Middle;
-        const titleSize = { x: 0, y: 0 };
-        this.#title.size(ctx, scale, titleSize);
-        const titleBox: Box = {
-            Position: nodeBounds.Position,
-            Size: {
-                x: nodeBounds.Size.x,
-                y: titleSize.y + (scaledPadding * 2)
+            // Background
+            const nodeStyle = this.#calculateStyle(state);
+            nodeStyle.Draw(ctx, nodeBounds, scale);
+
+            // Title
+            const borderSize = nodeStyle.borderSize();
+            ctx.textAlign = TextAlign.Center;
+            ctx.textBaseline = TextBaseline.Middle;
+
+            const titleSize = VectorPool.get();
+            this.#title.size(ctx, scale, titleSize);
+
+            const titleBoxSize = VectorPool.get();
+            titleBoxSize.x = nodeBounds.Size.x;
+            titleBoxSize.y = titleSize.y + (scaledPadding * 2);
+
+            ctx.fillStyle = "#154050"
+            ctx.beginPath();
+            ctx.roundRect(
+                nodeBounds.Position.x + (borderSize * scale * 0.5),
+                nodeBounds.Position.y + (borderSize * scale * 0.5),
+                titleBoxSize.x - (borderSize * scale),
+                titleBoxSize.y - (borderSize * scale * 0.5),
+                [nodeStyle.radius() * scale, nodeStyle.radius() * scale, 0, 0]
+            );
+            ctx.fill();
+            // ctx.stroke();
+
+            const titlePosition = VectorPool.get();
+            titlePosition.x = nodeBounds.Position.x + (nodeBounds.Size.x / 2)
+            titlePosition.y = nodeBounds.Position.y + scaledPadding + (titleSize.y / 2)
+            this.#title.render(ctx, scale, titlePosition);
+
+            // Input Ports
+            let startY = nodeBounds.Position.y + (scaledPadding * 2) + titleSize.y + scaledElementSpacing;
+            const leftSide = nodeBounds.Position.x + scaledPadding;
+            ctx.textAlign = TextAlign.Left;
+            for (let i = 0; i < this.#input.length; i++) {
+                const port = this.#input[i];
+                const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
+                const position = VectorPool.get();
+
+                position.x = nodeBounds.Position.x;
+                position.y = startY + (measurement.y / 2);
+
+                // Text
+                this.#portTextStyle.setupStyle(ctx, scale);
+                ctx.fillText(port.getDisplayName(), leftSide, position.y);
+
+                // Port
+                this.#inputPortPositions.Push(port.render(ctx, position, scale));
+
+                startY += measurement.y + scaledElementSpacing;
             }
-        }
-        ctx.fillStyle = "#154050"
-        ctx.beginPath();
-        ctx.roundRect(
-            titleBox.Position.x + (borderSize * scale * 0.5),
-            titleBox.Position.y + (borderSize * scale * 0.5),
-            titleBox.Size.x - (borderSize * scale),
-            titleBox.Size.y - (borderSize * scale * 0.5),
-            [nodeStyle.radius() * scale, nodeStyle.radius() * scale, 0, 0]
-        );
-        ctx.fill();
-        // ctx.stroke();
 
-        this.#title.render(ctx, scale, {
-            x: nodeBounds.Position.x + (nodeBounds.Size.x / 2),
-            y: nodeBounds.Position.y + scaledPadding + (titleSize.y / 2)
-        });
+            // Output Ports
+            const rightSide = nodeBounds.Position.x + nodeBounds.Size.x;
+            ctx.textAlign = TextAlign.Right;
+            for (let i = 0; i < this.#output.length; i++) {
+                const port = this.#output[i];
+                const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
+                const position = VectorPool.get();
+                position.x = rightSide;
+                position.y = startY + (measurement.y / 2);
 
-        // Input Ports
-        let startY = nodeBounds.Position.y + (scaledPadding * 2) + titleSize.y + scaledElementSpacing;
-        const leftSide = nodeBounds.Position.x + scaledPadding;
-        ctx.textAlign = TextAlign.Left;
-        for (let i = 0; i < this.#input.length; i++) {
-            const port = this.#input[i];
-            const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
-            const position = { x: nodeBounds.Position.x, y: startY + (measurement.y / 2) }
+                // Text
+                this.#portTextStyle.setupStyle(ctx, scale);
+                ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
 
-            // Text
-            this.#portTextStyle.setupStyle(ctx, scale);
-            ctx.fillText(port.getDisplayName(), leftSide, position.y);
+                // Port
+                this.#outputPortPositions.Push(port.render(ctx, position, scale));
 
-            // Port
-            this.#inputPortPositions.Push(port.render(ctx, position, scale));
+                startY += measurement.y + scaledElementSpacing;
+            }
 
-            startY += measurement.y + scaledElementSpacing;
-        }
+            for (let i = 0; i < this.#widgets.length; i++) {
+                const widget = this.#widgets[i];
+                const widgetSize = widget.Size();
+                const scaledWidgetWidth = widgetSize.x * scale;
 
-        // Output Ports
-        const rightSide = nodeBounds.Position.x + nodeBounds.Size.x;
-        ctx.textAlign = TextAlign.Right;
-        for (let i = 0; i < this.#output.length; i++) {
-            const port = this.#output[i];
-            const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
-            const position = { x: rightSide, y: startY + (measurement.y / 2) };
+                const position = VectorPool.get();
+                position.x = nodeBounds.Position.x + ((nodeBounds.Size.x - scaledWidgetWidth) / 2);
+                position.y = startY;
 
-            // Text
-            this.#portTextStyle.setupStyle(ctx, scale);
-            ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
+                this.#widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));
+                startY += (widgetSize.y * scale) + scaledElementSpacing;
+            }
 
-            // Port
-            this.#outputPortPositions.Push(port.render(ctx, position, scale));
+        })
 
-            startY += measurement.y + scaledElementSpacing;
-        }
-
-        for (let i = 0; i < this.#widgets.length; i++) {
-            const widget = this.#widgets[i];
-            const widgetSize = widget.Size();
-            const scaledWidgetWidth = widgetSize.x * scale;
-            const position = {
-                x: nodeBounds.Position.x + ((nodeBounds.Size.x - scaledWidgetWidth) / 2),
-                y: startY
-            };
-            this.#widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));
-            startY += (widgetSize.y * scale) + scaledElementSpacing;
-        }
     }
 }

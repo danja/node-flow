@@ -1,3 +1,4 @@
+import { Camera } from "../camera";
 import { ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
 import { InBox } from "../types/box";
@@ -87,7 +88,7 @@ export class NoteSubsystem {
         return result;
     }
 
-    clickStart(mousePosition: Vector2, ctrlKey: boolean): boolean {
+    clickStart(mousePosition: Vector2, camera: Camera, ctrlKey: boolean): boolean {
         if (this.#noteHovering !== null && this.#noteHovering.edittingLayout()) {
             this.#noteSelected = this.#noteHovering;
             this.#noteSelected.selectHandle(this.#hoveringHandle);
@@ -133,7 +134,7 @@ export class NoteSubsystem {
         }
     }
 
-    render(ctx: CanvasRenderingContext2D, scale: number, position: Vector2, mousePosition: Vector2 | undefined): RenderResults | undefined {
+    render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): RenderResults | undefined {
         this.#noteHovering = null;
         this.#hoveringHandle = DragHandle.None;
 
@@ -161,7 +162,7 @@ export class NoteSubsystem {
         }
 
         for (let i = 0; i < this.#notes.length; i++) {
-            this.#notes[i].render(ctx, position, scale, mousePosition);
+            this.#notes[i].render(ctx, camera, mousePosition);
         }
         return;
     }

@@ -94,6 +94,8 @@ export class Port {
         return this.#filledStyle.fillColor;
     }
 
+    #box: Box = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
+
     render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number): Box {
         let style = this.#emptyStyle;
         if (this.#connections.length > 0) {
@@ -108,15 +110,11 @@ export class Port {
         ctx.fill();
         ctx.stroke();
 
-        return {
-            Position: {
-                x: position.x - radius,
-                y: position.y - radius,
-            },
-            Size: {
-                x: radius * 2,
-                y: radius * 2,
-            }
-        }
+        this.#box.Position.x = position.x - radius;
+        this.#box.Position.y = position.y - radius;
+        this.#box.Size.x = radius * 2;
+        this.#box.Size.y = radius * 2;
+
+        return this.#box;
     }
 }
