@@ -1,4 +1,4 @@
-import { CopyVector2, Vector2 } from "./types/vector2";
+import { CopyVector2, SubVector2, Vector2 } from "./types/vector2";
 
 export class MouseObserver {
 
@@ -7,6 +7,9 @@ export class MouseObserver {
     #lastTouch: Vector2;
 
     #ele: HTMLElement
+
+    #lastMousePosition: Vector2;
+
     #dragCallback: (delta: Vector2) => void
     #moveCallback: (position: Vector2) => void
     #clickStart: (position: Vector2, shiftOrCtrl: boolean) => void
@@ -33,7 +36,12 @@ export class MouseObserver {
         this.#lastTouch = {
             x: 0,
             y: 0
-        }
+        };
+
+        this.#lastMousePosition = {
+            x: 0,
+            y: 0
+        };
 
         // Down
         ele.addEventListener('mousedown', this.#down.bind(this), false);
@@ -57,7 +65,7 @@ export class MouseObserver {
                     // If dropped items aren't files, reject them
                     if (item.kind === "file") {
                         const file = item.getAsFile();
-                        if(file) {
+                        if (file) {
                             fileDrop(file);
                             console.log(file)
                             console.log(`… file[${i}].name = ${file.name}`);
@@ -94,14 +102,16 @@ export class MouseObserver {
     }
 
     #move(event: MouseEvent): void {
+        const pos = this.#mousePosition(event);
+
         if (this.#clicked) {
-            this.#dragCallback({
-                x: event.movementX,
-                y: event.movementY,
-            })
+            const delta = { x: 0, y: 0 };
+            SubVector2(delta, pos, this.#lastMousePosition);
+            this.#dragCallback(delta)
         }
 
-        this.#moveCallback(this.#mousePosition(event));
+        this.#moveCallback(pos);
+        CopyVector2(this.#lastMousePosition, pos);
     }
 
     #moveTouch(event: TouchEvent): void {
