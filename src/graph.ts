@@ -5,7 +5,7 @@ import { FlowNode } from "./node";
 import { NodeFactoryConfig } from "./nodes/factory";
 import { TimeExecution } from "./performance";
 import { CursorStyle } from "./styles/cursor";
-import { CopyVector2, Vector2 } from './types/vector2';
+import { CopyVector2, Vector2, Zero } from './types/vector2';
 import { Clamp01 } from "./utils/math";
 import { GraphSubsystem, RenderResults } from './graphSubsystem';
 import { FlowNote, FlowNoteConfig } from "./notes/note";
@@ -238,7 +238,7 @@ export class NodeFlowGraph {
             return;
         }
 
-        let pos = { x: 0, y: 0 };
+        let pos = Zero();
         if (this.#mousePosition) {
             CopyVector2(pos, this.#sceenPositionToGraphPosition(this.#mousePosition));
         }
@@ -324,7 +324,7 @@ export class NodeFlowGraph {
     }
 
     #sceenPositionToGraphPosition(screenPosition: Vector2): Vector2 {
-        const out = { x: 0, y: 0 };
+        const out = Zero();
         this.#camera.screenSpaceToGraphSpace(screenPosition, out);
         return out;
     }

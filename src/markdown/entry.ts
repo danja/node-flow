@@ -1,7 +1,7 @@
 import { Theme } from "../theme";
 import { List } from "../types/list";
 import { Text } from "../types/text";
-import { CopyVector2, Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2, Zero } from "../types/vector2";
 
 export interface MarkdownEntry {
     render(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, maxWidth: number): number
@@ -179,8 +179,8 @@ export class BasicMarkdownEntry {
         this.#calculatedEntries.Clear();
         this.#calculatedPositions.Clear();
 
-        const curPosition: Vector2 = { x: 0, y: 0 };
-        const texSize: Vector2 = { x: 0, y: 0 };
+        const curPosition: Vector2 = Zero();
+        const texSize: Vector2 = Zero();
 
         let currentLineHeight = 0;
         const currentLineText = new List<Text>();

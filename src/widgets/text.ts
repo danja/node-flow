@@ -1,6 +1,6 @@
 import { Theme } from "../theme";
 import { Box, InBox } from "../types/box";
-import { Vector2 } from "../types/vector2";
+import { Vector2, Zero } from "../types/vector2";
 import { FlowNode } from '../node';
 import { Text } from "../types/text";
 import { TextStyle, TextStyleConfig, TextStyleFallback } from "../styles/text";
@@ -28,7 +28,7 @@ export class TextWidget {
     #size: Vector2;
 
     constructor(node: FlowNode, config?: TextWidgetConfig) {
-        this.#size = { x: 0, y: 0 };
+        this.#size = Zero();
         this.#node = node;
         this.#nodeProperty = config?.property;
         this.#value = new Text("", TextStyleFallback(config?.textBoxStyle, {

@@ -1,6 +1,6 @@
 import { FontWeight, TextStyle, TextStyleConfig } from "../styles/text";
 import { splitString, splitStringIntoLines } from "../utils/string";
-import { CopyVector2, Vector2 } from "./vector2";
+import { CopyVector2, Vector2, Zero } from "./vector2";
 
 export class Text {
 
@@ -15,7 +15,7 @@ export class Text {
     constructor(value: string, style?: TextStyleConfig) {
         this.#value = value;
         this.#measured = false;
-        this.#size = { x: 0, y: 0 };
+        this.#size = Zero();
         this.#style = new TextStyle(style);
 
         if (!document.fonts.check(`16px "${this.#style.getFont()}"`)) {

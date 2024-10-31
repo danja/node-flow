@@ -8,9 +8,11 @@ import { TimeExecution } from "../performance";
 import { Port } from "../port";
 import { BoxStyle } from "../styles/box";
 import { CursorStyle } from "../styles/cursor";
+import { Theme } from "../theme";
+import { Box, BoxIntersection } from "../types/box";
 import { List } from "../types/list";
 import { Pool, VectorPool } from "../types/pool";
-import { AddVector2, CopyVector2, SubVector2, Vector2 } from "../types/vector2";
+import { AddVector2, CopyVector2, SubVector2, Vector2, Zero } from "../types/vector2";
 import { Widget } from "../widgets/widget";
 import { NodeFactory, NodeFactoryConfig } from "./factory";
 import { Publisher } from "./publisher";
@@ -82,6 +84,10 @@ export class NodeSubsystem {
 
     #boxSelectEnd_graphSpace: Vector2;
 
+    #boxSelectionNodes: List<number>;
+
+    #boxSelectStyle: BoxStyle;
+
     constructor(config?: NodeSubsystemConfig) {
         this.#nodes = [];
         this.#nodeHovering = -1;
@@ -93,9 +99,19 @@ export class NodeSubsystem {
         this.#connections = new Array<Connection>();
         this.#nodeFactory = new NodeFactory(config?.nodes);
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
+
         this.#boxSelect = false;
-        this.#boxSelectStart_graphSpace = { x: 0, y: 0 };
-        this.#boxSelectEnd_graphSpace = { x: 0, y: 0 };
+        this.#boxSelectStart_graphSpace = Zero();
+        this.#boxSelectEnd_graphSpace = Zero();
+        this.#boxSelectionNodes = new List<number>();
+        this.#boxSelectStyle = new BoxStyle({
+            border: {
+                color: Theme.BoxSelect.Color,
+                size: Theme.BoxSelect.Size,
+            },
+            color: "rgba(0,0,0,0)",
+            radius: Theme.BoxSelect.Radius
+        });
     }
 
     addPublisher(identifier: string, publisher: Publisher): void {
@@ -126,7 +142,7 @@ export class NodeSubsystem {
 
         if (this.#portHovering === null) {
 
-            if (ctrlKey) {
+            if (ctrlKey && !hoveringSomething) {
                 camera.screenSpaceToGraphSpace(mousePosition, this.#boxSelectStart_graphSpace)
                 CopyVector2(this.#boxSelectEnd_graphSpace, this.#boxSelectStart_graphSpace);
                 this.#boxSelect = true;
@@ -202,7 +218,15 @@ export class NodeSubsystem {
 
     clickEnd(): void {
         this.#nodesGrabbed.Clear();
-        this.#boxSelect = false;
+
+        if (this.#boxSelect) {
+            for (let i = 0; i < this.#boxSelectionNodes.Count(); i++) {
+                this.#selectNode(this.#nodes[this.#boxSelectionNodes.At(i)], false);
+            }
+
+            this.#boxSelectionNodes.Clear();
+            this.#boxSelect = false;
+        }
 
         if (this.#widgetCurrentlyClicking !== null) {
             this.#widgetCurrentlyClicking.ClickEnd();
@@ -561,12 +585,15 @@ export class NodeSubsystem {
         this.#portHovering = null;
         this.#widgetHovering = null;
         this.#nodeHovering = -1;
+        this.#boxSelectionNodes.Clear();
+
+        const selectedBox_Screenspace = this.#boxSelectionScreenspaceBox(camera);
 
         for (let i = 0; i < this.#nodes.length; i++) {
             let state = NodeState.Idle;
 
-            if (mousePosition !== undefined) {
-                const intersection = this.#nodes[i].inBounds(ctx, camera.position, camera.zoom, mousePosition);
+            if (mousePosition !== undefined && !this.#boxSelect) {
+                const intersection = this.#nodes[i].inBounds(ctx, camera, mousePosition);
 
                 if (intersection.Node !== undefined && intersection.PortIndex === undefined && intersection.Widget === undefined) {
                     state = NodeState.MouseOver;
@@ -587,6 +614,13 @@ export class NodeSubsystem {
                         InputPort: intersection.PortIsInput
                     };
                 }
+            } else if (this.#boxSelect) {
+                const nodeBounds = this.#nodes[i].calculateBounds(ctx, camera);
+
+                if (BoxIntersection(selectedBox_Screenspace, nodeBounds)) {
+                    state = NodeState.MouseOver;
+                    this.#boxSelectionNodes.Push(i);
+                }
             }
 
             // if (i === this.#nodeSelected) {
@@ -598,8 +632,19 @@ export class NodeSubsystem {
                 this.#cursor = CursorStyle.Grabbing;
             }
 
-            this.#nodes[i].render(ctx, camera.position, camera.zoom, state, mousePosition);
+            this.#nodes[i].render(ctx, camera, state, mousePosition);
         }
+    }
+
+    #boxSelectionScreenspaceBox(camera: Camera): Box {
+        const box = { Position: Zero(), Size: Zero() }
+
+        camera.graphSpaceToScreenSpace(this.#boxSelectStart_graphSpace, box.Position);
+        camera.graphSpaceToScreenSpace(this.#boxSelectEnd_graphSpace, box.Size);
+
+        SubVector2(box.Size, box.Size, box.Position);
+
+        return box;
     }
 
     render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): RenderResults | undefined {
@@ -611,29 +656,14 @@ export class NodeSubsystem {
             this.#renderNodes(ctx, camera, mousePosition);
         })
 
-        VectorPool.runIf(this.#boxSelect, () => {
-            const start = VectorPool.get();
-            const end = VectorPool.get();
-
-            camera.graphSpaceToScreenSpace(this.#boxSelectStart_graphSpace, start);
-            camera.graphSpaceToScreenSpace(this.#boxSelectEnd_graphSpace, end);
-
-            const size = VectorPool.get();
-            SubVector2(size, end, start);
-
-            new BoxStyle({
-                border: {
-                    color: "#00FF00",
-                    size: 2,
-                },
-                color: "rgba(0,0,0,0)",
-                radius: 2
-            }).Draw(ctx, { Position: start, Size: size }, 1);
-        })
-
-        return {
-            cursorStyle: this.#cursor,
+        if (this.#boxSelect) {
+            const box = this.#boxSelectionScreenspaceBox(camera);
+            ctx.setLineDash([Theme.BoxSelect.LineDashLength]);
+            this.#boxSelectStyle.Draw(ctx, box, 1);
+            ctx.setLineDash([]);
         }
+
+        return { cursorStyle: this.#cursor }
     }
 
 }

@@ -3,7 +3,7 @@ import { TextAlign } from './styles/canvasTextAlign';
 import { TextStyle, TextStyleConfig, TextStyleFallback } from './styles/text';
 import { Box, InBox } from './types/box';
 import { List } from './types/list';
-import { Vector2 } from './types/vector2';
+import { Vector2, Zero } from './types/vector2';
 
 const contextEntryHeight = 30;
 const contextEntryWidth = 250;
@@ -211,11 +211,12 @@ export class ContextMenu {
             return this.#calculatedWidth;
         }
 
+        const tempVec = Zero();
         for (let groupIndex = 0; groupIndex < this.#groups.Count(); groupIndex++) {
             const group = this.#groups.At(groupIndex);
             for (let entryIndex = 0; entryIndex < group.entries.length; entryIndex++) {
-                const vec = this.#textStyle.measure(ctx, scale, group.entries[entryIndex].text);
-                this.#calculatedWidth = Math.max(vec.x, this.#calculatedWidth);
+                this.#textStyle.measure(ctx, scale, group.entries[entryIndex].text, tempVec);
+                this.#calculatedWidth = Math.max(tempVec.x, this.#calculatedWidth);
             }
         }
         return this.#calculatedWidth;
@@ -225,7 +226,7 @@ export class ContextMenu {
         return this.#name;
     }
 
-    #tempBox: Box = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
+    #tempBox: Box = { Position: Zero(), Size: Zero() };
 
     #openSubMenu: ContextMenu | undefined;
 

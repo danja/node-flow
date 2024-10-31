@@ -65,13 +65,11 @@ export class TextStyle {
         return this.#font;
     }
 
-    measure(ctx: CanvasRenderingContext2D, scale: number, text: string): Vector2 {
+    measure(ctx: CanvasRenderingContext2D, scale: number, text: string, out: Vector2): void {
         this.setupStyle(ctx, scale);
         const measurements = ctx.measureText(text)
-        return {
-            x: measurements.width,
-            y: measurements.actualBoundingBoxAscent + measurements.actualBoundingBoxDescent
-        }
+        out.x = measurements.width;
+        out.y = measurements.actualBoundingBoxAscent + measurements.actualBoundingBoxDescent;
     }
 
     setColor(color: string): void {

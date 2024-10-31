@@ -7,7 +7,7 @@ import { TextBaseline } from "../styles/canvasTextBaseline";
 import { TextStyleConfig } from "../styles/text";
 import { Theme } from "../theme";
 import { Box } from "../types/box";
-import { CopyVector2, Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2, Zero } from "../types/vector2";
 import { Camera } from "../camera";
 
 export interface FlowNoteConfig {
@@ -24,8 +24,8 @@ export enum DragHandle {
     Right
 };
 
-const boundsSpacing = 20;
-const boxSize = 10;
+const BOUNDS_SPACING = 20;
+const BOX_SIZE = 10;
 
 export class FlowNote {
 
@@ -86,7 +86,7 @@ export class FlowNote {
         this.#handleSelected = handle;
     }
 
-    #tempPosition: Vector2 = { x: 0, y: 0 };
+    #tempPosition: Vector2 = Zero();
 
     render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): void {
         if (this.#edittingLayout && (this.#hovering || this.#handleSelected !== DragHandle.None)) {
@@ -115,24 +115,23 @@ export class FlowNote {
             const right = this.#lastRenderedBox.Position.x + this.#lastRenderedBox.Size.x;
             const bottom = this.#lastRenderedBox.Position.y;
             const top = this.#lastRenderedBox.Position.y + this.#lastRenderedBox.Size.y;
-            ctx.moveTo(left, bottom + (this.#lastRenderedBox.Size.y / 2) - (boxSize));
+            ctx.moveTo(left, bottom + (this.#lastRenderedBox.Size.y / 2) - (BOX_SIZE));
             ctx.lineTo(left, bottom);
             ctx.lineTo(right, bottom);
-            ctx.lineTo(right, bottom + (this.#lastRenderedBox.Size.y / 2) - (boxSize));
+            ctx.lineTo(right, bottom + (this.#lastRenderedBox.Size.y / 2) - (BOX_SIZE));
 
-            ctx.moveTo(left, top - (this.#lastRenderedBox.Size.y / 2) + (boxSize));
+            ctx.moveTo(left, top - (this.#lastRenderedBox.Size.y / 2) + (BOX_SIZE));
             ctx.lineTo(left, top);
             ctx.lineTo(right, top);
-            ctx.lineTo(right, top - (this.#lastRenderedBox.Size.y / 2) + (boxSize));
+            ctx.lineTo(right, top - (this.#lastRenderedBox.Size.y / 2) + (BOX_SIZE));
             ctx.stroke();
             // this.#edittingStyle.Outline(ctx, bigBox, camera.zoom, 2);
         }
-        const startY = (this.#position.y * camera.zoom) + camera.position.y;
-
-        this.#tempPosition.x = (this.#position.x * camera.zoom) + camera.position.x;
-        this.#tempPosition.y = startY;
+        
+        camera.graphSpaceToScreenSpace(this.#position, this.#tempPosition);
         CopyVector2(this.#lastRenderedBox.Position, this.#tempPosition)
-
+        
+        const startY = this.#tempPosition.y;
         const lineSpacing = Theme.Note.EntrySpacing * camera.zoom;
 
         ctx.textAlign = TextAlign.Left;
@@ -142,29 +141,29 @@ export class FlowNote {
             this.#tempPosition.y += text.render(ctx, this.#tempPosition, camera.zoom, this.#width) + lineSpacing;
         }
 
-        this.#lastRenderedBox.Position.x -= boundsSpacing
-        this.#lastRenderedBox.Position.y -= boundsSpacing
-        this.#lastRenderedBox.Size.x = camera.zoom * this.#width + (boundsSpacing * 2);
-        this.#lastRenderedBox.Size.y = this.#tempPosition.y - startY + (boundsSpacing * 2);
+        this.#lastRenderedBox.Position.x -= BOUNDS_SPACING
+        this.#lastRenderedBox.Position.y -= BOUNDS_SPACING
+        this.#lastRenderedBox.Size.x = camera.zoom * this.#width + (BOUNDS_SPACING * 2);
+        this.#lastRenderedBox.Size.y = this.#tempPosition.y - startY + (BOUNDS_SPACING * 2);
     }
 
     leftResizeHandleBox(): Box {
         return {
             Position: {
-                x: this.#lastRenderedBox.Position.x - (boxSize / 2),
-                y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (boxSize / 2),
+                x: this.#lastRenderedBox.Position.x - (BOX_SIZE / 2),
+                y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (BOX_SIZE / 2),
             },
-            Size: { x: boxSize, y: boxSize, }
+            Size: { x: BOX_SIZE, y: BOX_SIZE, }
         };
     }
 
     rightResizeHandleBox(): Box {
         return {
             Position: {
-                x: this.#lastRenderedBox.Position.x - (boxSize / 2) + this.#lastRenderedBox.Size.x,
-                y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (boxSize / 2),
+                x: this.#lastRenderedBox.Position.x - (BOX_SIZE / 2) + this.#lastRenderedBox.Size.x,
+                y: this.#lastRenderedBox.Position.y + (this.#lastRenderedBox.Size.y / 2) - (BOX_SIZE / 2),
             },
-            Size: { x: boxSize, y: boxSize, }
+            Size: { x: BOX_SIZE, y: BOX_SIZE, }
         };
     }
 

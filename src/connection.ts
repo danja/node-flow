@@ -1,7 +1,7 @@
 import { FlowNode } from "./node";
 import { Port } from "./port";
 import { BoxCenter, InBox } from "./types/box";
-import { Vector2 } from "./types/vector2";
+import { Vector2, Zero } from "./types/vector2";
 
 export interface ConnectionRendererParams {
     ctx: CanvasRenderingContext2D;
@@ -84,8 +84,8 @@ export class Connection {
         this.#outNodePortIndex = outNodePortIndex;
         this.#renderer = renderer;
         
-        this.#inPos = { x: 0, y: 0 };
-        this.#outPos = { x: 0, y: 0 };
+        this.#inPos = Zero();
+        this.#outPos = Zero();
 
         if (inNode !== null) {
             inNode.inputPort(this.#inNodePortIndex).addConnection(this);

@@ -2,7 +2,7 @@ import { Theme } from "../theme";
 import { TextAlign } from "../styles/canvasTextAlign";
 import { TextStyle, TextStyleConfig, TextStyleFallback } from "../styles/text";
 import { Box } from '../types/box';
-import { CopyVector2, Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2, Zero } from "../types/vector2";
 import { Clamp, Clamp01 } from "../utils/math";
 import { height, width } from "./widget";
 import { TextBaseline } from "../styles/canvasTextBaseline";
@@ -91,8 +91,8 @@ export class SliderWidget {
         this.#textStyle = new TextStyle(TextStyleFallback(config?.textStyle, {
             color: Theme.Widget.FontColor,
         }));
-        this.#lastMousePosition = { x: 0, y: 0 };
-        this.#clickStartMousePosition = { x: 0, y: 0 };
+        this.#lastMousePosition = Zero();
+        this.#clickStartMousePosition = Zero();
         this.#clicking = false;
 
 

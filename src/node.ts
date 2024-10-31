@@ -1,7 +1,7 @@
 import { Port, PortConfig } from "./port";
 import { FontWeight, TextStyle, TextStyleConfig, TextStyleFallback } from "./styles/text";
 import { Box, InBox } from "./types/box";
-import { CopyVector2, Vector2 } from "./types/vector2";
+import { CopyVector2, Vector2, Zero } from "./types/vector2";
 import { Widget } from './widgets/widget';
 import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
@@ -22,6 +22,9 @@ import { ColorWidget } from "./widgets/color";
 import { SliderWidget } from "./widgets/slider";
 import { ImageWidget } from "./widgets/image";
 import { VectorPool } from "./types/pool";
+import { Camera } from "./camera";
+
+const MINIMUM_NODE_WIDTH = 150;
 
 type AnyPropertyChangeCallback = (propertyName: string, oldValue: any, newValue: any) => void
 type PropertyChangeCallback = (oldValue: any, newValue: any) => void
@@ -194,23 +197,23 @@ export class FlowNode {
 
         this.#stateStyles = new Map<NodeState, BoxStyle>();
         this.#stateStyles.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
-            border: { color: "#1c1c1c", size: 1 },
+            border: { color: Theme.Node.Border.Idle, size: 1 },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         })));
         this.#stateStyles.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
-            border: { color: "#6e6e6e", size: 1.1, },
+            border: { color: Theme.Node.Border.MouseOver, size: 1.1, },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         })));
         this.#stateStyles.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
-            border: { color: "white", size: 2, },
+            border: { color: Theme.Node.Border.Grabbed, size: 2, },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         })));
 
         this.#selectedStyle = new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
-            border: { color: "white", size: 1, },
+            border: { color: Theme.Node.Border.Selected, size: 1, },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         }));
@@ -397,12 +400,12 @@ export class FlowNode {
                                 {
                                     name: "Max Width",
                                     type: "number",
-                                    startingValue: 150
+                                    startingValue: MINIMUM_NODE_WIDTH
                                 },
                                 {
                                     name: "Max Height",
                                     type: "number",
-                                    startingValue: 150
+                                    startingValue: MINIMUM_NODE_WIDTH
                                 }
                             ],
                             onUpdate: (data: Array<any>) => {
@@ -570,37 +573,34 @@ export class FlowNode {
     //     return this.#titleTextStyle.measure(ctx, scale, this.#title);
     // }
 
-    public calculateBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number): Box {
-        const scaledPadding = this.#padding;
-        const position: Vector2 = {
-            x: (this.#position.x * scale) + graphPosition.x,
-            y: (this.#position.y * scale) + graphPosition.y
-        }
+    public calculateBounds(ctx: CanvasRenderingContext2D, camera: Camera): Box {
+        const tempMeasurement = Zero();
 
-        const scaledTitleMeasurement = { x: 0, y: 0 };
-        this.#title.size(ctx, 1, scaledTitleMeasurement);
+        const doublePadding = this.#padding * 2;
 
-        const size = {
-            x: scaledTitleMeasurement.x + (scaledPadding * 2),
-            y: scaledTitleMeasurement.y + (scaledPadding * 2),
-        }
+        const screenSpacePosition = Zero();
+        camera.graphSpaceToScreenSpace(this.#position, screenSpacePosition);
 
-        size.y += (this.#elementSpacing * this.#input.length);
+        const size = Zero();
+        this.#title.size(ctx, 1, size);
+
+        size.x += doublePadding;
+        size.y += doublePadding + (this.#elementSpacing * this.#input.length);
 
         for (let i = 0; i < this.#input.length; i++) {
             const port = this.#input[i];
-            const measurement = this.#portTextStyle.measure(ctx, 1, port.getDisplayName());
-            size.y += measurement.y;
-            size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
+            this.#portTextStyle.measure(ctx, 1, port.getDisplayName(), tempMeasurement);
+            size.y += tempMeasurement.y;
+            size.x = Math.max(size.x, tempMeasurement.x + doublePadding)
         }
 
         size.y += (this.#elementSpacing * this.#output.length);
 
         for (let i = 0; i < this.#output.length; i++) {
             const port = this.#output[i];
-            const measurement = this.#portTextStyle.measure(ctx, 1, port.getDisplayName());
-            size.y += measurement.y;
-            size.x = Math.max(size.x, measurement.x + (scaledPadding * 2))
+            this.#portTextStyle.measure(ctx, 1, port.getDisplayName(), tempMeasurement);
+            size.y += tempMeasurement.y;
+            size.x = Math.max(size.x, tempMeasurement.x + doublePadding)
         }
 
         size.y += (this.#elementSpacing * this.#widgets.length);
@@ -608,18 +608,18 @@ export class FlowNode {
             const element = this.#widgets[i];
             const eleSize = element.Size();
             size.y += eleSize.y
-            size.x = Math.max(size.x, (eleSize.x) + (scaledPadding * 2))
+            size.x = Math.max(size.x, (eleSize.x) + doublePadding)
         }
 
         // Add some padding at the end!
         size.y += this.#elementSpacing
 
-        size.x = Math.max(size.x, 150)
-        size.x *= scale;
-        size.y *= scale;
+        size.x = Math.max(size.x, MINIMUM_NODE_WIDTH)
+        size.x *= camera.zoom;
+        size.y *= camera.zoom;
 
         return {
-            Position: position,
+            Position: screenSpacePosition,
             Size: size,
         }
     }
@@ -649,11 +649,10 @@ export class FlowNode {
         this.#position.y += delta.y;
     }
 
-    inBounds(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, position: Vector2): NodeIntersection {
-        var intersection: NodeIntersection = {
-        }
+    inBounds(ctx: CanvasRenderingContext2D, camera: Camera, position: Vector2): NodeIntersection {
+        var intersection: NodeIntersection = {}
 
-        const box = this.calculateBounds(ctx, graphPosition, scale);
+        const box = this.calculateBounds(ctx, camera);
         if (InBox(box, position)) {
             intersection.Node = this;
         }
@@ -739,20 +738,21 @@ export class FlowNode {
         return boxStyle;
     }
 
-    render(ctx: CanvasRenderingContext2D, graphPosition: Vector2, scale: number, state: NodeState, mousePosition: Vector2 | undefined): void {
-
+    render(ctx: CanvasRenderingContext2D, camera: Camera, state: NodeState, mousePosition: Vector2 | undefined): void {
         VectorPool.run(() => {
+            const tempMeasurement = VectorPool.get();
+
             this.#inputPortPositions.Clear();
             this.#outputPortPositions.Clear();
             this.#widgetPositions.Clear();
-            const scaledPadding = this.#padding * scale;
-            const scaledElementSpacing = this.#elementSpacing * scale;
+            const scaledPadding = this.#padding * camera.zoom;
+            const scaledElementSpacing = this.#elementSpacing * camera.zoom;
 
-            const nodeBounds = this.calculateBounds(ctx, graphPosition, scale);
+            const nodeBounds = this.calculateBounds(ctx, camera);
 
             // Background
             const nodeStyle = this.#calculateStyle(state);
-            nodeStyle.Draw(ctx, nodeBounds, scale);
+            nodeStyle.Draw(ctx, nodeBounds, camera.zoom);
 
             // Title
             const borderSize = nodeStyle.borderSize();
@@ -760,7 +760,7 @@ export class FlowNode {
             ctx.textBaseline = TextBaseline.Middle;
 
             const titleSize = VectorPool.get();
-            this.#title.size(ctx, scale, titleSize);
+            this.#title.size(ctx, camera.zoom, titleSize);
 
             const titleBoxSize = VectorPool.get();
             titleBoxSize.x = nodeBounds.Size.x;
@@ -769,11 +769,11 @@ export class FlowNode {
             ctx.fillStyle = "#154050"
             ctx.beginPath();
             ctx.roundRect(
-                nodeBounds.Position.x + (borderSize * scale * 0.5),
-                nodeBounds.Position.y + (borderSize * scale * 0.5),
-                titleBoxSize.x - (borderSize * scale),
-                titleBoxSize.y - (borderSize * scale * 0.5),
-                [nodeStyle.radius() * scale, nodeStyle.radius() * scale, 0, 0]
+                nodeBounds.Position.x + (borderSize * camera.zoom * 0.5),
+                nodeBounds.Position.y + (borderSize * camera.zoom * 0.5),
+                titleBoxSize.x - (borderSize * camera.zoom),
+                titleBoxSize.y - (borderSize * camera.zoom * 0.5),
+                [nodeStyle.radius() * camera.zoom, nodeStyle.radius() * camera.zoom, 0, 0]
             );
             ctx.fill();
             // ctx.stroke();
@@ -781,7 +781,7 @@ export class FlowNode {
             const titlePosition = VectorPool.get();
             titlePosition.x = nodeBounds.Position.x + (nodeBounds.Size.x / 2)
             titlePosition.y = nodeBounds.Position.y + scaledPadding + (titleSize.y / 2)
-            this.#title.render(ctx, scale, titlePosition);
+            this.#title.render(ctx, camera.zoom, titlePosition);
 
             // Input Ports
             let startY = nodeBounds.Position.y + (scaledPadding * 2) + titleSize.y + scaledElementSpacing;
@@ -789,20 +789,20 @@ export class FlowNode {
             ctx.textAlign = TextAlign.Left;
             for (let i = 0; i < this.#input.length; i++) {
                 const port = this.#input[i];
-                const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
+                this.#portTextStyle.measure(ctx, camera.zoom, port.getDisplayName(), tempMeasurement);
                 const position = VectorPool.get();
 
                 position.x = nodeBounds.Position.x;
-                position.y = startY + (measurement.y / 2);
+                position.y = startY + (tempMeasurement.y / 2);
 
                 // Text
-                this.#portTextStyle.setupStyle(ctx, scale);
+                this.#portTextStyle.setupStyle(ctx, camera.zoom);
                 ctx.fillText(port.getDisplayName(), leftSide, position.y);
 
                 // Port
-                this.#inputPortPositions.Push(port.render(ctx, position, scale));
+                this.#inputPortPositions.Push(port.render(ctx, position, camera.zoom));
 
-                startY += measurement.y + scaledElementSpacing;
+                startY += tempMeasurement.y + scaledElementSpacing;
             }
 
             // Output Ports
@@ -810,35 +810,33 @@ export class FlowNode {
             ctx.textAlign = TextAlign.Right;
             for (let i = 0; i < this.#output.length; i++) {
                 const port = this.#output[i];
-                const measurement = this.#portTextStyle.measure(ctx, scale, port.getDisplayName());
+                this.#portTextStyle.measure(ctx, camera.zoom, port.getDisplayName(), tempMeasurement);
                 const position = VectorPool.get();
                 position.x = rightSide;
-                position.y = startY + (measurement.y / 2);
+                position.y = startY + (tempMeasurement.y / 2);
 
                 // Text
-                this.#portTextStyle.setupStyle(ctx, scale);
+                this.#portTextStyle.setupStyle(ctx, camera.zoom);
                 ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
 
                 // Port
-                this.#outputPortPositions.Push(port.render(ctx, position, scale));
+                this.#outputPortPositions.Push(port.render(ctx, position, camera.zoom));
 
-                startY += measurement.y + scaledElementSpacing;
+                startY += tempMeasurement.y + scaledElementSpacing;
             }
 
             for (let i = 0; i < this.#widgets.length; i++) {
                 const widget = this.#widgets[i];
                 const widgetSize = widget.Size();
-                const scaledWidgetWidth = widgetSize.x * scale;
+                const scaledWidgetWidth = widgetSize.x * camera.zoom;
 
                 const position = VectorPool.get();
                 position.x = nodeBounds.Position.x + ((nodeBounds.Size.x - scaledWidgetWidth) / 2);
                 position.y = startY;
 
-                this.#widgetPositions.Push(widget.Draw(ctx, position, scale, mousePosition));
-                startY += (widgetSize.y * scale) + scaledElementSpacing;
+                this.#widgetPositions.Push(widget.Draw(ctx, position, camera.zoom, mousePosition));
+                startY += (widgetSize.y * camera.zoom) + scaledElementSpacing;
             }
-
         })
-
     }
 }

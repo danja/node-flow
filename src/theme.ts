@@ -12,9 +12,21 @@ export const Theme = {
             Padding: 5
         },
         BorderRadius: 15,
+        Border: {
+            Idle: "#1c1c1c",
+            MouseOver: "#6e6e6e",
+            Grabbed: "white",
+            Selected: "#6e6e6e"
+        },
         Port: {
             FontColor: "#afb9bb"
         }
+    },
+    BoxSelect: {
+        Color: "white",
+        Size: 1,
+        Radius: 2,
+        LineDashLength: 5,
     },
     Widget: {
         FontColor: "#afb9bb",

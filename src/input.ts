@@ -1,4 +1,4 @@
-import { CopyVector2, SubVector2, Vector2 } from "./types/vector2";
+import { CopyVector2, SubVector2, Vector2, Zero } from "./types/vector2";
 
 export class MouseObserver {
 
@@ -33,15 +33,8 @@ export class MouseObserver {
         this.#contextMenu = contextMenu;
 
         this.#clicked = false;
-        this.#lastTouch = {
-            x: 0,
-            y: 0
-        };
-
-        this.#lastMousePosition = {
-            x: 0,
-            y: 0
-        };
+        this.#lastTouch = Zero();
+        this.#lastMousePosition = Zero();
 
         // Down
         ele.addEventListener('mousedown', this.#down.bind(this), false);
@@ -105,7 +98,7 @@ export class MouseObserver {
         const pos = this.#mousePosition(event);
 
         if (this.#clicked) {
-            const delta = { x: 0, y: 0 };
+            const delta = Zero();
             SubVector2(delta, pos, this.#lastMousePosition);
             this.#dragCallback(delta)
         }

@@ -12,27 +12,40 @@ export class Pool<Type> {
 
     #reset: (v: Type) => void;
 
+    #runningDepth: number;
+
     constructor(builder: () => Type, reset: (v: Type) => void) {
         this.#arr = new Array<Type>();
         this.#count = 0;
         this.#builder = builder;
         this.#reset = reset;
+        this.#runningDepth = 0;
     }
 
     public runIf(condition: boolean, fn: () => void) {
-        if(condition) {
+        if (condition) {
             this.run(fn);
         }
     }
 
+    #running(): boolean {
+        return this.#runningDepth > 0;
+    }
+
     public run(fn: () => void) {
         const start = this.#count;
+        this.#runningDepth += 1;
         fn();
+        this.#runningDepth -= 1;
         this.#count = start;
         // console.log(this.#arr.length);
     }
 
     get(): Type {
+        if(!this.#running()) {
+            throw new Error("can't use pool outside of running context");
+        }
+
         let value: Type;
         if (this.#arr.length === this.#count) {
             value = this.#builder();

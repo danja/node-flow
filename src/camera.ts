@@ -1,4 +1,4 @@
-import { Vector2 } from "./types/vector2";
+import { Vector2, Zero } from "./types/vector2";
 
 export class Camera {
 
@@ -8,7 +8,7 @@ export class Camera {
 
     constructor() {
         this.zoom = 1;
-        this.position = { x: 0, y: 0 }
+        this.position = Zero();
     }
 
     screenSpaceToGraphSpace(screenPosition: Vector2, out: Vector2): void {
