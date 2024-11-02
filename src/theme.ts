@@ -14,7 +14,7 @@ export const Theme = {
         BorderRadius: 15,
         Border: {
             Idle: "#1c1c1c",
-            MouseOver: "#6e6e6e",
+            MouseOver: "#8e8e8e",
             Grabbed: "white",
             Selected: "#6e6e6e"
         },

@@ -1,3 +1,4 @@
+import { Camera } from "./camera";
 import { NodeFlowGraph } from "./graph";
 import { FlowNode } from "./node";
 import { NodeSubsystem } from "./nodes/subsystem";
@@ -54,9 +55,11 @@ export function Organize(ctx: CanvasRenderingContext2D, graph: NodeSubsystem, no
         }
     }
 
+    const camera = new Camera();
+
     // Initialize everything
     for (let i = 0; i < nodes.length; i++) {
-        bounds[i] = nodes[i].calculateBounds(ctx, { x: 0, y: 0 }, 1);
+        bounds[i] = nodes[i].calculateBounds(ctx, camera);
         relativePosition[i] = new Array<number>(nodes.length);
         nodeLUT.set(nodes[i], i);
         claimed[i] = false;
