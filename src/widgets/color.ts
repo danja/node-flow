@@ -1,7 +1,7 @@
 import { HexToColor } from "../utils/color";
 import { TextStyleConfig } from "../styles/text";
 import { Box } from "../types/box";
-import { Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
 import { Popup } from "../popup";
 import { TextBoxStyle } from '../styles/textBox';
@@ -133,12 +133,13 @@ export class ColorWidget {
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
         const box = {
-            Position: position,
+            Position: { x: 0, y: 0 },
             Size: {
                 x: width * scale,
                 y: height * scale
             }
         };
+        CopyVector2(box.Position, position);
 
         this.#textBoxStyle.Draw(ctx, box, scale, this.#value)
 

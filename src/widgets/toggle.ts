@@ -1,6 +1,6 @@
 import { Theme } from "../theme";
 import { Box, InBox } from "../types/box";
-import { Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 import { FlowNode } from "../node";
@@ -63,7 +63,8 @@ class ToggleStyle {
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, text: string, mousePosition: Vector2 | undefined): Box {
         const scaledWidth = width * scale;
         const scaledHeight = height * scale;
-        const box = { Position: position, Size: { x: scaledWidth, y: scaledHeight } };
+        const box = { Position: { x: 0, y: 0 }, Size: { x: scaledWidth, y: scaledHeight } };
+        CopyVector2(box.Position, position);
 
         // Background
         let style: TextBoxStyle = this.#idleStyle;

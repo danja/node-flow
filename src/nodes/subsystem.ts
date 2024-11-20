@@ -602,6 +602,7 @@ export class NodeSubsystem {
                 }
 
                 if (intersection.Widget !== undefined) {
+                    // console.log(i, this.#nodes[i].title(), "widget")
                     this.#widgetHovering = intersection.Widget
                     this.#cursor = CursorStyle.Pointer;
                 }

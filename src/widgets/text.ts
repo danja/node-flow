@@ -1,6 +1,6 @@
 import { Theme } from "../theme";
 import { Box, InBox } from "../types/box";
-import { Vector2, Zero } from "../types/vector2";
+import { CopyVector2, Vector2, Zero } from "../types/vector2";
 import { FlowNode } from '../node';
 import { Text } from "../types/text";
 import { TextStyle, TextStyleConfig, TextStyleFallback } from "../styles/text";
@@ -77,9 +77,10 @@ export class TextWidget {
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
         this.#value.size(ctx, scale, this.#size);
         const box = {
-            Position: position,
+            Position: { x: 0, y: 0 },
             Size: this.#size
         };
+        CopyVector2(box.Position, position);
         this.#value.size(ctx, 1, this.#size);
         
         ctx.textAlign = "left";

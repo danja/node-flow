@@ -1,7 +1,7 @@
 import { Theme } from "../theme";
 import { TextBoxStyle, TextBoxStyleConfig, TextBoxStyleWithFallback } from "../styles/textBox";
 import { Box, InBox } from "../types/box";
-import { Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2 } from "../types/vector2";
 import { height, width } from "./widget";
 
 
@@ -70,9 +70,13 @@ export class ButtonWidget {
 
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
         const box = {
-            Position: position,
-            Size: { x: width * scale, y: height * scale }
+            Position: { x: 0, y: 0 },
+            Size: {
+                x: width * scale,
+                y: height * scale
+            }
         };
+        CopyVector2(box.Position, position);
 
         let style: TextBoxStyle = this.#idleStyle;
 

@@ -1,5 +1,5 @@
 import { Box } from "../types/box";
-import { Vector2 } from "../types/vector2";
+import { CopyVector2, Vector2 } from "../types/vector2";
 
 const margin = 15;
 
@@ -139,12 +139,13 @@ export class ImageWidget {
     Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, mousePosition: Vector2 | undefined): Box {
         const size = this.Size();
         const box: Box = {
-            Position: position,
+            Position: { x: 0, y: 0 },
             Size: {
                 x: size.x * scale,
                 y: size.y * scale,
             }
         }
+        CopyVector2(box.Position, position);
 
         if (!this.#image) {
             return box;

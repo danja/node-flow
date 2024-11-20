@@ -204,7 +204,7 @@ export class SliderWidget {
         }
 
         return {
-            Position: position,
+            Position: { x: position.x, y: position.y },
             Size: {
                 x: scaledWidth,
                 y: scaledHeight
