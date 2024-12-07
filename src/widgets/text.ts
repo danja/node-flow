@@ -40,7 +40,7 @@ export class TextWidget {
         this.Set(config?.value === undefined ? "" : config?.value);
         this.#callback = config?.callback;
         if (this.#nodeProperty !== undefined) {
-            this.#node.subscribeToProperty(this.#nodeProperty, (oldVal, newVal) => {
+            this.#node.addPropertyChangeListener(this.#nodeProperty, (oldVal, newVal) => {
                 this.Set(newVal);
             });
         }

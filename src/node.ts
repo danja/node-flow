@@ -1,4 +1,4 @@
-import { Port, PortConfig } from "./port";
+import { Port, PortConfig, PortType } from "./port";
 import { FontWeight, TextStyle, TextStyleConfig, TextStyleFallback } from "./styles/text";
 import { Box, InBox } from "./types/box";
 import { CopyVector2, Vector2, Zero } from "./types/vector2";
@@ -262,13 +262,13 @@ export class FlowNode {
         }
     }
 
-    public subscribeToAnyPropertyChange(callback: AnyPropertyChangeCallback): void {
+    public addAnyPropertyChangeListener(callback: AnyPropertyChangeCallback): void {
         if (callback === undefined || callback === null) {
         }
         this.#registeredAnyPropertyChangeCallbacks.push(callback);
     }
 
-    public subscribeToProperty(name: string, callback: PropertyChangeCallback): void {
+    public addPropertyChangeListener(name: string, callback: PropertyChangeCallback): void {
         if (!this.#registeredPropertyChangeCallbacks.has(name)) {
             this.#registeredPropertyChangeCallbacks.set(name, []);
         }
@@ -624,12 +624,16 @@ export class FlowNode {
         }
     }
 
-    addInput(port: PortConfig): void {
-        this.#input.push(new Port(port));
+    addInput(config: PortConfig): Port {
+        const port = new Port(this, PortType.Input, config);
+        this.#input.push(port);
+        return port;
     }
 
-    addOutput(port: PortConfig): void {
-        this.#output.push(new Port(port));
+    addOutput(config: PortConfig): Port {
+        const port = new Port(this, PortType.Output, config);
+        this.#output.push(port);
+        return port;
     }
 
     addWidget(widget: Widget): void {
@@ -800,7 +804,7 @@ export class FlowNode {
                 ctx.fillText(port.getDisplayName(), leftSide, position.y);
 
                 // Port
-                this.#inputPortPositions.Push(port.render(ctx, position, camera.zoom));
+                this.#inputPortPositions.Push(port.render(ctx, position, camera, mousePosition));
 
                 startY += tempMeasurement.y + scaledElementSpacing;
             }
@@ -820,7 +824,7 @@ export class FlowNode {
                 ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
 
                 // Port
-                this.#outputPortPositions.Push(port.render(ctx, position, camera.zoom));
+                this.#outputPortPositions.Push(port.render(ctx, position, camera, mousePosition));
 
                 startY += tempMeasurement.y + scaledElementSpacing;
             }

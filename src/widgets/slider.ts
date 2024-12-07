@@ -97,7 +97,7 @@ export class SliderWidget {
 
 
         if (config?.property !== undefined && config?.property !== null) {
-            node.subscribeToProperty(config.property, (oldVal, newVal) => {
+            node.addPropertyChangeListener(config.property, (oldVal, newVal) => {
                 this.SetValue(newVal);
             });
         }
