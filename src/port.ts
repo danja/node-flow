@@ -107,10 +107,16 @@ export class Port {
     }
 
     addConnectionAddedListener(callback: ConnectionChangeCallback) {
+        if (callback === undefined) {
+            return;
+        }
         this.#onConnectionAdded.push(callback);
     }
 
     addConnectionRemovedListener(callback: ConnectionChangeCallback) {
+        if (callback === undefined) {
+            return;
+        }
         this.#onConnectionRemoved.push(callback);
     }
 
@@ -154,9 +160,9 @@ export class Port {
 
         if (mousePosition && InBox(this.#box, mousePosition)) {
             radius *= 1.25;
-    
+
             ctx.textAlign = TextAlign.Center;
-            ctx.fillText(this.#dataType, position.x , position.y + (radius * 3));
+            ctx.fillText(this.#dataType, position.x, position.y + (radius * 3));
         }
 
         this.#box.Position.x = position.x - radius;

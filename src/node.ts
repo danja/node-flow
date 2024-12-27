@@ -44,6 +44,15 @@ export interface FlowNodeTitleConfig {
     padding?: number;
 }
 
+export interface FlowNodeStyle {
+    title?: FlowNodeTitleConfig;
+    idle?: BoxStyleConfig;
+    mouseOver?: BoxStyleConfig;
+    grabbed?: BoxStyleConfig;
+    selected?: BoxStyleConfig;
+    portText?: TextStyleConfig;
+}
+
 export interface FlowNodeConfig {
     position?: Vector2;
     title?: string;
@@ -67,12 +76,7 @@ export interface FlowNodeConfig {
     widgets?: Array<WidgetConfig>;
 
     // Styling
-    titleStyle?: FlowNodeTitleConfig;
-    idleBorder?: BoxStyleConfig;
-    mouseOverBorder?: BoxStyleConfig;
-    grabbedBorder?: BoxStyleConfig;
-    selectedBorder?: BoxStyleConfig;
-    portTextStyle?: TextStyleConfig;
+    style?: FlowNodeStyle;
 }
 
 export enum NodeState {
@@ -123,7 +127,7 @@ export class FlowNode {
 
     // Styling ================================================================
 
-    #titleStyle: BoxStyle;
+    #titleColor: string;
 
     #selectedStyle: BoxStyle;
 
@@ -186,43 +190,44 @@ export class FlowNode {
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.#title = new Text(
             config?.title === undefined ? "" : config.title,
-            TextStyleFallback(config?.titleStyle?.textStyle, {
+            TextStyleFallback(config?.style?.title?.textStyle, {
                 size: 16,
                 weight: FontWeight.Bold,
                 color: Theme.Node.FontColor
             })
         );
+        this.#titleColor = config?.style?.title?.color === undefined ? "#154050" : config?.style?.title?.color;
 
-        this.#padding = config?.titleStyle?.padding === undefined ? 15 : config?.titleStyle?.padding;
+        this.#padding = config?.style?.title?.padding === undefined ? 15 : config?.style?.title?.padding;
 
         this.#stateStyles = new Map<NodeState, BoxStyle>();
-        this.#stateStyles.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.idleBorder, {
+        this.#stateStyles.set(NodeState.Idle, new BoxStyle(BoxStyleWithFallback(config?.style?.idle, {
             border: { color: Theme.Node.Border.Idle, size: 1 },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         })));
-        this.#stateStyles.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.mouseOverBorder, {
+        this.#stateStyles.set(NodeState.MouseOver, new BoxStyle(BoxStyleWithFallback(config?.style?.mouseOver, {
             border: { color: Theme.Node.Border.MouseOver, size: 1.1, },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         })));
-        this.#stateStyles.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.grabbedBorder, {
+        this.#stateStyles.set(NodeState.Grabbed, new BoxStyle(BoxStyleWithFallback(config?.style?.grabbed, {
             border: { color: Theme.Node.Border.Grabbed, size: 2, },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         })));
 
-        this.#selectedStyle = new BoxStyle(BoxStyleWithFallback(config?.selectedBorder, {
+        this.#selectedStyle = new BoxStyle(BoxStyleWithFallback(config?.style?.selected, {
             border: { color: Theme.Node.Border.Selected, size: 1, },
             radius: Theme.Node.BorderRadius,
             color: Theme.Node.BackgroundColor,
         }));
 
         this.#portTextStyle = new TextStyle({
-            size: config?.portTextStyle?.size === undefined ? 14 : config?.portTextStyle?.size,
-            color: config?.portTextStyle?.color === undefined ? Theme.Node.Port.FontColor : config?.portTextStyle?.color,
-            font: config?.portTextStyle?.font,
-            weight: config?.portTextStyle?.weight,
+            size: config?.style?.portText?.size === undefined ? 14 : config?.style?.portText?.size,
+            color: config?.style?.portText?.color === undefined ? Theme.Node.Port.FontColor : config?.style?.portText?.color,
+            font: config?.style?.portText?.font,
+            weight: config?.style?.portText?.weight,
         });
 
         if (config?.inputs !== undefined) {
@@ -770,7 +775,7 @@ export class FlowNode {
             titleBoxSize.x = nodeBounds.Size.x;
             titleBoxSize.y = titleSize.y + (scaledPadding * 2);
 
-            ctx.fillStyle = "#154050"
+            ctx.fillStyle = this.#titleColor;
             ctx.beginPath();
             ctx.roundRect(
                 nodeBounds.Position.x + (borderSize * camera.zoom * 0.5),
