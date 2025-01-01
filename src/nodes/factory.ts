@@ -4,7 +4,7 @@ import { ContextMenuConfig } from "../contextMenu";
 import { Vector2 } from "../types/vector2";
 import { nodeFlowGroup as nodeFlowContextMenuGroup, NodeSubsystem } from "./subsystem";
 
-type NodeCreatedCallback = (publisher: string, nodeType: string, node: FlowNode) => void;
+export type NodeCreatedCallback = (publisher: string, nodeType: string, node: FlowNode) => void;
 
 interface NodeFactoryPublishers {
     [name: string]: PublisherConfig

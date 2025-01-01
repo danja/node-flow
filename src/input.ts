@@ -41,8 +41,8 @@ export class MouseObserver {
         ele.addEventListener('touchstart', this.#touchDown.bind(this), false);
 
         // Up
-        ele.addEventListener('mouseup', this.#up.bind(this), false);
-        ele.addEventListener('touchend', this.#up.bind(this), false);
+        document.addEventListener('mouseup', this.#up.bind(this), false);
+        document.addEventListener('touchend', this.#up.bind(this), false);
 
         // Move
         ele.addEventListener('mousemove', this.#move.bind(this), false);

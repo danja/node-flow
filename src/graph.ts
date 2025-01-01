@@ -2,7 +2,7 @@ import { CombineContextMenus, ContextEntry, ContextMenu, ContextMenuConfig } fro
 import { Theme } from "./theme";
 import { MouseObserver } from "./input";
 import { FlowNode } from "./node";
-import { NodeFactoryConfig } from "./nodes/factory";
+import { NodeCreatedCallback, NodeFactoryConfig } from "./nodes/factory";
 import { TimeExecution } from "./performance";
 import { CursorStyle } from "./styles/cursor";
 import { CopyVector2, Vector2, Zero } from './types/vector2';
@@ -10,7 +10,7 @@ import { Clamp01 } from "./utils/math";
 import { GraphSubsystem, RenderResults } from './graphSubsystem';
 import { FlowNote, FlowNoteConfig } from "./notes/note";
 import { NoteSubsystem } from "./notes/subsystem";
-import { ConnectionRendererConfiguration, NodeSubsystem } from "./nodes/subsystem";
+import { ConnectionRendererConfiguration, NodeAddedCallback, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
 import { Publisher } from './nodes/publisher';
 import { VectorPool } from './types/pool';
@@ -321,6 +321,14 @@ export class NodeFlowGraph {
 
     addNote(note: FlowNote): void {
         this.#mainNoteSubsystem.addNote(note);
+    }
+
+    public addOnNodeCreatedListener(callback: NodeCreatedCallback): void {
+        this.#mainNodeSubsystem.addOnNodeCreatedListener(callback);
+    }
+
+    public addOnNodeAddedListener(callback: NodeAddedCallback): void {
+        this.#mainNodeSubsystem.addOnNodeAddedListener(callback);
     }
 
     #sceenPositionToGraphPosition(screenPosition: Vector2): Vector2 {

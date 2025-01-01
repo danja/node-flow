@@ -271,6 +271,19 @@ node.addOutput({ name: "sum", type: "float32" })
         graph.addNode(sumNode)
         graph.addNode(aNode)
         graph.addNode(bNode)
+        graph.addNode(new FlowNode({
+            position: {
+                x: 1050,
+                y: 600
+            },
+            title: "Add",
+            inputs: [
+                { name: "numbers", type: "float32", array: true },
+            ],
+            outputs: [
+                { name: "sum", type: "float32" }
+            ],
+        }))
 
         graph.connectNodes(aNode, 0, sumNode, 0)
         graph.connectNodes(bNode, 0, sumNode, 1)

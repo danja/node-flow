@@ -5,7 +5,7 @@ import { RenderResults } from "../graphSubsystem";
 import { FlowNode, NodeState } from "../node";
 import { Organize } from "../organize";
 import { TimeExecution } from "../performance";
-import { Port } from "../port";
+import { Port, PortType } from "../port";
 import { BoxStyle } from "../styles/box";
 import { CursorStyle } from "../styles/cursor";
 import { Theme } from "../theme";
@@ -14,8 +14,10 @@ import { List } from "../types/list";
 import { Pool, VectorPool } from "../types/pool";
 import { AddVector2, CopyVector2, SubVector2, Vector2, Zero } from "../types/vector2";
 import { Widget } from "../widgets/widget";
-import { NodeFactory, NodeFactoryConfig } from "./factory";
+import { NodeCreatedCallback, NodeFactory, NodeFactoryConfig } from "./factory";
 import { Publisher } from "./publisher";
+
+export type NodeAddedCallback = (node: FlowNode) => void;
 
 export const nodeFlowGroup = "node-flow-graph-node-menu";
 
@@ -88,6 +90,8 @@ export class NodeSubsystem {
 
     #boxSelectStyle: BoxStyle;
 
+    #registeredNodeAddedCallbacks: Array<NodeAddedCallback>;
+
     constructor(config?: NodeSubsystemConfig) {
         this.#nodes = [];
         this.#nodeHovering = -1;
@@ -99,6 +103,7 @@ export class NodeSubsystem {
         this.#connections = new Array<Connection>();
         this.#nodeFactory = new NodeFactory(config?.nodes);
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
+        this.#registeredNodeAddedCallbacks = new Array<NodeAddedCallback>();
 
         this.#boxSelect = false;
         this.#boxSelectStart_graphSpace = Zero();
@@ -114,8 +119,16 @@ export class NodeSubsystem {
         });
     }
 
-    addPublisher(identifier: string, publisher: Publisher): void {
+    public addPublisher(identifier: string, publisher: Publisher): void {
         this.#nodeFactory.addPublisher(identifier, publisher);
+    }
+
+    public addOnNodeCreatedListener(callback: NodeCreatedCallback): void {
+        this.#nodeFactory.addOnNodeCreatedListener(callback);
+    }
+
+    public addOnNodeAddedListener(callback: NodeAddedCallback): void {
+        this.#registeredNodeAddedCallbacks.push(callback);
     }
 
     clickStart(mousePosition: Vector2, camera: Camera, ctrlKey: boolean): boolean {
@@ -156,6 +169,7 @@ export class NodeSubsystem {
                 if (this.#connections[i].inPort() === this.#portHovering.Port) {
                     this.#connections[i].clearInput();
                     this.#connectionSelected = this.#connections[i];
+                    break;
                 }
             }
         } else {
@@ -267,20 +281,22 @@ export class NodeSubsystem {
         }
 
         // Different types, can't connect
-        if (this.#portHovering.InputPort && this.#portHovering.Port.getType() !== conn.outPort()?.getType()) {
+        if (this.#portHovering.InputPort && this.#portHovering.Port.getDataType() !== conn.outPort()?.getDataType()) {
             this.#clearCurrentlySelectedConnection();
             return;
         }
 
         // Different types, can't connect
-        if (!this.#portHovering.InputPort && this.#portHovering.Port.getType() !== conn.inPort()?.getType()) {
+        if (!this.#portHovering.InputPort && this.#portHovering.Port.getDataType() !== conn.inPort()?.getDataType()) {
             this.#clearCurrentlySelectedConnection();
             return;
         }
 
         // Ight. Let's make the connection.
         if (this.#portHovering.InputPort) {
-            this.clearNodeInputConnection(this.#portHovering.Node, this.#portHovering.Index);
+            if (this.#portHovering.Port.getPortType() !== PortType.InputArray) {
+                this.clearNodeInputConnection(this.#portHovering.Node, this.#portHovering.Index);
+            }
             conn.setInput(this.#portHovering.Node, this.#portHovering.Index)
         } else {
             conn.setOutput(this.#portHovering.Node, this.#portHovering.Index);
@@ -290,8 +306,8 @@ export class NodeSubsystem {
     }
 
     connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
-        const outType = nodeOut.outputPort(outPort).getType();
-        const inType = nodeIn.inputPort(inPort).getType();
+        const outType = nodeOut.outputPort(outPort).getDataType();
+        const inType = nodeIn.inputPort(inPort).getDataType();
         if (outType !== inType) {
             console.error("can't connect nodes of different types", outType, inType);
             return;
@@ -359,6 +375,13 @@ export class NodeSubsystem {
 
     addNode(node: FlowNode): void {
         this.#nodes.push(node);
+        for (let i = 0; i < this.#registeredNodeAddedCallbacks.length; i++) {
+            const callback = this.#registeredNodeAddedCallbacks[i];
+            if (!callback) {
+                continue;
+            }
+            callback(node);
+        }
     }
 
     fileDrop(file: File): boolean {

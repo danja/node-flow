@@ -60,6 +60,7 @@ export interface FlowNodeConfig {
     data?: NodeData;
     canEdit?: boolean;
     contextMenu?: ContextMenuConfig;
+    metadata?: any;
 
     // Ports
     inputs?: Array<PortConfig>;
@@ -117,6 +118,8 @@ export class FlowNode {
 
     #contextMenu: ContextMenuConfig | null;
 
+    #metadata: any;
+
     // Callbacks
 
     #onSelect: Array<() => void>;
@@ -169,6 +172,7 @@ export class FlowNode {
         this.#registeredAnyPropertyChangeCallbacks = new Array<AnyPropertyChangeCallback>();
         this.#canEdit = config?.canEdit === undefined ? false : config.canEdit;
         this.#contextMenu = config?.contextMenu === undefined ? null : config.contextMenu;
+        this.#metadata = config?.metadata;
 
         this.#selected = false;
         this.#onSelect = new Array<() => void>;
@@ -251,6 +255,10 @@ export class FlowNode {
                 this.addWidget(GlobalWidgetFactory.create(this, widget.type, widget.config))
             }
         }
+    }
+
+    public metadata(): any {
+        return this.#metadata;
     }
 
     public selected(): boolean {
@@ -630,7 +638,7 @@ export class FlowNode {
     }
 
     addInput(config: PortConfig): Port {
-        const port = new Port(this, PortType.Input, config);
+        const port = new Port(this, config.array? PortType.InputArray : PortType.Input, config);
         this.#input.push(port);
         return port;
     }

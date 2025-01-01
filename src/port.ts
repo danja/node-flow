@@ -24,6 +24,7 @@ type ConnectionChangeCallback = (connection: Connection, port: Port, portType: P
 export interface PortConfig {
     name?: string;
     type?: string;
+    array?: boolean;
     emptyStyle?: PortStyle;
     filledStyle?: PortStyle;
     onConnectionAdded?: ConnectionChangeCallback;
@@ -100,7 +101,6 @@ export class Port {
 
     addConnection(connection: Connection): void {
         this.#connections.push(connection);
-
         for (let i = 0; i < this.#onConnectionAdded.length; i++) {
             this.#onConnectionAdded[i](connection, this, this.#portType, this.#node);
         }
@@ -132,8 +132,12 @@ export class Port {
         }
     }
 
-    getType(): string {
+    getDataType(): string {
         return this.#dataType;
+    }
+
+    getPortType(): PortType {
+        return this.#portType;
     }
 
     getDisplayName(): string {
@@ -172,8 +176,13 @@ export class Port {
 
         ctx.strokeStyle = style.borderColor as string;
         ctx.fillStyle = style.fillColor as string;
+
         ctx.beginPath();
-        ctx.arc(position.x, position.y, radius, 0, 2 * Math.PI);
+        if (this.#portType === PortType.InputArray) {
+            ctx.rect(position.x - radius, position.y - radius, radius * 2, radius * 2)
+        } else {
+            ctx.arc(position.x, position.y, radius, 0, 2 * Math.PI);
+        }
         ctx.fill();
         ctx.stroke();
 
