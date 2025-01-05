@@ -305,11 +305,29 @@ export class NodeSubsystem {
         this.#connectionSelected = null;
     }
 
-    connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
+    connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort: number): Connection | undefined {
         const outType = nodeOut.outputPort(outPort).getDataType();
         const inType = nodeIn.inputPort(inPort).getDataType();
         if (outType !== inType) {
             console.error("can't connect nodes of different types", outType, inType);
+            return;
+        }
+
+        // Check and make sure the nodes aren't already connected
+        const existingInputConnections = nodeIn.inputPort(inPort).connections();
+        for (let i = 0; i < existingInputConnections.length; i++) {
+            const connection = existingInputConnections[i];
+
+
+            if (connection.outNode() !== nodeOut) {
+                continue;
+            }
+
+            if(connection.outPort() !== nodeOut.outputPort(outPort)){
+                continue;
+            }
+
+            // This kind of connection already *exists*. Let's not add a duplicate
             return;
         }
 

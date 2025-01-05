@@ -438,7 +438,12 @@ export class FlowNode {
     public contextMenu(): ContextMenuConfig {
         let config: ContextMenuConfig = {
             group: nodeFlowGroup,
-            items: [],
+            items: [{
+                name: "Debug",
+                callback: () => {
+                    console.log(this);
+                }
+            }],
             subMenus: [],
         }
 

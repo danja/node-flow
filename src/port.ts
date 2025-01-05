@@ -1,5 +1,5 @@
 import { Camera } from "./camera";
-import { Connection } from "./connection";
+import { Connection } from './connection';
 import { FlowNode } from "./node";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { Box, BoxIntersection, InBox } from "./types/box";
@@ -19,7 +19,7 @@ export interface PortStyle {
     borderSize?: number;
 }
 
-type ConnectionChangeCallback = (connection: Connection, port: Port, portType: PortType, node: FlowNode) => void
+type ConnectionChangeCallback = (connection: Connection, connectionIndex: number, port: Port, portType: PortType, node: FlowNode) => void
 
 export interface PortConfig {
     name?: string;
@@ -100,9 +100,10 @@ export class Port {
     }
 
     addConnection(connection: Connection): void {
+        const c = this.#connections.length;
         this.#connections.push(connection);
         for (let i = 0; i < this.#onConnectionAdded.length; i++) {
-            this.#onConnectionAdded[i](connection, this, this.#portType, this.#node);
+            this.#onConnectionAdded[i](connection, c, this, this.#portType, this.#node);
         }
     }
 
@@ -111,6 +112,10 @@ export class Port {
             return;
         }
         this.#onConnectionAdded.push(callback);
+    }
+
+    connections(): Array<Connection> {
+        return this.#connections;
     }
 
     addConnectionRemovedListener(callback: ConnectionChangeCallback) {
@@ -125,7 +130,7 @@ export class Port {
         if (index > -1) {
             this.#connections.splice(index, 1);
             for (let i = 0; i < this.#onConnectionRemoved.length; i++) {
-                this.#onConnectionRemoved[i](connection, this, this.#portType, this.#node);
+                this.#onConnectionRemoved[i](connection,index, this, this.#portType, this.#node);
             }
         } else {
             console.error("no connection found to remove");
