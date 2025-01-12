@@ -81,23 +81,25 @@ var graph = new NodeFlowGraph(canvas, {
     },
 
     // Notes we want rendered on the graph.
-    notes: [
-        {
-            // Where to render the note
-            position: { x: 20, y: 20 },
+    board: {
+        notes: [
+            {
+                // Where to render the note
+                position: { x: 20, y: 20 },
 
-            // Whether or not the note can be 
-            // interacted with on the graph
-            locked: true,
+                // Whether or not the note can be 
+                // interacted with on the graph
+                locked: true,
 
-            // Markdown enabled text
-            text: `
-            # My First note!!!
+                // Markdown enabled text
+                text: `
+                # My First note!!!
 
-            Not sure what to write here
-            `
-        },  
-    ],
+                Not sure what to write here
+                `
+            },  
+        ]
+    },
 });
 ```
 

@@ -10,12 +10,17 @@ import { Box } from "../types/box";
 import { CopyVector2, Vector2, Zero } from "../types/vector2";
 import { Camera } from "../camera";
 
+export type NoteContentChangeCallback = (node: FlowNote, newContents: string) => void
+export type NoteWidthChangeCallback = (node: FlowNote, newWidth: number) => void
+
 export interface FlowNoteConfig {
     text?: string;
     style?: TextStyleConfig;
     position?: Vector2;
     width?: number;
     locked?: boolean;
+    onWidthChange?: NoteWidthChangeCallback;
+    onContentChange?: NoteContentChangeCallback;
 }
 
 export enum DragHandle {
@@ -49,9 +54,19 @@ export class FlowNote {
 
     #hovering: boolean;
 
+    // Callbacks ==============================================================
+
+    #widthChangeCallbacks: Array<NoteWidthChangeCallback>;
+
+    #contentChangeCallbacks: Array<NoteContentChangeCallback>;
+
     // ========================================================================
 
     constructor(config?: FlowNoteConfig) {
+        this.#widthChangeCallbacks = new Array<NoteWidthChangeCallback>();
+        this.#contentChangeCallbacks = new Array<NoteContentChangeCallback>();
+
+
         this.#hovering = false;
         this.#edittingLayout = config?.locked === undefined ? true : !config?.locked;
         this.#width = config?.width === undefined ? 500 : config.width;
@@ -66,16 +81,43 @@ export class FlowNote {
                 size: 1
             },
         })
+
+        if (config?.onWidthChange) {
+            this.#widthChangeCallbacks.push(config.onWidthChange);
+        }
+
+        if (config?.onContentChange) {
+            this.#contentChangeCallbacks.push(config.onContentChange);
+        }
     }
 
     setText(text: string): void {
         this.#originalText = text;
         this.#document = BuildMarkdown(this.#originalText);
+        for (let i = 0; i < this.#contentChangeCallbacks.length; i++) {
+            this.#contentChangeCallbacks[i](this, text);
+        }
+    }
+
+    text(): string {
+        return this.#originalText;
+    }
+
+    width(): number {
+        return this.#width;
+    }
+
+    position(): Vector2 {
+        return this.#position;
     }
 
     translate(delta: Vector2): void {
         this.#position.x += delta.x;
         this.#position.y += delta.y;
+    }
+
+    setPosition(position: Vector2): void {
+        CopyVector2(this.#position, position);
     }
 
     handleSelected(): DragHandle {
@@ -88,6 +130,30 @@ export class FlowNote {
 
     #tempPosition: Vector2 = Zero();
 
+    public setWidth(newWidth: number): void {
+        if (newWidth === undefined) {
+            console.error("Attempted to set note's width to undefined");
+        }
+        this.#width = newWidth;
+        for (let i = 0; i < this.#widthChangeCallbacks.length; i++) {
+            this.#widthChangeCallbacks[i](this, newWidth);
+        }
+    }
+
+    public addWidthChangeListener(callback: NoteWidthChangeCallback): void {
+        if (callback === null || callback === undefined) {
+            return;
+        }
+        this.#widthChangeCallbacks.push(callback);
+    }
+
+    public addContentChangeListener(callback: NoteContentChangeCallback): void {
+        if (callback === null || callback === undefined) {
+            return;
+        }
+        this.#contentChangeCallbacks.push(callback);
+    }
+
     render(ctx: CanvasRenderingContext2D, camera: Camera, mousePosition: Vector2 | undefined): void {
         if (this.#edittingLayout && (this.#hovering || this.#handleSelected !== DragHandle.None)) {
 
@@ -95,15 +161,15 @@ export class FlowNote {
                 if (this.#handleSelected === DragHandle.Right) {
 
                     const leftPosition = (this.#position.x * camera.zoom) + camera.position.x;
-                    this.#width = Math.max((mousePosition.x - leftPosition) / camera.zoom, 1)
+                    this.setWidth(Math.max((mousePosition.x - leftPosition) / camera.zoom, 1));
 
                 } else if (this.#handleSelected === DragHandle.Left) {
 
                     const scaledWidth = this.#width * camera.zoom;
                     const rightPosition = (this.#position.x * camera.zoom) + camera.position.x + scaledWidth;
-                    this.#width = Math.max((rightPosition - mousePosition.x) / camera.zoom, 1)
+                    this.setWidth(Math.max((rightPosition - mousePosition.x) / camera.zoom, 1));
                     this.#position.x = rightPosition - (this.#width * camera.zoom) - camera.position.x;
-                    this.#position.x /= camera.zoom; 
+                    this.#position.x /= camera.zoom;
                 }
             }
 
@@ -127,10 +193,10 @@ export class FlowNote {
             ctx.stroke();
             // this.#edittingStyle.Outline(ctx, bigBox, camera.zoom, 2);
         }
-        
+
         camera.graphSpaceToScreenSpace(this.#position, this.#tempPosition);
         CopyVector2(this.#lastRenderedBox.Position, this.#tempPosition)
-        
+
         const startY = this.#tempPosition.y;
         const lineSpacing = Theme.Note.EntrySpacing * camera.zoom;
 

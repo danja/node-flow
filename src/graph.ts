@@ -8,8 +8,8 @@ import { CursorStyle } from "./styles/cursor";
 import { CopyVector2, Vector2, Zero } from './types/vector2';
 import { Clamp01 } from "./utils/math";
 import { GraphSubsystem, RenderResults } from './graphSubsystem';
-import { FlowNote, FlowNoteConfig } from "./notes/note";
-import { NoteSubsystem } from "./notes/subsystem";
+import { FlowNote } from "./notes/note";
+import { NoteAddedCallback, NoteDragStartCallback, NoteDragStopCallback, NoteSubsystem, NoteSubsystemConfig } from "./notes/subsystem";
 import { ConnectionRendererConfiguration, NodeAddedCallback, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
 import { Publisher } from './nodes/publisher';
@@ -52,7 +52,7 @@ export interface FlowNodeGraphConfiguration {
     idleConnection?: ConnectionRendererConfiguration
     contextMenu?: ContextMenuConfig
     nodes?: NodeFactoryConfig
-    notes?: Array<FlowNoteConfig>
+    board?: NoteSubsystemConfig
 }
 
 interface OpenContextMenu {
@@ -165,7 +165,7 @@ export class NodeFlowGraph {
             idleConnection: config?.idleConnection
         });
 
-        this.#mainNoteSubsystem = new NoteSubsystem(config?.notes);
+        this.#mainNoteSubsystem = new NoteSubsystem(config?.board);
 
         this.#views = [
             new GraphView([
@@ -254,6 +254,19 @@ export class NodeFlowGraph {
             }]
         }));
     }
+
+    public addNoteAddedListener(callback: NoteAddedCallback): void {
+        this.#mainNoteSubsystem.addNoteAddedListener(callback);
+    }
+
+    public addNoteDragStartListener(callback: NoteDragStartCallback): void {
+        this.#mainNoteSubsystem.addNoteDragStartListener(callback);
+    }
+
+    public addNoteDragStopListener(callback: NoteDragStopCallback): void {
+        this.#mainNoteSubsystem.addNoteDragStopListener(callback);
+    }
+
 
     zoom(amount: number): void {
 

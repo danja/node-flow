@@ -71,6 +71,7 @@ export interface FlowNodeConfig {
     onRelease?: () => void;
     onSelect?: () => void;
     onUnselect?: () => void;
+    onDragStop?: (FlowNode) => void;
     onFileDrop?: (file: File) => void;
 
     // Widgets
@@ -128,6 +129,8 @@ export class FlowNode {
 
     #onFiledrop: Array<(file: File) => void>;
 
+    #onDragStop: Array<(node: FlowNode) => void>;
+
     // Styling ================================================================
 
     #titleColor: string;
@@ -175,9 +178,10 @@ export class FlowNode {
         this.#metadata = config?.metadata;
 
         this.#selected = false;
-        this.#onSelect = new Array<() => void>;
-        this.#onUnselect = new Array<() => void>;
-        this.#onFiledrop = new Array<(file: File) => void>;
+        this.#onSelect = new Array<() => void>();
+        this.#onUnselect = new Array<() => void>();
+        this.#onFiledrop = new Array<(file: File) => void>();
+        this.#onDragStop = new Array<() => void>();
 
         if (config?.onSelect) {
             this.#onSelect.push(config?.onSelect);
@@ -189,6 +193,10 @@ export class FlowNode {
 
         if (config?.onFileDrop) {
             this.#onFiledrop.push(config?.onFileDrop);
+        }
+
+        if (config?.onDragStop) {
+            this.#onDragStop.push(config.onDragStop);
         }
 
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
@@ -273,6 +281,18 @@ export class FlowNode {
         for (let i = 0; i < this.#onSelect.length; i++) {
             this.#onSelect[i]();
         }
+    }
+
+    public raiseDragStoppedEvent() {
+        for (let i = 0; i < this.#onDragStop.length; i++) {
+            this.#onDragStop[i](this);
+        }
+    }
+
+    public addDragStoppedListener(callback: (node: FlowNode) => void): void {
+        if (callback === undefined || callback === null) {
+        }
+        this.#onDragStop.push(callback);
     }
 
     public addAnyPropertyChangeListener(callback: AnyPropertyChangeCallback): void {
@@ -587,6 +607,10 @@ export class FlowNode {
         CopyVector2(this.#position, position);
     }
 
+    public getPosition(): Vector2 {
+        return this.#position;
+    }
+
     // #measureTitleText(ctx: CanvasRenderingContext2D, scale: number): Vector2 {
     //     return this.#titleTextStyle.measure(ctx, scale, this.#title);
     // }
@@ -643,7 +667,7 @@ export class FlowNode {
     }
 
     addInput(config: PortConfig): Port {
-        const port = new Port(this, config.array? PortType.InputArray : PortType.Input, config);
+        const port = new Port(this, config.array ? PortType.InputArray : PortType.Input, config);
         this.#input.push(port);
         return port;
     }

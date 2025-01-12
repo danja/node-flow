@@ -231,6 +231,11 @@ export class NodeSubsystem {
     }
 
     clickEnd(): void {
+
+        for(let i = 0; i < this.#nodesGrabbed.Count(); i ++) {
+            const node = this.#nodes[this.#nodesGrabbed.At(i)];
+            node.raiseDragStoppedEvent();
+        }
         this.#nodesGrabbed.Clear();
 
         if (this.#boxSelect) {

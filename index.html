@@ -124,9 +124,10 @@
                     },
                 },
             },
-            notes: [
-                {
-                    text: `
+            board: {
+                notes: [
+                    {
+                        text: `
 # Notes
 
 This is an example of a *note* written in **markdown**.
@@ -146,19 +147,19 @@ This is a minimal implementation with graph-specific functionality. Currently im
 * Unordered Lists
 * Code blocks
 `,
-                    position: {
-                        x: 2300,
-                        y: 20
+                        position: {
+                            x: 2300,
+                            y: 20
+                        },
+                        locked: true,
                     },
-                    locked: true,
-                },
-                {
-                    position: {
-                        x: 20,
-                        y: 20
-                    },
-                    locked: true,
-                    text: `
+                    {
+                        position: {
+                            x: 20,
+                            y: 20
+                        },
+                        locked: true,
+                        text: `
 # Node Flow
 
 Node Flow is a javascript library that enables developers to build node based tools similar to Unreal Blueprints or Blender Nodes. 
@@ -175,9 +176,10 @@ var canvas = document.createElement("canvas");
 var graph = new NodeFlowGraph(canvas)
 \`\`\`
 `
-                },
+                    },
 
-            ]
+                ]
+            }
         });
 
         graph.addNote(new FlowNote({
@@ -268,10 +270,7 @@ node.addOutput({ name: "sum", type: "float32" })
             ]
         })
 
-        graph.addNode(sumNode)
-        graph.addNode(aNode)
-        graph.addNode(bNode)
-        graph.addNode(new FlowNode({
+        const arrNode = new FlowNode({
             position: {
                 x: 1050,
                 y: 600
@@ -283,10 +282,18 @@ node.addOutput({ name: "sum", type: "float32" })
             outputs: [
                 { name: "sum", type: "float32" }
             ],
-        }))
+        });
+
+        graph.addNode(sumNode)
+        graph.addNode(aNode)
+        graph.addNode(bNode)
+        graph.addNode(arrNode)
 
         graph.connectNodes(aNode, 0, sumNode, 0)
         graph.connectNodes(bNode, 0, sumNode, 1)
+
+        graph.connectNodes(aNode, 0, arrNode, 0)
+        graph.connectNodes(bNode, 0, arrNode, 0)
 
     </script>
 </body>
