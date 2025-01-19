@@ -173,10 +173,16 @@ export class Connection {
         this.clearOutput();
     }
 
-    setInput(node: FlowNode, portIndex: number): void {
+    setInput(node: FlowNode, portIndex: number, replace?: boolean): void {
         this.#inNode = node;
         this.#inNodePortIndex = portIndex;
-        this.#inNode.inputPort(portIndex).addConnection(this);
+
+        const port = this.#inNode.inputPort(portIndex);
+        if(!!replace && port.connections().length > 0) {
+            port.replaceConnection(this, 0);
+        } else {
+            port.addConnection(this);
+        }
     }
 
     setOutput(node: FlowNode, portIndex: number): void {

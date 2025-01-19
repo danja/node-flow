@@ -1,6 +1,7 @@
 import { Camera } from "./camera";
 import { Connection } from './connection';
 import { FlowNode } from "./node";
+import { PassSubsystem } from "./pass/subsystem";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { Box, BoxIntersection, InBox } from "./types/box";
 import { Vector2 } from "./types/vector2";
@@ -107,6 +108,14 @@ export class Port {
         }
     }
 
+    replaceConnection(connection: Connection, index: number): void {
+        const c = this.#connections.length;
+        this.#connections[index] = connection;
+        for (let i = 0; i < this.#onConnectionAdded.length; i++) {
+            this.#onConnectionAdded[i](connection, c, this, this.#portType, this.#node);
+        }
+    }
+
     addConnectionAddedListener(callback: ConnectionChangeCallback) {
         if (callback === undefined) {
             return;
@@ -130,7 +139,7 @@ export class Port {
         if (index > -1) {
             this.#connections.splice(index, 1);
             for (let i = 0; i < this.#onConnectionRemoved.length; i++) {
-                this.#onConnectionRemoved[i](connection,index, this, this.#portType, this.#node);
+                this.#onConnectionRemoved[i](connection, index, this, this.#portType, this.#node);
             }
         } else {
             console.error("no connection found to remove");
@@ -159,34 +168,51 @@ export class Port {
 
     #box: Box = { Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
 
-    render(ctx: CanvasRenderingContext2D, position: Vector2, camera: Camera, mousePosition: Vector2 | undefined): Box {
+    render(ctx: CanvasRenderingContext2D, position: Vector2, camera: Camera, mousePosition: Vector2 | undefined, postProcess: PassSubsystem): Box {
         let style = this.#emptyStyle;
         if (this.#connections.length > 0) {
             style = this.#filledStyle;
         }
 
-        let radius = style.size as number * camera.zoom
+        let scaledRadius = style.size as number * camera.zoom
 
         if (mousePosition && InBox(this.#box, mousePosition)) {
-            radius *= 1.25;
+            scaledRadius *= 1.25;
 
-            ctx.textAlign = TextAlign.Center;
-            ctx.fillText(this.#dataType, position.x, position.y + (radius * 3));
+            // Redeclare so lambda is ensured to use these values
+            const xPos = position.x;
+            const yPos = position.y;
+
+            postProcess.queue(() => {
+                ctx.textAlign = TextAlign.Center;
+
+                const padding = 13;
+                const measurement = ctx.measureText(this.#dataType)
+                const w = measurement.width + (padding * camera.zoom);
+
+                ctx.beginPath();
+                ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+                ctx.roundRect(xPos - w / 2, yPos + (scaledRadius * 3) - (padding * camera.zoom), w, (padding * 2) * camera.zoom, 4 * camera.zoom);
+                ctx.fill();
+
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillText(this.#dataType, xPos, yPos + (scaledRadius * 3));
+            })
         }
 
-        this.#box.Position.x = position.x - radius;
-        this.#box.Position.y = position.y - radius;
-        this.#box.Size.x = radius * 2;
-        this.#box.Size.y = radius * 2;
+        this.#box.Position.x = position.x - scaledRadius;
+        this.#box.Position.y = position.y - scaledRadius;
+        this.#box.Size.x = scaledRadius * 2;
+        this.#box.Size.y = scaledRadius * 2;
 
         ctx.strokeStyle = style.borderColor as string;
         ctx.fillStyle = style.fillColor as string;
 
         ctx.beginPath();
         if (this.#portType === PortType.InputArray) {
-            ctx.rect(position.x - radius, position.y - radius, radius * 2, radius * 2)
+            ctx.rect(position.x - scaledRadius, position.y - scaledRadius, scaledRadius * 2, scaledRadius * 2)
         } else {
-            ctx.arc(position.x, position.y, radius, 0, 2 * Math.PI);
+            ctx.arc(position.x, position.y, scaledRadius, 0, 2 * Math.PI);
         }
         ctx.fill();
         ctx.stroke();

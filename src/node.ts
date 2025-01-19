@@ -1,7 +1,7 @@
 import { Port, PortConfig, PortType } from "./port";
 import { FontWeight, TextStyle, TextStyleConfig, TextStyleFallback } from "./styles/text";
 import { Box, InBox } from "./types/box";
-import { CopyVector2, Vector2, Zero } from "./types/vector2";
+import { CopyVector2, Distance, Vector2, Zero } from "./types/vector2";
 import { Widget } from './widgets/widget';
 import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
@@ -10,7 +10,7 @@ import { GlobalWidgetFactory } from "./widgets/factory";
 import { Theme } from "./theme";
 import { TextAlign } from "./styles/canvasTextAlign";
 import { TextBaseline } from "./styles/canvasTextBaseline";
-import { CombineContextMenus, ContextMenuConfig } from "./contextMenu";
+import { CombineContextMenus, ContextMenuConfig, ContextMenuItemConfig } from "./contextMenu";
 import { nodeFlowGroup } from "./nodes/subsystem";
 import { SetStringPopup } from "./popups/string";
 import { ButtonWidget } from "./widgets/button";
@@ -23,11 +23,15 @@ import { SliderWidget } from "./widgets/slider";
 import { ImageWidget } from "./widgets/image";
 import { VectorPool } from "./types/pool";
 import { Camera } from "./camera";
+import { PassSubsystem } from "./pass/subsystem";
+import { splitString, splitStringIntoLines } from "./utils/string";
 
 const MINIMUM_NODE_WIDTH = 150;
 
 type AnyPropertyChangeCallback = (propertyName: string, oldValue: any, newValue: any) => void
 type PropertyChangeCallback = (oldValue: any, newValue: any) => void
+type TitleChangeCallback = (node: FlowNode, oldTitle: string, newTitle: string) => void
+type InfoChangeCallback = (node: FlowNode, oldInfo: string, newInfo: string) => void
 
 interface NodeData {
     [name: string]: any;
@@ -56,11 +60,15 @@ export interface FlowNodeStyle {
 export interface FlowNodeConfig {
     position?: Vector2;
     title?: string;
+    info?: string;
     locked?: boolean;
     data?: NodeData;
-    canEdit?: boolean;
     contextMenu?: ContextMenuConfig;
     metadata?: any;
+
+    canEditTitle?: boolean;
+    canEditInfo?: boolean;
+    canEditPorts?: boolean;
 
     // Ports
     inputs?: Array<PortConfig>;
@@ -73,6 +81,8 @@ export interface FlowNodeConfig {
     onUnselect?: () => void;
     onDragStop?: (FlowNode) => void;
     onFileDrop?: (file: File) => void;
+    onTitleChange?: TitleChangeCallback;
+    onInfoChange?: InfoChangeCallback;
 
     // Widgets
     widgets?: Array<WidgetConfig>;
@@ -107,6 +117,10 @@ export class FlowNode {
 
     #title: Text;
 
+    #infoSymbol: Text;
+
+    #infoText: string;
+
     #input: Array<Port>;
 
     #output: Array<Port>;
@@ -115,7 +129,11 @@ export class FlowNode {
 
     #locked: boolean;
 
-    #canEdit: boolean;
+    #canEditTitle: boolean;
+
+    #canEditInfo: boolean;
+
+    #canEditPorts: boolean;
 
     #contextMenu: ContextMenuConfig | null;
 
@@ -130,6 +148,10 @@ export class FlowNode {
     #onFiledrop: Array<(file: File) => void>;
 
     #onDragStop: Array<(node: FlowNode) => void>;
+
+    #titleChangeCallback: Array<TitleChangeCallback>;
+
+    #infoChangeCallback: Array<InfoChangeCallback>;
 
     // Styling ================================================================
 
@@ -173,7 +195,9 @@ export class FlowNode {
         this.#data = config?.data === undefined ? {} : config?.data;
         this.#registeredPropertyChangeCallbacks = new Map<string, Array<PropertyChangeCallback>>();
         this.#registeredAnyPropertyChangeCallbacks = new Array<AnyPropertyChangeCallback>();
-        this.#canEdit = config?.canEdit === undefined ? false : config.canEdit;
+        this.#canEditPorts = config?.canEditPorts === undefined ? false : config.canEditPorts;
+        this.#canEditTitle = config?.canEditTitle === undefined ? false : config.canEditTitle;
+        this.#canEditInfo = config?.canEditInfo === undefined ? false : config.canEditInfo;
         this.#contextMenu = config?.contextMenu === undefined ? null : config.contextMenu;
         this.#metadata = config?.metadata;
 
@@ -182,6 +206,8 @@ export class FlowNode {
         this.#onUnselect = new Array<() => void>();
         this.#onFiledrop = new Array<(file: File) => void>();
         this.#onDragStop = new Array<() => void>();
+        this.#titleChangeCallback = new Array<TitleChangeCallback>();
+        this.#infoChangeCallback = new Array<InfoChangeCallback>();
 
         if (config?.onSelect) {
             this.#onSelect.push(config?.onSelect);
@@ -199,6 +225,14 @@ export class FlowNode {
             this.#onDragStop.push(config.onDragStop);
         }
 
+        if (config?.onTitleChange) {
+            this.#titleChangeCallback.push(config.onTitleChange);
+        }
+
+        if (config?.onInfoChange) {
+            this.#infoChangeCallback.push(config.onInfoChange);
+        }
+
         this.#position = config?.position === undefined ? { x: 0, y: 0 } : config.position;
         this.#title = new Text(
             config?.title === undefined ? "" : config.title,
@@ -208,6 +242,17 @@ export class FlowNode {
                 color: Theme.Node.FontColor
             })
         );
+
+        this.#infoSymbol = new Text(
+            "i",
+            {
+                size: 13,
+                weight: FontWeight.Bold,
+                color: Theme.Node.FontColor
+            }
+        );
+        this.#infoText = config?.info ? config?.info : "";
+
         this.#titleColor = config?.style?.title?.color === undefined ? "#154050" : config?.style?.title?.color;
 
         this.#padding = config?.style?.title?.padding === undefined ? 15 : config?.style?.title?.padding;
@@ -289,6 +334,19 @@ export class FlowNode {
         }
     }
 
+    public addTitleChangeListener(callback: TitleChangeCallback): void {
+        if (callback === undefined || callback === null) {
+        }
+        this.#titleChangeCallback.push(callback);
+    }
+
+    public addInfoChangeListener(callback: InfoChangeCallback): void {
+        if (callback === undefined || callback === null) {
+        }
+        this.#infoChangeCallback.push(callback);
+    }
+
+
     public addDragStoppedListener(callback: (node: FlowNode) => void): void {
         if (callback === undefined || callback === null) {
         }
@@ -346,7 +404,17 @@ export class FlowNode {
             onUpdate: (value: string): void => {
                 this.setTitle(value);
             },
-        }).Show()
+        }).Show();
+    }
+
+    #popupNodeInfoSelection(): void {
+        SetStringPopup({
+            title: "Set Node Info",
+            startingValue: this.#infoText,
+            onUpdate: (value: string): void => {
+                this.setInfo(value);
+            },
+        }).Show();
     }
 
     #popupNewButtonWidget(): void {
@@ -467,19 +535,30 @@ export class FlowNode {
             subMenus: [],
         }
 
-        if (this.canEdit()) {
-            config.subMenus?.push({
-                group: nodeFlowGroup,
-                name: "Edit",
-                items: [
-                    {
-                        name: "Title",
-                        callback: () => {
-                            this.#popupNodeTitleSelection();
-                        }
-                    },
-                ],
-                subMenus: [{
+        if (this.canEditPorts() || this.canEditTitle() || this.#canEditInfo) {
+
+            const items = new Array<ContextMenuItemConfig>();
+            if (this.canEditTitle()) {
+                items.push({
+                    name: "Title",
+                    callback: () => {
+                        this.#popupNodeTitleSelection();
+                    }
+                })
+            }
+
+            if (this.#canEditInfo) {
+                items.push({
+                    name: "Info",
+                    callback: () => {
+                        this.#popupNodeInfoSelection();
+                    }
+                })
+            }
+
+            const submenus = new Array<ContextMenuConfig>();
+            if (this.canEditPorts()) {
+                submenus.push({
                     name: "Add",
                     items: [
                         {
@@ -538,7 +617,14 @@ export class FlowNode {
                     subMenus: [
                         this.#widgetSubmenu(),
                     ]
-                }],
+                });
+            }
+
+            config.subMenus?.push({
+                group: nodeFlowGroup,
+                name: "Edit",
+                items: items,
+                subMenus: submenus,
             })
         }
 
@@ -626,8 +712,16 @@ export class FlowNode {
         const size = Zero();
         this.#title.size(ctx, 1, size);
 
+        if (this.#infoText !== "") {
+            size.x += (size.y * 2);
+        }
+
         size.x += doublePadding;
         size.y += doublePadding + (this.#elementSpacing * this.#input.length);
+
+        if (this.#infoText !== "") {
+            size.x += (size.y);
+        }
 
         for (let i = 0; i < this.#input.length; i++) {
             const port = this.#input[i];
@@ -732,8 +826,12 @@ export class FlowNode {
         return intersection;
     }
 
-    canEdit(): boolean {
-        return this.#canEdit;
+    canEditTitle(): boolean {
+        return this.#canEditTitle;
+    }
+
+    canEditPorts(): boolean {
+        return this.#canEditPorts;
     }
 
     title(): string {
@@ -741,10 +839,51 @@ export class FlowNode {
     }
 
     setTitle(newTitle: string): void {
-        // if (!this.#canEdit) {
-        //     console.warn("setTitle instruction ignored, as node has been marked un-editable");
-        // }
-        this.#title.set(newTitle);
+        if (!this.#canEditTitle) {
+            console.warn("setTitle instruction ignored, as node has been marked un-editable");
+            return;
+        }
+
+        let cleaned = newTitle;
+        if (cleaned === null || cleaned === undefined) {
+            cleaned = "";
+        }
+
+        const old = this.title();
+        if (cleaned === old) {
+            return;
+        }
+
+        this.#title.set(cleaned);
+
+        for (let i = 0; i < this.#titleChangeCallback.length; i++) {
+            const callback = this.#titleChangeCallback[i];
+            callback(this, old, cleaned);
+        }
+    }
+
+    setInfo(newInfo: string): void {
+        if (!this.#canEditInfo) {
+            console.warn("setInfo instruction ignored, as node has been marked un-editable");
+        }
+
+
+        let cleaned = newInfo;
+        if (cleaned === null || cleaned === undefined) {
+            cleaned = "";
+        }
+
+        if (cleaned === this.#infoText) {
+            return;
+        }
+
+        const old = this.#infoText;
+        this.#infoText = cleaned;
+
+        for (let i = 0; i < this.#infoChangeCallback.length; i++) {
+            const callback = this.#infoChangeCallback[i];
+            callback(this, old, cleaned);
+        }
     }
 
     inputPortPosition(index: number): Box {
@@ -784,7 +923,7 @@ export class FlowNode {
         return boxStyle;
     }
 
-    render(ctx: CanvasRenderingContext2D, camera: Camera, state: NodeState, mousePosition: Vector2 | undefined): void {
+    render(ctx: CanvasRenderingContext2D, camera: Camera, state: NodeState, mousePosition: Vector2 | undefined, postProcess: PassSubsystem): void {
         VectorPool.run(() => {
             const tempMeasurement = VectorPool.get();
 
@@ -814,11 +953,12 @@ export class FlowNode {
 
             ctx.fillStyle = this.#titleColor;
             ctx.beginPath();
+            const titleX = nodeBounds.Position.x + (borderSize * camera.zoom * 0.5)
+            const titleY = nodeBounds.Position.y + (borderSize * camera.zoom * 0.5)
+            const titleWidth = titleBoxSize.x - (borderSize * camera.zoom);
+            const titleHeight = titleBoxSize.y - (borderSize * camera.zoom * 0.5);
             ctx.roundRect(
-                nodeBounds.Position.x + (borderSize * camera.zoom * 0.5),
-                nodeBounds.Position.y + (borderSize * camera.zoom * 0.5),
-                titleBoxSize.x - (borderSize * camera.zoom),
-                titleBoxSize.y - (borderSize * camera.zoom * 0.5),
+                titleX, titleY, titleWidth, titleHeight,
                 [nodeStyle.radius() * camera.zoom, nodeStyle.radius() * camera.zoom, 0, 0]
             );
             ctx.fill();
@@ -829,11 +969,82 @@ export class FlowNode {
             titlePosition.y = nodeBounds.Position.y + scaledPadding + (titleSize.y / 2)
             this.#title.render(ctx, camera.zoom, titlePosition);
 
+            // Info symbol
+            if (this.#infoText !== "") {
+                const infoRadius = titleHeight * .25;
+                const centerX = titleX + titleWidth - (titleHeight * .25) - infoRadius;
+                const centerY = titleY + (titleHeight * .25) + infoRadius;
+
+                const infoPosition = VectorPool.get();
+                infoPosition.x = centerX;
+                infoPosition.y = centerY + (titleHeight * .025);
+
+                let infoLineThickness = 1.5 * camera.zoom;
+
+                if (mousePosition && Distance(infoPosition, mousePosition) <= infoRadius) {
+                    infoLineThickness *= 1.5;
+
+                    // This is a slightly expensive function if we're not 
+                    // caching, but it only executes while we're mousing over 
+                    // the info symbol, so I'm not particularly obligated to
+                    // optimize it. 
+                    //
+                    // If you're just bored, def cache the split string method,
+                    // and figure out a system to recalculate as a node has its
+                    // title, port, or widgets change.
+                    //
+                    // Should probably break out the lambda into a proper 
+                    // function as well. I think as it is, we're creating a new
+                    // lambda function per frame?
+                    postProcess.queue(() => {
+                        this.#infoSymbol.style().setupStyle(ctx, camera.zoom);
+                        ctx.textAlign = TextAlign.Center;
+
+                        const infoBoxWidth = titleWidth * 1.5;
+                        const textEntries = splitStringIntoLines(ctx, this.#infoText, infoBoxWidth);
+
+                        const lineHeight = (this.#infoSymbol.style().getSize() + 2);
+                        const infoBoxHeight = lineHeight * textEntries.length * camera.zoom;
+                        const scaledLineHeight = lineHeight * camera.zoom;
+                        const start = titleY - infoBoxHeight - (scaledLineHeight / 2);
+
+                        // Draw box
+                        ctx.fillStyle = this.#titleColor;
+                        ctx.beginPath();
+                        ctx.roundRect(
+                            centerX - (infoBoxWidth / 2) - (scaledLineHeight / 2),
+                            start - scaledLineHeight,
+                            infoBoxWidth + scaledLineHeight,
+                            infoBoxHeight + scaledLineHeight,
+                            nodeStyle.radius() * camera.zoom
+                        );
+                        ctx.fill();
+
+                        // Render Text
+                        this.#infoSymbol.style().setupStyle(ctx, camera.zoom);
+                        for (let i = 0; i < textEntries.length; i++) {
+                            const entry = textEntries[i];
+                            ctx.fillText(entry, centerX, start + (i * lineHeight * camera.zoom));
+                        }
+                    });
+                }
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, infoRadius, 0, 2 * Math.PI, false);
+                ctx.lineWidth = infoLineThickness;
+                ctx.strokeStyle = this.#infoSymbol.getColor();
+                ctx.stroke();
+
+                ctx.textAlign = TextAlign.Center;
+                this.#infoSymbol.render(ctx, camera.zoom, infoPosition);
+            }
+
+
             // Input Ports
             let startY = nodeBounds.Position.y + (scaledPadding * 2) + titleSize.y + scaledElementSpacing;
             const leftSide = nodeBounds.Position.x + scaledPadding;
-            ctx.textAlign = TextAlign.Left;
             for (let i = 0; i < this.#input.length; i++) {
+                ctx.textAlign = TextAlign.Left;
                 const port = this.#input[i];
                 this.#portTextStyle.measure(ctx, camera.zoom, port.getDisplayName(), tempMeasurement);
                 const position = VectorPool.get();
@@ -846,7 +1057,7 @@ export class FlowNode {
                 ctx.fillText(port.getDisplayName(), leftSide, position.y);
 
                 // Port
-                this.#inputPortPositions.Push(port.render(ctx, position, camera, mousePosition));
+                this.#inputPortPositions.Push(port.render(ctx, position, camera, mousePosition, postProcess));
 
                 startY += tempMeasurement.y + scaledElementSpacing;
             }
@@ -866,7 +1077,7 @@ export class FlowNode {
                 ctx.fillText(port.getDisplayName(), rightSide - scaledPadding, position.y);
 
                 // Port
-                this.#outputPortPositions.Push(port.render(ctx, position, camera, mousePosition));
+                this.#outputPortPositions.Push(port.render(ctx, position, camera, mousePosition, postProcess));
 
                 startY += tempMeasurement.y + scaledElementSpacing;
             }

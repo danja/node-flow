@@ -21,3 +21,9 @@ export function AddVector2(dst: Vector2, a: Vector2, b: Vector2): void {
 export function Zero(): Vector2 {
     return { x: 0, y: 0 };
 }
+
+export function Distance(a: Vector2, b: Vector2): number { 
+    const xd = b.x - a.x
+    const yd = b.y - a.y
+    return Math.sqrt((xd*xd)+(yd*yd))
+}

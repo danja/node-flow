@@ -76,6 +76,10 @@ export class TextStyle {
         this.#color = color;
     }
 
+    getColor(): string {
+        return this.#color ;
+    }
+
     setSize(size: number): void {
         this.#size = size;
     }

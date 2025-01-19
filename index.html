@@ -68,7 +68,9 @@
                         nodes: {
                             "empty": {
                                 title: "Empty Node",
-                                canEdit: true,
+                                canEditTitle: true,
+                                canEditPorts: true,
+                                canEditInfo: true
                             },
                             "widgets/slider": {
                                 title: "Slider Node",
@@ -193,6 +195,7 @@ Create a Add node that takes two numbers and outputs a single number
 \`\`\`
 var node = new FlowNode({ 
     title: "Add",
+    info:  "I add two numbers",
     inputs: [
         { name: "a", type: "float32" },
         { name: "b", type: "float32" }
@@ -220,6 +223,7 @@ node.addOutput({ name: "sum", type: "float32" })
                 y: 600
             },
             title: "Add",
+            info: "I add two numbers",
             inputs: [
                 { name: "a", type: "float32" },
                 { name: "b", type: "float32" }
@@ -236,6 +240,7 @@ node.addOutput({ name: "sum", type: "float32" })
                 y: 500
             },
             title: "Number",
+            info: "I'm a node with a number widget",
             outputs: [
                 { name: "value", type: "float32" }
             ],
@@ -253,6 +258,7 @@ node.addOutput({ name: "sum", type: "float32" })
                 y: 650
             },
             title: "Number",
+            info: "I'm a node with both a number and image widget on it",
             outputs: [
                 { name: "value", type: "float32" }
             ],
@@ -276,6 +282,7 @@ node.addOutput({ name: "sum", type: "float32" })
                 y: 600
             },
             title: "Add",
+            info: "This node contains a port that can take multiple input nodes at once, which can be useful for operations that can operate on [0,n] data sizes",
             inputs: [
                 { name: "numbers", type: "float32", array: true },
             ],

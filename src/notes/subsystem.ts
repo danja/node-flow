@@ -141,7 +141,7 @@ export class NoteSubsystem {
                     name: "Delete Note",
                     group: group,
                     callback: () => {
-                        this.#removeNote(noteToReview);
+                        this.removeNote(noteToReview);
                     }
                 },
                 {
@@ -213,7 +213,7 @@ export class NoteSubsystem {
         return false;
     }
 
-    #removeNote(note: FlowNote): void {
+    removeNote(note: FlowNote): void {
         const index = this.#notes.indexOf(note);
         if (index > -1) {
             const noteRemoved = this.#notes[index];

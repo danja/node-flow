@@ -9,12 +9,13 @@ import { CopyVector2, Vector2, Zero } from './types/vector2';
 import { Clamp01 } from "./utils/math";
 import { GraphSubsystem, RenderResults } from './graphSubsystem';
 import { FlowNote } from "./notes/note";
-import { NoteAddedCallback, NoteDragStartCallback, NoteDragStopCallback, NoteSubsystem, NoteSubsystemConfig } from "./notes/subsystem";
-import { ConnectionRendererConfiguration, NodeAddedCallback, NodeSubsystem } from "./nodes/subsystem";
+import { NoteAddedCallback, NoteDragStartCallback, NoteDragStopCallback, NoteRemovedCallback, NoteSubsystem, NoteSubsystemConfig } from "./notes/subsystem";
+import { ConnectionRendererConfiguration, NodeAddedCallback, NodeRemovedCallback, NodeSubsystem } from "./nodes/subsystem";
 import { Connection } from './connection';
 import { Publisher } from './nodes/publisher';
 import { VectorPool } from './types/pool';
 import { Camera } from './camera';
+import { PassSubsystem } from './pass/subsystem';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -160,7 +161,9 @@ export class NodeFlowGraph {
     #mainNoteSubsystem: NoteSubsystem;
 
     constructor(canvas: HTMLCanvasElement, config?: FlowNodeGraphConfiguration) {
-        this.#mainNodeSubsystem = new NodeSubsystem({
+        const postProcessPass = new PassSubsystem();
+
+        this.#mainNodeSubsystem = new NodeSubsystem(postProcessPass, {
             nodes: config?.nodes,
             idleConnection: config?.idleConnection
         });
@@ -171,6 +174,7 @@ export class NodeFlowGraph {
             new GraphView([
                 this.#mainNoteSubsystem,
                 this.#mainNodeSubsystem,
+                postProcessPass
             ])
         ];
         this.#currentView = 0;
@@ -259,6 +263,10 @@ export class NodeFlowGraph {
         this.#mainNoteSubsystem.addNoteAddedListener(callback);
     }
 
+    public addNoteRemovedListener(callback: NoteRemovedCallback): void {
+        this.#mainNoteSubsystem.addNoteRemovedListener(callback);
+    }
+
     public addNoteDragStartListener(callback: NoteDragStartCallback): void {
         this.#mainNoteSubsystem.addNoteDragStartListener(callback);
     }
@@ -342,6 +350,10 @@ export class NodeFlowGraph {
 
     public addOnNodeAddedListener(callback: NodeAddedCallback): void {
         this.#mainNodeSubsystem.addOnNodeAddedListener(callback);
+    }
+
+    public addOnNodeRemovedListener(callback: NodeRemovedCallback): void {
+        this.#mainNodeSubsystem.addOnNodeRemovedListener(callback);
     }
 
     #sceenPositionToGraphPosition(screenPosition: Vector2): Vector2 {

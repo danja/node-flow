@@ -4,6 +4,7 @@ import { CombineContextMenus, ContextMenuConfig } from "../contextMenu";
 import { RenderResults } from "../graphSubsystem";
 import { FlowNode, NodeState } from "../node";
 import { Organize } from "../organize";
+import { PassSubsystem } from "../pass/subsystem";
 import { TimeExecution } from "../performance";
 import { Port, PortType } from "../port";
 import { BoxStyle } from "../styles/box";
@@ -18,6 +19,7 @@ import { NodeCreatedCallback, NodeFactory, NodeFactoryConfig } from "./factory";
 import { Publisher } from "./publisher";
 
 export type NodeAddedCallback = (node: FlowNode) => void;
+export type NodeRemovedCallback = (node: FlowNode) => void;
 
 export const nodeFlowGroup = "node-flow-graph-node-menu";
 
@@ -58,6 +60,8 @@ interface NodeSubsystemConfig {
 
 export class NodeSubsystem {
 
+    #postProcessPass: PassSubsystem;
+
     #nodes: Array<FlowNode>;
 
     #connections: Array<Connection>;
@@ -90,9 +94,16 @@ export class NodeSubsystem {
 
     #boxSelectStyle: BoxStyle;
 
+    // LISTENERS ==============================================================
+
+    #nodeRemovedCallbacks: Array<NodeRemovedCallback>;
+
     #registeredNodeAddedCallbacks: Array<NodeAddedCallback>;
 
-    constructor(config?: NodeSubsystemConfig) {
+    // ========================================================================
+
+    constructor(postProcessPass: PassSubsystem, config?: NodeSubsystemConfig) {
+        this.#postProcessPass = postProcessPass;
         this.#nodes = [];
         this.#nodeHovering = -1;
         this.#nodesGrabbed = new List<number>();
@@ -104,6 +115,7 @@ export class NodeSubsystem {
         this.#nodeFactory = new NodeFactory(config?.nodes);
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
         this.#registeredNodeAddedCallbacks = new Array<NodeAddedCallback>();
+        this.#nodeRemovedCallbacks = new Array<NodeRemovedCallback>();
 
         this.#boxSelect = false;
         this.#boxSelectStart_graphSpace = Zero();
@@ -128,7 +140,17 @@ export class NodeSubsystem {
     }
 
     public addOnNodeAddedListener(callback: NodeAddedCallback): void {
+        if (callback === null || callback === undefined) {
+            return;
+        }
         this.#registeredNodeAddedCallbacks.push(callback);
+    }
+
+    public addOnNodeRemovedListener(callback: NodeRemovedCallback): void {
+        if (callback === null || callback === undefined) {
+            return;
+        }
+        this.#nodeRemovedCallbacks.push(callback);
     }
 
     clickStart(mousePosition: Vector2, camera: Camera, ctrlKey: boolean): boolean {
@@ -225,14 +247,14 @@ export class NodeSubsystem {
         const port = node.inputPort(index);
         for (let i = this.#connections.length - 1; i >= 0; i--) {
             if (this.#connections[i].inPort() === port) {
-                this.#removeConnection(this.#connections[i]);
+                this.#removeConnection(this.#connections[i], true);
             }
         }
     }
 
     clickEnd(): void {
 
-        for(let i = 0; i < this.#nodesGrabbed.Count(); i ++) {
+        for (let i = 0; i < this.#nodesGrabbed.Count(); i++) {
             const node = this.#nodes[this.#nodesGrabbed.At(i)];
             node.raiseDragStoppedEvent();
         }
@@ -299,10 +321,21 @@ export class NodeSubsystem {
 
         // Ight. Let's make the connection.
         if (this.#portHovering.InputPort) {
-            if (this.#portHovering.Port.getPortType() !== PortType.InputArray) {
-                this.clearNodeInputConnection(this.#portHovering.Node, this.#portHovering.Index);
+            let replace = false;
+            const inputPort = this.#portHovering.Node.inputPort(this.#portHovering.Index);
+            if (this.#portHovering.Port.getPortType() !== PortType.InputArray && inputPort.connections().length > 0) {
+                replace = true;
             }
-            conn.setInput(this.#portHovering.Node, this.#portHovering.Index)
+
+            if (replace) {
+                // Remove input port's connection's output
+                inputPort.connections()[0].clearOutput();
+
+                // Remove connection from this subsystem
+                this.#removeConnection(inputPort.connections()[0], false);
+            }
+            conn.setInput(this.#portHovering.Node, this.#portHovering.Index, replace);
+
         } else {
             conn.setOutput(this.#portHovering.Node, this.#portHovering.Index);
         }
@@ -328,7 +361,7 @@ export class NodeSubsystem {
                 continue;
             }
 
-            if(connection.outPort() !== nodeOut.outputPort(outPort)){
+            if (connection.outPort() !== nodeOut.outputPort(outPort)) {
                 continue;
             }
 
@@ -422,7 +455,7 @@ export class NodeSubsystem {
         }
         for (let i = this.#connections.length - 1; i >= 0; i--) {
             if (this.#connections[i].referencesNode(this.#nodes[nodeIndex])) {
-                this.#removeConnectionByIndex(i);
+                this.#removeConnectionByIndex(i, true);
             }
         }
     }
@@ -441,18 +474,24 @@ export class NodeSubsystem {
 
     #removeNodeByIndex(nodeIndex: number): void {
         this.#removeNodeConnections(nodeIndex);
+        const node = this.#nodes[nodeIndex];
         this.#nodes.splice(nodeIndex, 1);
+        for (let i = 0; i < this.#nodeRemovedCallbacks.length; i++) {
+            this.#nodeRemovedCallbacks[i](node);
+        }
     }
 
-    #removeConnectionByIndex(index: number): void {
-        this.#connections[index].clearPorts();
+    #removeConnectionByIndex(index: number, clearPorts: boolean): void {
+        if (clearPorts) {
+            this.#connections[index].clearPorts();
+        }
         this.#connections.splice(index, 1);
     }
 
-    #removeConnection(connection: Connection): void {
+    #removeConnection(connection: Connection, clearPorts: boolean): void {
         const index = this.#connections.indexOf(connection);
         if (index > -1) {
-            this.#removeConnectionByIndex(index);
+            this.#removeConnectionByIndex(index, clearPorts);
         } else {
             console.error("no connection found to remove");
         }
@@ -613,7 +652,7 @@ export class NodeSubsystem {
         if (this.#connectionSelected === null) {
             return;
         }
-        this.#removeConnection(this.#connectionSelected);
+        this.#removeConnection(this.#connectionSelected, true);
         this.#connectionSelected = null;
     }
 
@@ -679,7 +718,7 @@ export class NodeSubsystem {
                 this.#cursor = CursorStyle.Grabbing;
             }
 
-            this.#nodes[i].render(ctx, camera, state, mousePosition);
+            this.#nodes[i].render(ctx, camera, state, mousePosition, this.#postProcessPass);
         }
     }
 

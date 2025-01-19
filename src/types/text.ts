@@ -114,6 +114,10 @@ export class Text {
     setColor(color: string): void {
         this.#style.setColor(color);
     }
+    
+    getColor(): string {
+        return this.#style.getColor();
+    }
 
     setSize(size: number): void {
         this.#style.setSize(size);
