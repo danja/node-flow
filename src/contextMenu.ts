@@ -3,7 +3,7 @@ import { TextAlign } from './styles/canvasTextAlign';
 import { TextStyle, TextStyleConfig, TextStyleFallback } from './styles/text';
 import { Box, InBox } from './types/box';
 import { List } from './types/list';
-import { Vector2, Zero } from './types/vector2';
+import { CopyVector2, Vector2, Zero } from './types/vector2';
 
 const contextEntryHeight = 30;
 const contextEntryWidth = 250;
@@ -245,8 +245,7 @@ export class ContextMenu {
 
         this.#tempBox.Size.x = scaledEntryWidth;
         this.#tempBox.Size.y = scaledEntryHeight;
-        this.#tempBox.Position.x = position.x;
-        this.#tempBox.Position.y = position.y;
+        CopyVector2(this.#tempBox.Position, position)
 
         ctx.textAlign = TextAlign.Left;
 

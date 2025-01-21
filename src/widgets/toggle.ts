@@ -34,6 +34,8 @@ class ToggleStyle {
 
     #lightBlur?: number;
 
+    #box: Box;
+
     constructor(config?: ToggleStyleConfig) {
         this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idle, {
             box: {
@@ -58,22 +60,25 @@ class ToggleStyle {
         this.#lightColor = config?.lightColor === undefined ? "#222222" : config.lightColor;
         this.#lightBorderColor = config?.lightBorderColor === undefined ? "black" : config.lightBorderColor;
         this.#lightBlur = config?.lightBlur;
+
+        this.#box = {Position: { x: 0, y: 0 }, Size: { x: 0, y: 0 } };
     }
 
-    Draw(ctx: CanvasRenderingContext2D, position: Vector2, scale: number, text: string, mousePosition: Vector2 | undefined): Box {
+    Draw(ctx: CanvasRenderingContext2D, pos: Vector2, scale: number, text: string, mousePosition: Vector2 | undefined): Box {
         const scaledWidth = width * scale;
         const scaledHeight = height * scale;
-        const box = { Position: { x: 0, y: 0 }, Size: { x: scaledWidth, y: scaledHeight } };
-        CopyVector2(box.Position, position);
+        this.#box.Size.x = scaledWidth;
+        this.#box.Size.y = scaledHeight;
+        CopyVector2(this.#box.Position, pos);
 
         // Background
         let style: TextBoxStyle = this.#idleStyle;
         if (mousePosition !== undefined) {
-            if (InBox(box, mousePosition)) {
+            if (InBox(this.#box, mousePosition)) {
                 style = this.#hoverStyle;
             }
         }
-        style.Draw(ctx, box, scale, text);
+        style.Draw(ctx, this.#box, scale, text);
 
         // Light
         const lightScale = Math.min(scaledWidth, scaledHeight);
@@ -81,8 +86,8 @@ class ToggleStyle {
         ctx.fillStyle = this.#lightColor
         ctx.beginPath();
         ctx.roundRect(
-            position.x + (lightScale * .2),
-            position.y + (lightScale * .2),
+            pos.x + (lightScale * .2),
+            pos.y + (lightScale * .2),
             lightScale * .6,
             lightScale * .6,
             Theme.Widget.Border.Radius * scale
@@ -97,13 +102,7 @@ class ToggleStyle {
         }
         // ctx.stroke();
 
-        return {
-            Position: position,
-            Size: {
-                x: scaledWidth,
-                y: scaledHeight
-            }
-        }
+        return this.#box
     }
 }
 
@@ -200,6 +199,5 @@ export class ToggleWidget {
     }
 
     ClickEnd(): void {
-
     }
 }

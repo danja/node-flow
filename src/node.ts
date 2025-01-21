@@ -713,15 +713,13 @@ export class FlowNode {
         this.#title.size(ctx, 1, size);
 
         if (this.#infoText !== "") {
-            size.x += (size.y * 2);
+            size.x += (size.y * 4);
         }
 
         size.x += doublePadding;
         size.y += doublePadding + (this.#elementSpacing * this.#input.length);
 
-        if (this.#infoText !== "") {
-            size.x += (size.y);
-        }
+      
 
         for (let i = 0; i < this.#input.length; i++) {
             const port = this.#input[i];
