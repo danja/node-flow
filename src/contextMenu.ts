@@ -247,8 +247,9 @@ export class ContextMenu {
         this.#tempBox.Size.y = scaledEntryHeight;
         CopyVector2(this.#tempBox.Position, position)
 
-        ctx.textAlign = TextAlign.Left;
+        // ctx.canvas.clientHeight
 
+        ctx.textAlign = TextAlign.Left;
         ctx.fillStyle = Theme.ContextMenu.BackgroundColor;
         ctx.shadowColor = "#000000";
         ctx.shadowBlur = 5 * menuScale;

@@ -60,6 +60,7 @@ export interface FlowNodeStyle {
 export interface FlowNodeConfig {
     position?: Vector2;
     title?: string;
+    subTitle?: string;
     info?: string;
     locked?: boolean;
     data?: NodeData;
@@ -116,6 +117,8 @@ export class FlowNode {
     #position: Vector2;
 
     #title: Text;
+
+    #subTitle: Text;
 
     #infoSymbol: Text;
 
@@ -238,6 +241,15 @@ export class FlowNode {
             config?.title === undefined ? "" : config.title,
             TextStyleFallback(config?.style?.title?.textStyle, {
                 size: 16,
+                weight: FontWeight.Bold,
+                color: Theme.Node.FontColor
+            })
+        );
+
+        this.#subTitle = new Text(
+            config?.subTitle === undefined ? "" : config.subTitle,
+            TextStyleFallback(config?.style?.title?.textStyle, {
+                size: 10,
                 weight: FontWeight.Bold,
                 color: Theme.Node.FontColor
             })
@@ -712,14 +724,16 @@ export class FlowNode {
         const size = Zero();
         this.#title.size(ctx, 1, size);
 
+        const subtitleSize = Zero();
+        this.#subTitle.size(ctx, 1, subtitleSize);
+        size.x = Math.max(size.x, subtitleSize.x);
+
         if (this.#infoText !== "") {
             size.x += (size.y * 4);
         }
 
         size.x += doublePadding;
         size.y += doublePadding + (this.#elementSpacing * this.#input.length);
-
-      
 
         for (let i = 0; i < this.#input.length; i++) {
             const port = this.#input[i];
@@ -945,6 +959,9 @@ export class FlowNode {
             const titleSize = VectorPool.get();
             this.#title.size(ctx, camera.zoom, titleSize);
 
+            const subtitleSize = VectorPool.get();
+            this.#subTitle.size(ctx, camera.zoom, subtitleSize);
+
             const titleBoxSize = VectorPool.get();
             titleBoxSize.x = nodeBounds.Size.x;
             titleBoxSize.y = titleSize.y + (scaledPadding * 2);
@@ -965,6 +982,22 @@ export class FlowNode {
             const titlePosition = VectorPool.get();
             titlePosition.x = nodeBounds.Position.x + (nodeBounds.Size.x / 2)
             titlePosition.y = nodeBounds.Position.y + scaledPadding + (titleSize.y / 2)
+
+            if (this.#subTitle.get() !== "") {
+                const subtitlePosition = VectorPool.get();
+                CopyVector2(subtitlePosition, titlePosition);
+
+                // TODO: I'm fudging a bunch of numbers ot make it fit nicely 
+                // together. 
+                // 
+                // Need to come up with like, proper logic about how we ensure 
+                // title and subtitle fit together
+                subtitlePosition.y -= titleSize.y / 1.5;
+                titlePosition.y += scaledPadding / 2
+
+                this.#subTitle.render(ctx, camera.zoom, subtitlePosition);
+            }
+
             this.#title.render(ctx, camera.zoom, titlePosition);
 
             // Info symbol
