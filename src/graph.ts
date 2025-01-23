@@ -451,7 +451,7 @@ export class NodeFlowGraph {
             if (this.#openedContextMenu !== null) {
                 const pos = VectorPool.get();
                 this.#camera.graphSpaceToScreenSpace(this.#openedContextMenu.Position, pos)
-                this.#contextMenuEntryHovering = this.#openedContextMenu.Menu.render(this.#ctx, pos, this.#camera.zoom, this.#mousePosition);
+                this.#contextMenuEntryHovering = this.#openedContextMenu.Menu.render(this.#ctx, pos, this.#camera.zoom, this.#mousePosition, true);
 
                 if (this.#contextMenuEntryHovering !== null) {
                     this.#cursor = CursorStyle.Pointer;
