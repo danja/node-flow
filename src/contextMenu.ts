@@ -356,9 +356,7 @@ export class ContextMenu {
             const mouseOverSub = this.#openSubMenu.render(ctx, this.#submenuPosition, menuScale, mousePosition, submenuOpenRight)
             if (mouseOverSub !== null) {
                 mouseIsOver = mouseOverSub;
-            } else if (!subOpenedThisFrame) {
-                this.#openSubMenu = undefined;
-            }
+            } 
         }
 
         return mouseIsOver;

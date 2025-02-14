@@ -4,6 +4,8 @@ Another Flow-based Node graph Library.
 
 Check it out [here](https://elicdavis.github.io/node-flow/).
 
+![promotional image](./docs/promotional-image.png)
+
 ## About
 
 Node Flow is a javascript library that enables developers to build node based tools similar to Unreal Blueprints or Blender Nodes. 
