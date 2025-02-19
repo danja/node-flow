@@ -172,10 +172,10 @@ Scattered across this graph contains code snippets on how to accomplish differen
 
 \`\`\`
 // Create a canvas to render our graph to
-var canvas = document.createElement("canvas");
+let canvas = document.createElement("canvas");
 
 // Create our Node Flow Graph
-var graph = new NodeFlowGraph(canvas)
+let graph = new NodeFlowGraph(canvas)
 \`\`\`
 `
                     },
@@ -193,7 +193,7 @@ var graph = new NodeFlowGraph(canvas)
 Create a Add node that takes two numbers and outputs a single number
 
 \`\`\`
-var node = new FlowNode({ 
+let node = new FlowNode({ 
     title: "Add",
     info:  "I add two numbers",
     inputs: [

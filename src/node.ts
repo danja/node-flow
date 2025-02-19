@@ -1,7 +1,7 @@
 import { Port, PortConfig, PortType } from "./port";
 import { FontWeight, TextStyle, TextStyleConfig, TextStyleFallback } from "./styles/text";
 import { Box, InBox } from "./types/box";
-import { CopyVector2, Distance, Vector2, Zero } from "./types/vector2";
+import { CopyVector2, Distance, ScaleVector, Vector2, Zero } from "./types/vector2";
 import { Widget } from './widgets/widget';
 import { List } from './types/list';
 import { BoxStyle, BoxStyleConfig, BoxStyleWithFallback } from "./styles/box";
@@ -538,12 +538,14 @@ export class FlowNode {
     public contextMenu(): ContextMenuConfig {
         let config: ContextMenuConfig = {
             group: nodeFlowGroup,
-            items: [{
-                name: "Debug",
-                callback: () => {
-                    console.log(this);
-                }
-            }],
+            items: [
+                // {
+                //     name: "Debug",
+                //     callback: () => {
+                //         console.log(this);
+                //     }
+                // }
+            ],
             subMenus: [],
         }
 
@@ -763,8 +765,7 @@ export class FlowNode {
         size.y += this.#elementSpacing
 
         size.x = Math.max(size.x, MINIMUM_NODE_WIDTH)
-        size.x *= camera.zoom;
-        size.y *= camera.zoom;
+        ScaleVector(size, camera.zoom);
 
         return {
             Position: screenSpacePosition,

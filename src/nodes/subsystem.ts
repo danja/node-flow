@@ -138,6 +138,10 @@ export class NodeSubsystem {
     public addOnNodeCreatedListener(callback: NodeCreatedCallback): void {
         this.#nodeFactory.addOnNodeCreatedListener(callback);
     }
+    
+    public nodeFactory(): NodeFactory {
+        return this.#nodeFactory;
+    }
 
     public addOnNodeAddedListener(callback: NodeAddedCallback): void {
         if (callback === null || callback === undefined) {

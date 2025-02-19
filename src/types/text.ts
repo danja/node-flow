@@ -1,6 +1,6 @@
 import { FontWeight, TextStyle, TextStyleConfig } from "../styles/text";
 import { splitString, splitStringIntoLines } from "../utils/string";
-import { CopyVector2, Vector2, Zero } from "./vector2";
+import { CopyVector2, ScaleVector, Vector2, Zero } from "./vector2";
 
 export class Text {
 
@@ -105,10 +105,8 @@ export class Text {
 
     size(ctx: CanvasRenderingContext2D, scale: number, out: Vector2): void {
         this.#measure(ctx);
-
         CopyVector2(out, this.#size);
-        out.x *= scale;
-        out.y *= scale;
+        ScaleVector(out, scale);
     }
 
     setColor(color: string): void {

@@ -69,15 +69,19 @@ export class NodeFactory {
         return node;
     }
 
-    public openMenu(graph: NodeSubsystem, position: Vector2): ContextMenuConfig {
+    public newNodeSubmenus(graph: NodeSubsystem, position: Vector2): Array<ContextMenuConfig> {
         const menus: Array<ContextMenuConfig> = [];
         for (let [_, publisher] of this.#registeredPublishers) {
             menus.push(publisher.contextMenu(graph, position))
         }
+        return menus;
+    }
+
+    public openMenu(graph: NodeSubsystem, position: Vector2): ContextMenuConfig {
         return {
             name: "New Node",
             group: nodeFlowContextMenuGroup,
-            subMenus: menus,
+            subMenus: this.newNodeSubmenus(graph, position),
         };
     }
 } 

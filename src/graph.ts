@@ -16,6 +16,7 @@ import { Publisher } from './nodes/publisher';
 import { VectorPool } from './types/pool';
 import { Camera } from './camera';
 import { PassSubsystem } from './pass/subsystem';
+import { QuickMenu } from './quickMenu';
 
 export type GraphRenderer = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, position: Vector2, scale: number) => void;
 
@@ -58,6 +59,11 @@ export interface FlowNodeGraphConfiguration {
 
 interface OpenContextMenu {
     Menu: ContextMenu
+    Position: Vector2
+}
+
+interface OpenQuickMenu {
+    Menu: QuickMenu
     Position: Vector2
 }
 
@@ -150,6 +156,8 @@ export class NodeFlowGraph {
 
     #openedContextMenu: OpenContextMenu | null;
 
+    #openQuickMenu: OpenQuickMenu | null;
+
     #contextMenuEntryHovering: ContextEntry | null;
 
     #views: Array<GraphView>;
@@ -192,6 +200,7 @@ export class NodeFlowGraph {
         }, config?.contextMenu);
 
         this.#openedContextMenu = null;
+        this.#openQuickMenu = null;
         this.#contextMenuEntryHovering = null;
 
         this.#canvas = canvas;
@@ -227,6 +236,45 @@ export class NodeFlowGraph {
             this.#clickEnd.bind(this),
             this.#openContextMenu.bind(this),
             this.#fileDrop.bind(this)
+        );
+
+        document.addEventListener(
+            "keydown",
+            (e) => {
+                if (this.#openQuickMenu) {
+                    if (e.code === "Escape") {
+                        this.#openQuickMenu = null;
+                        return;
+                    }
+
+                    if (e.code === "Enter") {
+                        this.#openQuickMenu.Menu.execute();
+                        this.#openQuickMenu = null;
+                        return;
+                    }
+
+                    this.#openQuickMenu.Menu.keyboardEvent(e);
+                    return
+                }
+
+                const spacePressed = e.key == " " || e.code == "Space";
+                if (!spacePressed) {
+                    return;
+                }
+
+                if (!this.#mousePosition) {
+                    return;
+                }
+                const contextMenuPosition = this.#sceenPositionToGraphPosition(this.#mousePosition);
+
+                let items = this.#mainNodeSubsystem.nodeFactory().newNodeSubmenus(this.#mainNodeSubsystem, contextMenuPosition);
+                this.#openQuickMenu = {
+                    Menu: new QuickMenu({
+                        subMenus: items,
+                    }),
+                    Position: contextMenuPosition
+                }
+            }
         );
     }
 
@@ -302,6 +350,7 @@ export class NodeFlowGraph {
             return;
         }
         this.#openedContextMenu = null;
+        this.#openQuickMenu = null;
         this.#contextMenuEntryHovering = null;
 
         this.#mousePosition = mousePosition;
@@ -375,6 +424,7 @@ export class NodeFlowGraph {
         };
     }
 
+
     // Somethings wrong here. Needs more testing
     // #fitView(): void {
     //     if (this.#nodes.length === 0) {
@@ -432,6 +482,8 @@ export class NodeFlowGraph {
 
         TimeExecution("Render_Context", this.#renderContextMenu.bind(this));
 
+        TimeExecution("Render_QuickMenu", this.#renderQuickMenu.bind(this))
+
         // Only update CSS style if things have changed
         // TODO: Does this actually have any measurable performance savings?
         if (this.#lastFrameCursor !== this.#cursor) {
@@ -452,6 +504,20 @@ export class NodeFlowGraph {
                 const pos = VectorPool.get();
                 this.#camera.graphSpaceToScreenSpace(this.#openedContextMenu.Position, pos)
                 this.#contextMenuEntryHovering = this.#openedContextMenu.Menu.render(this.#ctx, pos, this.#camera.zoom, this.#mousePosition, true);
+
+                if (this.#contextMenuEntryHovering !== null) {
+                    this.#cursor = CursorStyle.Pointer;
+                }
+            }
+        });
+    }
+
+    #renderQuickMenu(): void {
+        VectorPool.run(() => {
+            if (this.#openQuickMenu !== null) {
+                const pos = VectorPool.get();
+                this.#camera.graphSpaceToScreenSpace(this.#openQuickMenu.Position, pos)
+                this.#contextMenuEntryHovering = this.#openQuickMenu.Menu.render(this.#ctx, pos, this.#camera.zoom, this.#mousePosition);
 
                 if (this.#contextMenuEntryHovering !== null) {
                     this.#cursor = CursorStyle.Pointer;
