@@ -19,10 +19,10 @@ class QuickMenuGroup {
         this.items = items;
     }
 
-    updateRendering(text: string): void {
+    updateRendering(terms: Array<string>): void {
         let shouldRender = false;
         for (let i = 0; i < this.items.length; i++) {
-            const kept = this.items[i].filter(text);
+            const kept = this.items[i].filter(terms);
             this.items[i].render(kept);
             if (kept) {
                 shouldRender = true;
@@ -45,11 +45,20 @@ class QuickMenuItem {
         this.#context = context;
     }
 
-    filter(text: string): boolean {
-        if (text === "") {
+    filter(terms: Array<string>): boolean {
+        if (terms.length === 0) {
             return true;
         }
-        return this.#searchText.indexOf(text) != -1;
+        for (let i = 0; i < terms.length; i++) {
+            if (terms[i] === "") {
+                continue;
+            }
+
+            if (this.#searchText.indexOf(terms[i]) === -1) {
+                return false;
+            }
+        }
+        return true;
     }
 
     render(render: boolean): void {
@@ -78,7 +87,7 @@ function RecurseBuildContainers(
     groups: Array<QuickMenuGroup>
 ): void {
 
-    let currentPath = config?.name ?? "Menu";
+    let currentPath = config?.name ?? "";
     if (path !== "") {
         currentPath = path + " / " + currentPath;
     }
@@ -119,7 +128,7 @@ function RecurseBuildContainers(
             );
 
             quickItems.push(new QuickMenuItem(
-                configItem.name ?? "",
+                currentPath + (configItem.name ?? ""),
                 itemText,
                 configItem
             ));
@@ -239,11 +248,22 @@ export class QuickMenu {
             .trim()
             .toLowerCase();
 
+        let terms = new Array<string>();
+        if (searchText !== "") {
+            var potentialTerms = searchText.split(" ");
+            for (let i = 0; i < potentialTerms.length; i++) {
+                const cleaned = potentialTerms[i].trim();
+                if (cleaned !== "") {
+                    terms.push(cleaned);
+                }
+            }
+        }
+
         let selection = this.#currentSelection;
 
         for (let groupIndex = 0; groupIndex < this.#menuGroups.length; groupIndex++) {
             const group = this.#menuGroups[groupIndex];
-            group.updateRendering(searchText);
+            group.updateRendering(terms);
 
             for (let itemIndex = 0; itemIndex < group.items.length; itemIndex++) {
                 if (group.items[itemIndex].rendering()) {
@@ -262,7 +282,7 @@ export class QuickMenu {
             this.#currentSelection = 0;
             const text = this.#searchText.get();
             this.#searchText.set(text.slice(0, text.length - 1));
-        } else if (/^[a-zA-Z0-9]$/.test(event.key)) {
+        } else if (/^[a-zA-Z0-9]$/.test(event.key) || event.key === " ") {
             this.#currentSelection = 0;
             this.#searchText.set(this.#searchText.get() + event.key);
         } else if (event.key === "ArrowUp") {
