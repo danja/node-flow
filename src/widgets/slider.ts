@@ -77,6 +77,8 @@ export class SliderWidget {
     #clicking: boolean;
 
     constructor(node: FlowNode, config?: SliderWidgetConfig) {
+        this.#node = node;
+        this.#value = 0;
         this.#min = config?.min === undefined ? 0 : config?.min;
         this.#max = config?.max === undefined ? 1 : config?.max;
         this.#snapIncrement = config?.snapIncrement;

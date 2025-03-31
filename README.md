@@ -20,6 +20,14 @@ Node Flow is a javascript library that enables developers to build node based to
 
 Download the latest build [here](https://raw.githubusercontent.com/EliCDavis/node-flow/gh-pages/dist/web/NodeFlow.js).
 
+## Building
+
+If you want to build the library yourself, you can run
+
+```bash
+npm run package
+```
+
 ## API
 
 ### Graph API
@@ -148,5 +156,4 @@ node.addOutput({ name: "sum", type: "float32" })
 Just run
 
 ```bash
-npm run watch-dev
-```
+```npm run watch

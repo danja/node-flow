@@ -116,6 +116,7 @@ export class NodeSubsystem {
         this.#idleConnectionRenderer = BuildConnectionRenderer(config?.idleConnection);
         this.#registeredNodeAddedCallbacks = new Array<NodeAddedCallback>();
         this.#nodeRemovedCallbacks = new Array<NodeRemovedCallback>();
+        this.#cursor = CursorStyle.Default;
 
         this.#boxSelect = false;
         this.#boxSelectStart_graphSpace = Zero();

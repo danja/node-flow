@@ -115,7 +115,10 @@ export class ContextMenu {
 
     #group?: string;
 
+    #submenuPosition: Vector2;
+
     constructor(config?: ContextMenuConfig) {
+        this.#submenuPosition = Zero();
         this.#groups = new List<ContextGroup>();
         this.#name = config?.name === undefined ? "menu" : config?.name;
         this.#items = new Array<ContextMenuItem>();
@@ -230,7 +233,6 @@ export class ContextMenu {
 
     #openSubMenu: ContextMenu | undefined;
 
-    #submenuPosition: Vector2;
 
     public render(ctx: CanvasRenderingContext2D, pppp: Vector2, graphScale: number, mousePosition: Vector2 | undefined, openRight: boolean): ContextEntry | null {
         const menuScale = 1.25;
@@ -299,7 +301,8 @@ export class ContextMenu {
                     entryMousedOver = true
                     if (entry.subMenu !== undefined) {
                         this.#openSubMenu = entry.subMenu;
-                        this.#submenuPosition = { x: position.x, y: this.#tempBox.Position.y }
+                        this.#submenuPosition.x = position.x
+                        this.#submenuPosition.y = this.#tempBox.Position.y;
                         if (submenuOpenRight) {
                             this.#submenuPosition.x += scaledEntryWidth
                         }
@@ -356,7 +359,7 @@ export class ContextMenu {
             const mouseOverSub = this.#openSubMenu.render(ctx, this.#submenuPosition, menuScale, mousePosition, submenuOpenRight)
             if (mouseOverSub !== null) {
                 mouseIsOver = mouseOverSub;
-            } 
+            }
         }
 
         return mouseIsOver;

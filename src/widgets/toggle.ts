@@ -123,6 +123,8 @@ export class ToggleWidget {
     #callback?: (value: boolean) => void;
 
     constructor(node: FlowNode, config?: ToggleWidgetConfig) {
+        this.#value = false;
+
         this.#node = node;
         this.#nodeProperty = config?.property;
         this.#text = config?.text === undefined ? "Toggle" : config?.text;

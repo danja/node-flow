@@ -148,7 +148,6 @@ export class MarkdownSyntaxParser {
                 case MarkdownTokenType.H1:
                 case MarkdownTokenType.H2:
                 case MarkdownTokenType.H3:
-                case MarkdownTokenType.Text:
                 case MarkdownTokenType.Space:
                     textContent += token.lexeme();
                     break;

@@ -9,6 +9,7 @@ import { Theme } from "../theme";
 import { Box } from "../types/box";
 import { CopyVector2, Vector2, Zero } from "../types/vector2";
 import { Camera } from "../camera";
+import { Metadata } from "../metadata";
 
 export type NoteContentChangeCallback = (node: FlowNote, newContents: string) => void
 export type NoteWidthChangeCallback = (node: FlowNote, newWidth: number) => void
@@ -16,6 +17,7 @@ export type NoteWidthChangeCallback = (node: FlowNote, newWidth: number) => void
 export interface FlowNoteConfig {
     text?: string;
     style?: TextStyleConfig;
+    metadata?: Metadata;
     position?: Vector2;
     width?: number;
     locked?: boolean;
@@ -44,6 +46,8 @@ export class FlowNote {
 
     // Runtime ================================================================
 
+    #data: Metadata;
+
     #position: Vector2;
 
     #handleSelected: DragHandle;
@@ -65,8 +69,9 @@ export class FlowNote {
     constructor(config?: FlowNoteConfig) {
         this.#widthChangeCallbacks = new Array<NoteWidthChangeCallback>();
         this.#contentChangeCallbacks = new Array<NoteContentChangeCallback>();
-
-
+        this.#data = config?.metadata === undefined ? {} : config?.metadata;
+        this.#document = [];
+        this.#originalText = "";
         this.#hovering = false;
         this.#edittingLayout = config?.locked === undefined ? true : !config?.locked;
         this.#width = config?.width === undefined ? 500 : config.width;
@@ -97,6 +102,14 @@ export class FlowNote {
         for (let i = 0; i < this.#contentChangeCallbacks.length; i++) {
             this.#contentChangeCallbacks[i](this, text);
         }
+    }
+
+    public setMetadataProperty(name: string, value: any): void {
+        this.#data[name] = value;
+    }
+
+    public getMetadataProperty(name: string): any {
+        return this.#data[name];
     }
 
     text(): string {
@@ -237,7 +250,7 @@ export class FlowNote {
         return this.#edittingLayout;
     }
 
-    setHovering(hovering): void {
+    setHovering(hovering: boolean): void {
         this.#hovering = hovering;
     }
 

@@ -32,6 +32,8 @@ export class StringWidget {
     #nodeProperty: string | undefined;
 
     constructor(node: FlowNode, config?: StringWidgetConfig) {
+        this.#value = "";
+        
         this.#node = node;
         this.#nodeProperty = config?.property;
         this.#idleStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.textBoxStyle, {

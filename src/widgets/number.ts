@@ -35,6 +35,9 @@ export class NumberWidget {
     #callback?: (newNumber: number) => void;
 
     constructor(node: FlowNode, config?: NumberWidgetConfig) {
+        this.#value = 0;
+        this.#text = "0";
+
         this.#node = node;
         this.#nodeProperty = config?.property;
         this.#idleBoxStyle = new TextBoxStyle(TextBoxStyleWithFallback(config?.idleBoxStyle, {

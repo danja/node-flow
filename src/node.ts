@@ -25,6 +25,7 @@ import { VectorPool } from "./types/pool";
 import { Camera } from "./camera";
 import { PassSubsystem } from "./pass/subsystem";
 import { splitString, splitStringIntoLines } from "./utils/string";
+import { Metadata } from './metadata';
 
 const MINIMUM_NODE_WIDTH = 150;
 
@@ -33,9 +34,7 @@ type PropertyChangeCallback = (oldValue: any, newValue: any) => void
 type TitleChangeCallback = (node: FlowNode, oldTitle: string, newTitle: string) => void
 type InfoChangeCallback = (node: FlowNode, oldInfo: string, newInfo: string) => void
 
-interface NodeData {
-    [name: string]: any;
-}
+
 
 export interface WidgetConfig {
     type?: string,
@@ -63,7 +62,7 @@ export interface FlowNodeConfig {
     subTitle?: string;
     info?: string;
     locked?: boolean;
-    data?: NodeData;
+    data?: Metadata;
     contextMenu?: ContextMenuConfig;
     metadata?: any;
 
@@ -80,7 +79,7 @@ export interface FlowNodeConfig {
     onRelease?: () => void;
     onSelect?: () => void;
     onUnselect?: () => void;
-    onDragStop?: (FlowNode) => void;
+    onDragStop?: (FlowNode: FlowNode) => void;
     onFileDrop?: (file: File) => void;
     onTitleChange?: TitleChangeCallback;
     onInfoChange?: InfoChangeCallback;
@@ -180,7 +179,7 @@ export class FlowNode {
 
     #widgetPositions: List<Box>;
 
-    #data: NodeData;
+    #data: Metadata;
 
     #registeredAnyPropertyChangeCallbacks: Array<AnyPropertyChangeCallback>;
 

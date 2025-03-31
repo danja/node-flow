@@ -176,6 +176,9 @@ export class NodeFlowGraph {
             idleConnection: config?.idleConnection
         });
 
+        this.#lastFrameCursor = CursorStyle.Default;
+        this.#cursor = CursorStyle.Default;
+
         this.#mainNoteSubsystem = new NoteSubsystem(config?.board);
 
         this.#views = [
@@ -241,6 +244,10 @@ export class NodeFlowGraph {
         document.addEventListener(
             "keydown",
             (e) => {
+                if (document.activeElement) {
+                    if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+                }
+
                 if (this.#openQuickMenu) {
                     if (e.code === "Escape") {
                         this.#openQuickMenu = null;
@@ -381,7 +388,7 @@ export class NodeFlowGraph {
         return this.#mainNodeSubsystem.connectedOutputsNodeReferences(nodeIndex);
     }
 
-    connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort): Connection | undefined {
+    connectNodes(nodeOut: FlowNode, outPort: number, nodeIn: FlowNode, inPort: number): Connection | undefined {
         return this.#mainNodeSubsystem.connectNodes(nodeOut, outPort, nodeIn, inPort);
     }
 
