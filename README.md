@@ -10,15 +10,21 @@ Check it out [here](https://elicdavis.github.io/node-flow/).
 
 Node Flow is a javascript library that enables developers to build node based tools similar to Unreal Blueprints or Blender Nodes. 
 
+## Install
+
+Grab the [latest from npm](https://www.npmjs.com/package/@elicdavis/node-flow):
+
+```
+npm i @elicdavis/node-flow
+```
+
+Or download the latest build [here](https://raw.githubusercontent.com/EliCDavis/node-flow/gh-pages/dist/web/NodeFlow.js).
+
 ## Features
 
 * Nodes
 * Markdown Notes
 * More Nodes
-
-## Install
-
-Download the latest build [here](https://raw.githubusercontent.com/EliCDavis/node-flow/gh-pages/dist/web/NodeFlow.js).
 
 ## Building
 
@@ -37,6 +43,8 @@ npm run package
 The only requirement for creating a graph is providing it an instance of a [canvas](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas).
 
 ```javascript
+import { NodeFlowGraph } from "@elicdavis/node-flow";
+
 // Create a canvas to render our graph to
 var canvas = document.createElement("canvas");
 
@@ -47,6 +55,7 @@ var graph = new NodeFlowGraph(canvas)
 There are a bunch of optional parameters you can provide the graph:
 
 ```javascript
+import { NodeFlowGraph } from "@elicdavis/node-flow";
 var graph = new NodeFlowGraph(canvas, {
     // Background color of the graph.
     backgroundColor: "#FF5500",
@@ -118,6 +127,8 @@ var graph = new NodeFlowGraph(canvas, {
 #### Creation
 
 ```javascript
+import { FlowNode } from "@elicdavis/node-flow";
+
 // All nodes require a title. That's about it.
 var node = new FlowNode({ 
     title: "My First Node!",
@@ -132,6 +143,8 @@ graph.addNode(node);
 Create a Add node that takes two numbers and outputs a single number
 
 ```javascript
+import { FlowNode } from "@elicdavis/node-flow";
+
 var node = new FlowNode({ 
     title: "Add",
     inputs: [
@@ -156,4 +169,5 @@ node.addOutput({ name: "sum", type: "float32" })
 Just run
 
 ```bash
-```npm run watch
+npm run watch
+```
